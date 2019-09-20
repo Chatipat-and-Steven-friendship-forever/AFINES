@@ -30,13 +30,13 @@ class motor_ensemble
                 double stiffness, double max_ext_ratio, 
                 double ron, double roff, double rend, 
                 double fstall, double rcut,
-                double vis, vector<array<double,3> > positions, string BC);
+                double vis, vector<array<double,3> > positions, string BC, bool use_attach_opt_);
 
         motor_ensemble(vector<vector<double> > motors, array<double, 2> myfov, double delta_t, double temp, 
                 double mlen, filament_ensemble * network, double v0, double stiffness, double max_ext_ratio, 
                 double ron, double roff, double rend, 
                 double fstall, double rcut,
-                double vis, string BC); 
+                double vis, string BC, bool use_attach_opt_); 
         
         ~motor_ensemble();
 
@@ -72,6 +72,7 @@ class motor_ensemble
         array<double, 2> fov;
         filament_ensemble *f_network;
         vector<motor *> n_motors;  
+        bool use_attach_opt;
 };
 
 #endif

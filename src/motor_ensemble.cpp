@@ -22,8 +22,8 @@ motor_ensemble::motor_ensemble(double mdensity, array<double, 2> myfov, double d
         double mlen, filament_ensemble * network, double v0, double stiffness, double max_ext_ratio, 
         double ron, double roff, double rend, 
         double fstall, double rcut,
-        double vis, vector<array<double,3> > positions, string BC) {
-    
+        double vis, vector<array<double,3> > positions, string BC, bool use_attach_opt_) {
+    use_attach_opt = use_attach_opt_; 
     fov = myfov;
     mld =mlen;
     gamma = 0;
@@ -63,8 +63,8 @@ motor_ensemble::motor_ensemble(vector<vector<double> > motors, array<double, 2> 
         double mlen, filament_ensemble * network, double v0, double stiffness, double max_ext_ratio, 
         double ron, double roff, double rend, 
         double fstall, double rcut,
-        double vis, string BC) {
-    
+        double vis, string BC, bool use_attach_opt_) {
+    use_attach_opt = use_attach_opt_; 
     fov = myfov;
     mld = mlen;
     gamma = 0;
@@ -164,6 +164,10 @@ void motor_ensemble::motor_walk(double t)
     bool attached;
     //#pragma omp parallel for
     
+    if (use_attach_opt) {
+        f_network->update_counts();
+    }
+    
     for (int i=0; i<nmotors_sz; i++) {
        
     //    if(i==0) cout<<"\nDEBUG: motor_walk: using "<<omp_get_num_threads()<<" cores";
@@ -182,15 +186,25 @@ void motor_ensemble::motor_walk(double t)
             n_motors[i]->filament_update();
             
             //Attachment or Movement + Detachment
-            if (s[0] == 0)
-                n_motors[i]->attach(0);
-            else
+            if (s[0] == 0) {
+                if (use_attach_opt) {
+                    n_motors[i]->attach_opt(0);
+                } else {
+                    n_motors[i]->attach(0);
+                }
+            } else {
                 n_motors[i]->step_onehead(0);
+            }
 
-            if (s[1] == 0)
-                n_motors[i]->attach(1);
-            else 
+            if (s[1] == 0) {
+                if (use_attach_opt) {
+                    n_motors[i]->attach_opt(1);
+                } else {
+                    n_motors[i]->attach(1);
+                }
+            } else  {
                 n_motors[i]->step_onehead(1);
+            }
 
         }
     

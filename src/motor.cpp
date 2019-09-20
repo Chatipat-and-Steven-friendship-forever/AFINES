@@ -245,6 +245,61 @@ bool motor::allowed_bind(int hd, array<int, 2> fl_idx){
     return (f_index[pr(hd)] != fl_idx[0] || l_index[pr(hd)] != fl_idx[1]);
 }
 
+bool motor::attach_opt(int hd)
+{
+    double mf_rand = rng_u();
+    int count = filament_network->get_num_attach(hx[hd], hy[hd]);
+    assert(kon * count < 1.0);
+    int i = floor(mf_rand / kon);
+    assert(i >= 0);
+    if (i < count) {
+        double remprob = mf_rand - kon * i;
+        assert(remprob >= 0 && remprob < kon);
+
+        // compute and get attachment point
+        array<int, 2> fl = filament_network->get_attach(hx[hd], hy[hd], i);
+        filament *f = filament_network->get_filament(fl[0]);
+        spring *s = f->get_spring(fl[1]);
+        s->calc_intpoint(f->get_BC(), filament_network->get_delrx(), hx[hd], hy[hd]);
+        array<double ,2> intpoint = s->get_intpoint();
+
+        // don't bind if binding site is further away than the cutoff
+        double dist_sq = s->get_distance_sq(f->get_BC(), filament_network->get_delrx(), hx[hd], hy[hd]);
+        if (dist_sq > max_bind_dist_sq || !allowed_bind(hd, fl)) {
+            return false;
+        }
+
+        double prob = metropolis_prob(hd, fl, intpoint, kon);
+
+        if (remprob < prob) {
+            //update state
+            state[hd] = 1;
+            f_index[hd] = fl[0];
+            l_index[hd] = fl[1];
+
+            //record displacement of head and orientation of spring for future unbinding move
+            ldir_bind[hd] = filament_network->get_direction(f_index[hd], l_index[hd]);
+            bind_disp[hd] = rij_bc(BC, intpoint[0]-hx[hd], intpoint[1]-hy[hd], fov[0], fov[1], filament_network->get_delrx());
+
+            //update head position
+            hx[hd] = intpoint[0];
+            hy[hd] = intpoint[1];
+
+            //update relative head position
+            pos_a_end[hd]=dist_bc(BC, filament_network->get_end(f_index[hd], l_index[hd])[0] - hx[hd],
+                    filament_network->get_end(f_index[hd], l_index[hd])[1] - hy[hd], fov[0], fov[1], 
+                    filament_network->get_delrx());
+
+            //(even if its at the barbed end upon binding, could have negative velocity, so always set this to false, until it steps)
+            at_barbed_end[hd] = false; 
+
+            return true;
+        }
+    }
+    return false;
+}
+
+
 //check for attachment of unbound heads given head index (0 for head 1, and 1 for head 2)
 bool motor::attach(int hd)
 {

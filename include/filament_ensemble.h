@@ -29,15 +29,15 @@ class filament_ensemble
         filament_ensemble(int npolymer, int nbeads_min, int nbeads_max, double nbeads_prob,
                 array<double,2> myfov, array<int,2> mynq, double delta_t, double temp,
                 double rad, double vis, double spring_len, vector<array<double, 3> > pos_sets, double stretching, double ext, double bending, 
-                double frac_force, string bc, double seed);
+                double frac_force, string bc, double seed, bool check_dup_in_quad_);
 
         filament_ensemble(double density, array<double,2> myfov, array<int, 2> mynq, double delta_t, double temp, 
                 double len, double vis, int nbead,
                 double spring_len, vector<array<double, 3> > pos_sets, double stretching, double ext, double bending, double frac_force, 
-                string bc, double seed);
+                string bc, double seed, bool check_dup_in_quad_);
         
         filament_ensemble(vector< vector<double> > beads, array<double,2> myfov, array<int,2> mynq, double delta_t, double temp,
-                double vis, double spring_len, double stretching, double ext, double bending, double frac_force, string bc); 
+                double vis, double spring_len, double stretching, double ext, double bending, double frac_force, string bc, bool check_dup_in_quad_); 
         
         ~filament_ensemble();
         
@@ -56,6 +56,10 @@ class filament_ensemble
         void reset_n_springs(int);
 
         void update_dist_map(set<pair<double, array<int, 2>>>& t_map, const array<int, 2>& mquad, double x, double y);
+
+        void update_counts();
+        int get_num_attach(double, double);
+        array<int, 2> get_attach(double, double, int);
         
         vector<filament *> * get_network();
 
@@ -174,6 +178,9 @@ class filament_ensemble
         vector< vector < vector< array<int, 2 > >* > * > springs_per_quad;
         vector< vector < int >* > n_springs_per_quad;
         
+        bool check_dup_in_quad;
+        int **quad_count;
+
         vector<array<int, 2>* > all_quads;
         vector<filament *> network;
         unordered_set<array<int, 2>, boost::hash<array<int,2>>> fls;

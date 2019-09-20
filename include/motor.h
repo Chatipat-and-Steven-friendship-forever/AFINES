@@ -48,6 +48,7 @@ class motor
         bool allowed_bind( int hd, array<int, 2> fl_idx);
         
         bool attach( int hd);
+        bool attach_opt(int hd);
 
         void relax_head( int hd);
 
