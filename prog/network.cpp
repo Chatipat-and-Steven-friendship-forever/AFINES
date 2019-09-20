@@ -61,7 +61,7 @@ int main(int argc, char* argv[]){
     ios_base::openmode write_mode = ios_base::out;
 
     double strain_pct, time_of_strain, pre_strain, d_strain_pct, d_strain_amp;                                      //External Force
-    double d_strain, prev_d_strain, d_strain_freq, time_of_dstrain;
+    double d_strain, prev_d_strain, d_strain_freq, time_of_dstrain, total_strain, restart_strain;
     bool link_intersect_flag, motor_intersect_flag, dead_head_flag, p_dead_head_flag, static_cl_flag, quad_off_flag;
     bool diff_strain_flag, osc_strain_flag;
     double p_linkage_prob, a_linkage_prob;                                              
@@ -151,6 +151,8 @@ int main(int argc, char* argv[]){
         
         ("restart", po::value<bool>(&restart)->default_value(false), "if true, will restart simulation from last timestep recorded")
         ("restart_time", po::value<double>(&restart_time)->default_value(-1), "time to restart simulation from")
+        ("pre_strain", po::value<double>(&pre_strain)->default_value(0),"the starting strain value for the simulation")
+        ("restart_strain", po::value<double>(&restart_strain)->default_value(0),"the starting strain for restarting simulation")
 
         ("dir", po::value<string>(&dir)->default_value("."), "output directory")
         ("myseed", po::value<int>(&myseed)->default_value(time(NULL)), "Random number generator myseed")
@@ -395,72 +397,55 @@ int main(int argc, char* argv[]){
     t = tinit;
     pre_strain = strain_pct * xrange;
     d_strain_amp = d_strain_pct * xrange;
-    prev_d_strain = 0;
 
     cout<<"\nDEBUG: time of pre_strain = "<<time_of_strain;
     //Run the simulation
-    if (time_of_strain == 0){
-        cout<<"\nDEBUG: t = "<<t<<"; adding pre_strain of "<<pre_strain<<" um here";
-        net->update_delrx( pre_strain );
-        net->update_shear();
-    }
+    //    if (time_of_strain == 0){
+    //    cout<<"\nDEBUG: t = "<<t<<"; adding pre_strain of "<<pre_strain<<" um here";
+    //    net->update_delrx( pre_strain );
+    //    net->update_shear();
+    // }
+    
+    net->update_delrx(restart_strain);
+    prev_d_strain = restart_strain;
+
     while (t <= tfinal) {
         
-        //print to file
-	    if (t+dt/100 >= tinit && (count-unprinted_count)%n_bw_print==0) {
-	        
-            if (t>tinit) time_str ="\n";
-            time_str += "t = "+to_string(t);
-            
-            file_a << time_str<<"\tN = "<<to_string(net->get_nbeads());
-            net->write_beads(file_a);
-
-            file_l << time_str<<"\tN = "<<to_string(net->get_nsprings());
-            net->write_springs(file_l);
-
-            file_am << time_str<<"\tN = "<<to_string(myosins->get_nmotors());
-            myosins->motor_write(file_am);
-            
-            file_pm << time_str<<"\tN = "<<to_string(crosslks->get_nmotors());
-            crosslks->motor_write(file_pm);
-
-            file_th << time_str<<"\tN = "<<to_string(net->get_nfilaments());
-            net->write_thermo(file_th);
-
-            file_pe << net->get_stretching_energy()<<"\t"<<net->get_bending_energy()<<"\t"<<
-                myosins->get_potential_energy()<<"\t"<<crosslks->get_potential_energy()<<endl;
-            
-            file_a<<std::flush;
-            file_l<<std::flush;
-            file_am<<std::flush;
-            file_pm<<std::flush;
-            file_th<<std::flush;
-            file_pe<<std::flush;
-            
-		}
-        
         //print time count
-        if (time_of_strain!=0 && close(t, time_of_strain, dt/(10*time_of_strain))){
+      //  if (time_of_strain!=0 && close(t, time_of_strain, dt/(10*time_of_strain))){
             //Perform the shear here
-            cout<<"\nDEBUG: t = "<<t<<"; adding pre_strain of "<<pre_strain<<" um here";
-            net->update_delrx( pre_strain );
-            net->update_shear();
-        }
+      //      cout<<"\nDEBUG: t = "<<t<<"; adding pre_strain of "<<pre_strain<<" um here";
+      //      net->update_delrx( pre_strain );
+      //      net->update_shear();
+      //  }
 
-        if (osc_strain_flag && t >= time_of_dstrain){
-            d_strain = d_strain_amp * sin(2*pi*d_strain_freq * ( t - time_of_dstrain) );
-            net->update_delrx( pre_strain + d_strain );
-            net->update_d_strain( d_strain - prev_d_strain );
+        if (osc_strain_flag && t >= time_of_dstrain && count%n_bw_shear==0){
+ 	  d_strain = restart_strain + d_strain_amp*4*d_strain_freq*((t-time_of_dstrain) - 1/(d_strain_freq*2)*floor(2*(t-time_of_dstrain)*d_strain_freq + 0.5))*pow(-1,floor(2*(t-time_of_dstrain)*d_strain_freq + 0.5));
+	  //d_strain = d_strain_amp * sin(2*pi*d_strain_freq * ( t - time_of_dstrain) );
+            net->update_delrx( d_strain );
+            net->update_d_strain( d_strain - prev_d_strain);
             cout<<"\nDEBUG: t = "<<t<<"; adding d_strain of "<<(d_strain-prev_d_strain)<<" um here; total strain = "<<(pre_strain+d_strain);
             prev_d_strain = d_strain;
-        }
+	    total_strain = d_strain;
+      }
         
-        if (diff_strain_flag && t >= time_of_dstrain && count%n_bw_shear==0){
-            net->update_delrx( pre_strain + d_strain_amp );
-            net->update_d_strain( d_strain_amp );
-            pre_strain += d_strain_amp;
-            cout<<"\nDEBUG: t = "<<t<<"; adding d_strain of "<<d_strain_amp<<" um here; total strain = "<<pre_strain<<" um";
-        }
+       	if (diff_strain_flag && t >= time_of_dstrain && count%n_bw_shear==0){
+		 d_strain = restart_strain + d_strain_amp*d_strain_freq*(t - time_of_dstrain);
+		 net->update_delrx( d_strain );
+		 net->update_d_strain( d_strain - prev_d_strain );
+		 cout<<"\nDEBUG: t = "<<t<<"; adding d_strain of "<<(d_strain-prev_d_strain)<<" um here; total strain = "<<(pre_strain+d_strain);
+		 prev_d_strain = d_strain;
+		 total_strain = d_strain;
+       	}
+
+
+	// if (diff_strain_flag && t >= time_of_dstrain && count%n_bw_shear==0){
+	//  net->update_delrx( pre_strain + d_strain_amp );
+	//  net->update_d_strain( d_strain_amp );
+	//  pre_strain += d_strain_amp;
+	//  cout<<"\nDEBUG: t = "<<t<<"; adding d_strain of "<<d_strain_amp<<" um here; total strain = "<<pre_strain<<" um";
+	//  total_strain = pre_strain;
+	//}
 
         if (count%n_bw_stdout==0) {
 			cout<<"\nTime counts: "<<count;
@@ -470,7 +455,48 @@ int main(int argc, char* argv[]){
             myosins->print_ensemble_thermo();
         }
 
-        //update network
+
+	if (!diff_strain_flag && !osc_strain_flag){
+
+	  total_strain = 0;
+
+	}
+
+	//print to file                                                                                                               
+	if (t+dt/100 >= tinit && (count-unprinted_count)%n_bw_print==0) {
+
+	  if (t>tinit) time_str ="\n";
+	  time_str += "t = "+to_string(t);
+
+	  file_a << time_str<<"\tN = "<<to_string(net->get_nbeads());
+	  net->write_beads(file_a);
+
+	  file_l << time_str<<"\tN = "<<to_string(net->get_nsprings());
+	  net->write_springs(file_l);
+
+	  file_am << time_str<<"\tN = "<<to_string(myosins->get_nmotors());
+	  myosins->motor_write(file_am);
+
+	  file_pm << time_str<<"\tN = "<<to_string(crosslks->get_nmotors());
+	  crosslks->motor_write(file_pm);
+
+	  file_th << time_str<<"\tN = "<<to_string(net->get_nfilaments());
+	  net->write_thermo(file_th);
+
+	  file_pe << net->get_stretching_energy()<<"\t"<<net->get_bending_energy()<<"\t"<<
+	    myosins->get_potential_energy()<<"\t"<<crosslks->get_potential_energy()<<"\t"<<total_strain<<endl;
+
+	  file_a<<std::flush;
+	  file_l<<std::flush;
+	  file_am<<std::flush;
+	  file_pm<<std::flush;
+	  file_th<<std::flush;
+	  file_pe<<std::flush;
+
+	}
+
+
+	//update network
         net->update();//updates all forces, velocities and positions of filaments
 
         if ( ! quad_off_flag && count % quad_update_period == 0)
