@@ -248,7 +248,8 @@ bool motor::allowed_bind(int hd, array<int, 2> fl_idx){
 bool motor::attach_opt(int hd)
 {
     double mf_rand = rng_u();
-    int count = filament_network->get_num_attach(hx[hd], hy[hd]);
+    vector<array<int, 2>> *attach_list = filament_network->get_attach_list(hx[hd], hy[hd]);
+    int count = attach_list->size();
     assert(kon * count < 1.0);
     int i = floor(mf_rand / kon);
     assert(i >= 0);
@@ -257,7 +258,7 @@ bool motor::attach_opt(int hd)
         assert(remprob >= 0 && remprob < kon);
 
         // compute and get attachment point
-        array<int, 2> fl = filament_network->get_attach(hx[hd], hy[hd], i);
+        array<int, 2> fl = attach_list->at(i);
         filament *f = filament_network->get_filament(fl[0]);
         spring *s = f->get_spring(fl[1]);
         s->calc_intpoint(f->get_BC(), filament_network->get_delrx(), hx[hd], hy[hd]);

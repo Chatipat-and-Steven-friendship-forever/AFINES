@@ -36,8 +36,6 @@ filament_ensemble::~filament_ensemble(){
     for (int i = 0; i < s; i++){
         delete network[i];
     }
-    delete[] quad_count[0];
-    delete[] quad_count;
 }
 
 
@@ -67,96 +65,53 @@ void filament_ensemble::nlist_init_serial()
             springs_per_quad[x]->at(y) = new vector<array<int, 2> >();
         }
     }
-    quad_count = new int *[nq[0]];
-    quad_count[0] = new int[nq[0] * nq[1]];
-    for (int x = 0; x < nq[0]; x++) {
-        quad_count[x] = &quad_count[0][x * nq[1]];
-    }
 }
 
  
 void filament_ensemble::quad_update_serial()
 {
     int n_quads, net_sz = int(network.size());
-    vector<vector<array<int, 2> > > q;
-    int x, y;
+    vector<vector<array<int, 2>>> q;
 
     //initialize all quadrants to have no springs
-    for (x = 0; x < nq[0]; x++){
-        for (y = 0; y < nq[1]; y++){
+    for (int x = 0; x < nq[0]; x++){
+        for (int y = 0; y < nq[1]; y++){
             springs_per_quad[x]->at(y)->clear();
         }
     }
-    
+
     for (int f = 0; f < net_sz; f++){
         q = network[f]->get_quadrants();
         for (int l = 0; l < network[f]->get_nsprings(); l++){
             n_quads = int(q[l].size());
             for (int i = 0; i < n_quads; i++){
-                x = q[l][i][0];
-                y = q[l][i][1];
+                int x = q[l][i][0];
+                int y = q[l][i][1];
                 springs_per_quad[x]->at(y)->push_back({{f,l}});
-                
             }
         }
     }
 
-}
-
-// count the number of distinct springs in each quadrant
-//
-// since each spring has one attachment point per motor,
-// this is equivalent to the number of attachment points
-// for each attempt to attach to a filament
-//
-// the set is used to remove duplicates;
-// I'm pretty sure that there are none, though
-void filament_ensemble::update_counts()
-{
     if (check_dup_in_quad) {
-        set<array<int, 2>> fls;
         for (int x = 0; x < nq[0]; x++) {
             for (int y = 0; y < nq[1]; y++) {
-                quad_count[x][y] = 0;
                 vector<array<int, 2>> *quad = springs_per_quad[x]->at(y);
-                int n = quad->size();
-                for (int i = 0; i < n; i++) {
-                    array<int, 2> fl = quad->at(i);
-                    if (fls.find(fl) == fls.end()) {
-                        fls.insert(fl);
-                        quad_count[x][y] += 1;
-                    } else {
-                        cout << "Duplicates exist!" << endl;
-                    }
+                set<array<int, 2>> s(quad->begin(), quad->end());
+                if (s.size() != quad->size()) {
+                    cout << "Quadrant (" << x << ", " << y << ") contains duplicates!" << endl;
                 }
-                fls.clear();
-            }
-        }
-    } else {
-        for (int x = 0; x < nq[0]; x++) {
-            for (int y = 0; y < nq[1]; y++) {
-                quad_count[x][y] = springs_per_quad[x]->at(y)->size();
             }
         }
     }
+
 }
 
-// return the number of possible attachment points
-// for a motor head at (x, y)
-int filament_ensemble::get_num_attach(double x, double y)
+// return list of possible attachment points for motor head at (x, y)
+vector<array<int, 2>> *filament_ensemble::get_attach_list(double x, double y)
 {
     int mqx = coord2quad(fov[0], nq[0], x);
     int mqy = coord2quad(fov[1], nq[1], y);
-//    return quad_count[mqx][mqy];
-    return springs_per_quad[mqx]->at(mqy)->size();
-}
-
-// get spring index and compute intpoint
-array<int, 2> filament_ensemble::get_attach(double x, double y, int i)
-{
-    int mqx = coord2quad(fov[0], nq[0], x);
-    int mqy = coord2quad(fov[1], nq[1], y);
-    return springs_per_quad[mqx]->at(mqy)->at(i);
+    return springs_per_quad[mqx]->at(mqy);
 }
 
 //given a motor position, and a quadrant

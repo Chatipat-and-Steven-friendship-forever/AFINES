@@ -161,13 +161,8 @@ void motor_ensemble::motor_walk(double t)
 
     this->check_broken_filaments();
     int nmotors_sz = int(n_motors.size());
-    bool attached;
     //#pragma omp parallel for
-    
-    if (use_attach_opt) {
-        f_network->update_counts();
-    }
-    
+
     for (int i=0; i<nmotors_sz; i++) {
        
     //    if(i==0) cout<<"\nDEBUG: motor_walk: using "<<omp_get_num_threads()<<" cores";
