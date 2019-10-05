@@ -65,6 +65,11 @@ void filament_ensemble::nlist_init_serial()
             springs_per_quad[x]->at(y) = new vector<array<int, 2> >();
         }
     }
+    for (int f = 0; f < network.size(); f++) {
+        for (int l = 0; l < network[f]->get_nsprings(); l++) {
+            all_springs.push_back({f, l});
+        }
+    }
 }
 
  
@@ -109,9 +114,13 @@ void filament_ensemble::quad_update_serial()
 // return list of possible attachment points for motor head at (x, y)
 vector<array<int, 2>> *filament_ensemble::get_attach_list(double x, double y)
 {
-    int mqx = coord2quad(fov[0], nq[0], x);
-    int mqy = coord2quad(fov[1], nq[1], y);
-    return springs_per_quad[mqx]->at(mqy);
+    if (quad_off_flag) {
+        return &all_springs;
+    } else {
+        int mqx = coord2quad(fov[0], nq[0], x);
+        int mqy = coord2quad(fov[1], nq[1], y);
+        return springs_per_quad[mqx]->at(mqy);
+    }
 }
 
 //given a motor position, and a quadrant

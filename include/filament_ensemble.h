@@ -175,6 +175,7 @@ class filament_ensemble
         
         vector< vector < vector< array<int, 2 > >* > * > springs_per_quad;
         vector< vector < int >* > n_springs_per_quad;
+        vector<array<int, 2>> all_springs;
 
         bool check_dup_in_quad;
 
