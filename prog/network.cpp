@@ -504,8 +504,15 @@ int main(int argc, char* argv[]){
 	//update network
         net->update();//updates all forces, velocities and positions of filaments
 
-        if ( ! quad_off_flag && count % quad_update_period == 0)
+        if ( ! quad_off_flag && count % quad_update_period == 0) {
             net->quad_update_serial();
+            if (2 * std::max(a_m_cut, p_m_cut) + std::abs(net->get_delrx()) > net->get_fov()[0] / net->get_nq()[0]) {
+                cout << "\nQuadrant width is less than 2 * cut + delrx. Increase the grid factor." << std::flush;
+            }
+            if (2 * std::max(a_m_cut, p_m_cut) > net->get_fov()[1] / net->get_nq()[1]) {
+                cout << "\nQuadrant height is less than 2 * cut. Increase the grid factor." << std::flush;
+            }
+        }
 
         //update cross linkers
         if (static_cl_flag)

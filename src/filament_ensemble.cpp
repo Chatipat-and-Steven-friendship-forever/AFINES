@@ -419,6 +419,13 @@ double filament_ensemble::get_delrx(){
     return delrx;
 }
 
+array<double, 2> filament_ensemble::get_fov() {
+    return fov;
+}
+
+array<int, 2> filament_ensemble::get_nq() {
+    return nq;
+}
  
 double filament_ensemble::get_bead_friction(){
     
