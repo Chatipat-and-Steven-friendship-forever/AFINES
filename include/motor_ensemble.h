@@ -64,6 +64,10 @@ class motor_ensemble
         
         void kill_heads(int i);
 
+        void unbind_all_heads();
+
+        void revive_heads();
+
     private:
 
         double mld, gamma, tMove;

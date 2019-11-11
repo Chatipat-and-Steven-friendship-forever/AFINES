@@ -275,3 +275,22 @@ double motor_ensemble::get_potential_energy(){
 void motor_ensemble::print_ensemble_thermo(){
     cout<<"\nAll Motors\t:\tKE = "<<ke<<"\tPEs = "<<pe<<"\tPEb = "<<0<<"\tTE = "<<(ke+pe);
 }
+
+
+void motor_ensemble::unbind_all_heads()
+{
+    for (int i = 0; i < n_motors.size(); i++) {
+        n_motors[i]->detach_head(0);
+        n_motors[i]->detach_head(1);
+        n_motors[i]->kill_head(0);
+        n_motors[i]->kill_head(1);
+    }
+}
+
+void motor_ensemble::revive_heads()
+{
+    for (int i = 0; i < n_motors.size(); i++) {
+        n_motors[i]->revive_head(0);
+        n_motors[i]->revive_head(1);
+    }
+}

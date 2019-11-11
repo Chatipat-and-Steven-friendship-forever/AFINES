@@ -539,6 +539,11 @@ void motor::filament_update()
     if (state[1]==1) this->filament_update_hd(1, {{-force[0], -force[1]}});
 }
 
+void motor::detach_head(int hd)
+{
+    array<double, 2> hpos_new = generate_off_pos(hd);
+    this->detach_head(hd, hpos_new);
+}
 
 void motor::detach_head(int hd, array<double, 2> newpos)
 {
@@ -633,4 +638,9 @@ string motor::write()
         +  "\t" + std::to_string(disp[0]) + "\t" + std::to_string(disp[1]) 
         +  "\t" + std::to_string(f_index[0]) + "\t" + std::to_string(f_index[1]) 
         +  "\t" + std::to_string(l_index[0]) + "\t" + std::to_string(l_index[1]);
+}
+
+void motor::revive_head(int hd)
+{
+    state[hd] = 0;
 }

@@ -92,9 +92,13 @@ class motor
 
         array<double, 2> get_hy();
 
+        void detach_head(int hd);
+
         void detach_head(int hd, array<double, 2> pos);
 
         void detach_head_without_moving(int hd);
+
+        void revive_head(int hd);
         
         void update_pos_a_end(int hd, double pos);
 
