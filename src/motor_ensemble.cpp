@@ -171,9 +171,9 @@ void motor_ensemble::motor_walk(double t)
         if (t >= tMove){
             
             //Dynamics
-            if (s[0] == 0)
+            if (s[0] == 0 || s[0] == -2)
                 n_motors[i]->brownian_relax(0);
-            if (s[1] == 0)
+            if (s[1] == 0 || s[1] == -2)
                 n_motors[i]->brownian_relax(1);
             
             n_motors[i]->update_angle();
@@ -187,7 +187,7 @@ void motor_ensemble::motor_walk(double t)
                 } else {
                     n_motors[i]->attach(0);
                 }
-            } else {
+            } else if (s[0] != -2) {
                 n_motors[i]->step_onehead(0);
             }
 
@@ -197,7 +197,7 @@ void motor_ensemble::motor_walk(double t)
                 } else {
                     n_motors[i]->attach(1);
                 }
-            } else  {
+            } else  if (s[1] != -2) {
                 n_motors[i]->step_onehead(1);
             }
 
@@ -282,8 +282,8 @@ void motor_ensemble::unbind_all_heads()
     for (int i = 0; i < n_motors.size(); i++) {
         n_motors[i]->detach_head(0);
         n_motors[i]->detach_head(1);
-        n_motors[i]->kill_head(0);
-        n_motors[i]->kill_head(1);
+        n_motors[i]->deactivate_head(0);
+        n_motors[i]->deactivate_head(1);
     }
 }
 

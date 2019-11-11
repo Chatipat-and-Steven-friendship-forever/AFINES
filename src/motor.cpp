@@ -407,6 +407,10 @@ void motor::kill_head(int hd)
     state[hd] = -1;
 }
 
+void motor::deactivate_head(int hd)
+{
+    state[hd] = -2;
+}
 
 void motor::relax_head(int hd)
 {

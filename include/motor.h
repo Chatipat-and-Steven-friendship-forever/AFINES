@@ -99,6 +99,8 @@ class motor
         void detach_head_without_moving(int hd);
 
         void revive_head(int hd);
+
+        void deactivate_head(int hd);
         
         void update_pos_a_end(int hd, double pos);
 
