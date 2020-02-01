@@ -111,7 +111,11 @@ class filament
 
         double get_stretching_energy();
 
-        double get_kinetic_energy();
+ 	double get_kinetic_energy(); 
+
+        //double get_kinetic_energy_bend();
+
+	//double get_kinetic_energy_stretch(); 
         
         double get_potential_energy();
         
@@ -121,13 +125,31 @@ class filament
     
         void print_thermo();
         
+        void set_l0_max(double);
+        
+        void set_nsprings_max(int);
+        
+        void set_l0_min(double);
+        
+        void set_kgrow(double);
+        
+        void set_lgrow(double);
+        
         array<double,2> get_bead_position(int bead);
+
+        void update_length();
+
+        void grow(double);
+
+        void shrink(double);
 
     protected:
         
         double kb, temperature, dt, fracture_force, fracture_force_sq, kinetic_energy, damp, kToverLp, bd_prefactor, ubend;
         double gamma, max_shear, delrx, y_thresh;
-
+        double spring_l0, l0_max, l0_min, kgrow, lgrow;
+        int nsprings_max;
+        
         array<double,2> fov;
         array<int,2> nq;
         vector<array<double, 2> > prv_rnds;

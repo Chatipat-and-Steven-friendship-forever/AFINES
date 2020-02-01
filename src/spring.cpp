@@ -37,9 +37,12 @@ spring::spring(double len, double stretching_stiffness, double max_ext_ratio, fi
 
     force = {{0,0}};
     intpoint = {{0,0}};
-    llensq = l0*l0;
+    point = {{0,0}}; 
+    
     llen = l0;
+    llensq = l0*l0;
 }
+
 spring::~spring(){ 
 };
 
@@ -129,6 +132,10 @@ double spring::get_kl(){
     return kl;
 }
 
+void spring::set_l0(double myl0){
+    l0 = myl0;
+}
+
 double spring::get_l0(){
     return l0;
 }
@@ -214,8 +221,6 @@ void spring::quad_update(string bc, double delrx){
         for(int ycoord : ycoords){
             quad.push_back({{xcoord, ycoord}});
         }
-
-
 }
 
 //shortest(perpendicular) distance between an arbitrary point and the spring
@@ -253,6 +258,111 @@ void spring::calc_intpoint(string bc, double delrx, double xp, double yp)
     }
 }
 
+double spring::get_r_c(string bc, double delrx, double x, double y)
+{
+    double l2 = disp[0]*disp[0] + disp[1]*disp[1]; 
+    double r_c; 
+    double dx, dy; 
+    array <double, 2> pos; 
+    array <double, 2> proj; 
+	
+    if(l2 == 0)
+    {
+        point = {{hx[0], hy[0]}};
+	pos = {{x,y}};
+        dx = pos[0] - point[0];
+        dy = pos[1] - point[1];
+        r_c = dist_bc(bc, dx, dy, fov[0], fov[1], delrx);  
+    }
+    else
+    {
+        double tp = dot_bc(bc, x-hx[0], y-hy[0], hx[1]-hx[0], hy[1]-hy[0], fov[0], fov[1], delrx)/l2;
+
+        if(tp < 0)
+        {
+            point = {{hx[0], hy[0]}};
+            pos = {{x,y}};
+            dx = pos[0] - point[0];
+            dy = pos[1] - point[1];
+            r_c = dist_bc(bc, dx, dy, fov[0], fov[1], delrx);
+        }
+        else if(tp > 1.0)
+        {
+            point = {{hx[1], hy[1]}};
+            pos = {{x,y}};
+            dx = pos[0] - point[0];
+            dy = pos[1] - point[1];
+            r_c = dist_bc(bc, dx, dy, fov[0], fov[1], delrx);
+        }
+        else
+        {
+            proj = {{hx[0] + tp*disp[0], hy[0] + tp*disp[1]}};
+            point = pos_bc(bc, delrx, 0, fov, {{0,0}}, proj);
+            pos = {{x,y}}; 
+            dx = pos[0] - point[0];
+            dy = pos[1] - point[1];
+            r_c = dist_bc(bc, dx, dy, fov[0], fov[1], delrx);
+        }
+
+        //cout << "r_c: " << r_c << endl; 
+	//cout << "tp: " << tp << endl; 
+	//return r_c; 
+    }
+    return r_c; 
+}
+
+bool spring::get_line_intersect(string bc, double delrx, spring *l2)
+{
+    //Reference to Stack Overflow entry by iMalc on Feb 10, 2013
+    //Web Address: https://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
+
+    //double dx1, dx2, dy1, dy2, dx12, 
+    double dx12, dy12, denom, s_num, t_num;
+    array <double,2> disp1, disp2, disp12, hx2, hy2;  
+    bool denomPos; 
+ 
+    //dx1 = hx[1]-hx[0];  
+    //dy1 = hy[1]-hy[0]; 
+    //dx2 = hx2[1]-hx2[0]; 
+    //dy2 = hy2[1]-hy2[0]; 
+
+    disp1 = this->get_disp(); 
+    disp2 = l2->get_disp(); 
+
+    //disp1 = rij_bc(bc, dx1, dy1, fov[0], fov[1], delrx); 
+    //disp2 = rij_bc(bc, dx2, dy2, fov[0], fov[1], delrx); 
+
+    hx2 = l2->get_hx();  
+    hy2 = l2->get_hy(); 
+
+    dx12 = hx[0]-hx2[0]; 
+    dy12 = hy[0]-hy2[0]; 
+
+    disp12 = rij_bc(bc, dx12, dy12, fov[0], fov[1], delrx); 
+
+    denom  = (disp1[0]*disp2[1] - disp1[1]*disp2[0]); 
+    if(denom == 0){return false;}
+    denomPos = denom > 0;
+
+    s_num = disp1[0]*disp12[1] - disp1[1]*disp12[0];   
+    t_num = disp2[0]*disp12[1] - disp2[1]*disp12[0]; 
+
+    if((s_num < 0) == denomPos){ return false; } 
+    if((t_num < 0) == denomPos){ return false; }
+
+    if(((s_num > denom) == denomPos) || ((t_num > denom) == denomPos)){ return false; }
+
+    //Else Collision have been detected, the filaments do intersect!
+    else{ return true; } 
+     
+}
+
+array <double, 2> spring::get_point()
+{
+    //this->calc_r_c(bc,delrx,x,y);
+    return point; 
+}
+
 vector<array<int, 2> > spring::get_quadrants()
 {
     return quad;
@@ -277,3 +387,54 @@ double spring::get_stretching_energy_fene(string bc, double shear_dist)
         return 0.25*kl*ext*ext*(max_ext/eps_ext);
     
 }
+
+void spring::set_aindex(array<int,2> aidx)
+{
+    aindex = aidx;
+}
+
+
+double spring::get_max_ext()
+{
+    return max_ext;
+}
+
+array<int, 2> spring::get_aindex(){
+    return aindex;
+}
+
+// functions for growing
+void spring::inc_aindex()
+{
+    aindex = {{aindex[0]+1, aindex[1]+1}};
+}
+
+void spring::add_mot(motor * mot, int hd)
+{
+    mots[mot] = hd;
+}
+
+void spring::remove_mot(motor * mot)
+{
+    //cout<<"\nDEBUG: trying to remove motor";
+///    cout<<"\nDEBUG: removing mot "<<mot<<" from mots on spring "<<this;
+    mots.erase(mot);
+}
+
+map<motor *, int> & spring::get_mots()
+{
+    map<motor *, int> &ptr = mots;
+    return ptr;
+}
+/*
+int spring::get_n_mots(){
+    return int(mots.size());
+}
+
+motor * spring::get_mot(int i){
+    return mots[i];
+}
+
+int spring::get_mot_hd(int i){
+    return mot_hds[i];
+}*/

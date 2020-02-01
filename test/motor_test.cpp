@@ -7,11 +7,11 @@ BOOST_AUTO_TEST_CASE( constructors_test )
 {
 
     double tol = 0.001;
-    double bead_density = 0;
+    double bead_density = 1;
     array<double, 2> fov = {{50,50}};
-    array<int, 2> nq = {{2,2}}, state = {{0,0}}, findex = {{0,0}}, lindex = {{0, 0}};
+    array<int, 2> nq = {{2,2}}, state = {{0,0}}, findex = {{0,0}}, lindex = {{-1, -1}};
     vector<array<double, 3> > pos_sets;
-    int nbead = 2;
+    int nbead = 3;
 
     double dt = 1, temp = 0, vis = 0;
     string bc = "REFLECTIVE";
@@ -26,10 +26,11 @@ BOOST_AUTO_TEST_CASE( constructors_test )
     
     
     filament_ensemble * f = new filament_ensemble(bead_density, fov, nq, dt, temp, 
-            bead_rad, vis, nbead, spring_len, pos_sets, stretching, 1, bending, frac_force, bc, seed);
+            bead_rad, vis, nbead, spring_len, pos_sets, stretching, 1, bending, frac_force, bc, seed, 0, 0);
+    cout<<"\nDEBUG: nfilaments = "<<f->get_nfilaments();
     motor  m = motor(array<double, 3>{{1, 1, 3.1416/2}}, motor_len, f, state, 
             findex, lindex, fov, dt, temp, v0, mstiff, 1, kon, koff, kend, fstall, rcut, vis, bc);
-
+    cout<<"\nDEBUG: created motors";
     BOOST_CHECK_CLOSE( m.get_hx()[0],  1, tol);                   // 1 //
     BOOST_CHECK_CLOSE( m.get_hx()[1],  1, tol);                   // 1 //
     BOOST_CHECK_CLOSE( m.get_hy()[0], 0.5, tol);                // 1 //
@@ -37,19 +38,23 @@ BOOST_AUTO_TEST_CASE( constructors_test )
     BOOST_CHECK_EQUAL( m.get_states()[0], 0);
     BOOST_CHECK_EQUAL( m.get_states()[1], 0);
     
-    bead_density = nbead/(fov[0]*fov[1]);
-    pos_sets.push_back({{-0.5,0,0}});
+    //delete f;
 
-    delete f;
+    //bead_density = nbead/(fov[0]*fov[1]);
+    //pos_sets.push_back({{-0.5,0,0}});
 
-    f = new filament_ensemble(bead_density, fov, nq, dt, temp, bead_rad, vis, nbead, spring_len, pos_sets, stretching, 1, bending, frac_force, bc, seed);
+    //f = new filament_ensemble(bead_density, fov, nq, dt, temp, bead_rad, vis, nbead, spring_len, pos_sets, stretching, 1, bending, frac_force, bc, seed, 0, 0);
     state = {{1,0}};
+    lindex = {{0,-1}};
+    f->get_filament(0)->get_spring(0);
+    cout<<"\nDEBUG: got to line 50";
 
     motor m2 = motor(array<double, 3>{{1, 1, 0}}, motor_len, f, state, findex, lindex, fov, dt, temp, v0, mstiff, 1, kon, koff, kend, fstall, rcut, vis, bc);
     BOOST_CHECK_EQUAL( m2.get_states()[0], 1);
     BOOST_CHECK_EQUAL( m2.get_states()[1], 0);
     
     state = {{0,1}};
+    lindex = {{-1,0}};
     motor m3 = motor(array<double, 3>{{1, 1, 0}}, motor_len, f, state, findex, lindex, fov, dt, temp, v0, mstiff, 1, kon, koff, kend, fstall, rcut, vis, bc);
     BOOST_CHECK_EQUAL( m3.get_states()[0], 0);
     BOOST_CHECK_EQUAL( m3.get_states()[1], 1);
@@ -81,7 +86,7 @@ BOOST_AUTO_TEST_CASE( step_onehead )
     double frac_force = 0;
     
     pos_sets.push_back({{-0.4,0,0}});
-    filament_ensemble * f = new filament_ensemble(bead_density, fov, nq, dt, temp, bead_rad, vis, nbead, spring_len, pos_sets, stretching, 1, bending, frac_force, bc, seed);
+    filament_ensemble * f = new filament_ensemble(bead_density, fov, nq, dt, temp, bead_rad, vis, nbead, spring_len, pos_sets, stretching, 1, bending, frac_force, bc, seed, 0, 0);
 
     //MOTOR
     double mx = 0.5, my = 0.5, mang = pi/2, mlen = 1;
@@ -109,7 +114,7 @@ BOOST_AUTO_TEST_CASE( step_onehead )
     BOOST_CHECK_EQUAL(m.get_pos_a_end()[0], 0);
     BOOST_CHECK_CLOSE(m.get_hx()[0], mx - 0.5*mlen*cos(mang), tol);
     BOOST_CHECK_CLOSE(m.get_hy()[0], my - 0.5*mlen*sin(mang), tol);
-
+/*
     // IF no detach
     // (a) new position is correct
     koff = -1;
@@ -126,7 +131,7 @@ BOOST_AUTO_TEST_CASE( step_onehead )
     BOOST_CHECK_CLOSE(m.get_pos_a_end()[0], 0.35, tol);
     BOOST_CHECK_CLOSE(m.get_hx()[0], 0.25, tol);
     BOOST_CHECK_CLOSE(m.get_hy()[0], 0, tol);
-
+*/
     delete f;
 }
 
@@ -152,7 +157,7 @@ BOOST_AUTO_TEST_CASE( update_pos_a_end )
     double frac_force = 0;
     
     pos_sets.push_back({{0,0,0}});
-    filament_ensemble * f = new filament_ensemble(bead_density, fov, nq, dt, temp, bead_rad, vis, nbead, spring_len, pos_sets, stretching, 1, bending, frac_force, bc, seed);
+    filament_ensemble * f = new filament_ensemble(bead_density, fov, nq, dt, temp, bead_rad, vis, nbead, spring_len, pos_sets, stretching, 1, bending, frac_force, bc, seed, 0, 0);
 
     //MOTOR
     double mx = 0.125, my = 0.5, mang = pi/2, mlen = 1;
@@ -218,7 +223,7 @@ BOOST_AUTO_TEST_CASE( update_pos_a_end )
     //Test 2 : Motor on filament facing left, so, moves right
     pos_sets.clear();
     pos_sets.push_back({{0,0,pi}});
-    f = new filament_ensemble(bead_density, fov, nq, dt, temp, bead_rad, vis, nbead, spring_len, pos_sets, stretching, 1, bending, frac_force, bc, seed);
+    f = new filament_ensemble(bead_density, fov, nq, dt, temp, bead_rad, vis, nbead, spring_len, pos_sets, stretching, 1, bending, frac_force, bc, seed, 0, 0);
 
     //MOTOR
     mx = -0.125;
@@ -283,7 +288,7 @@ BOOST_AUTO_TEST_CASE( update_pos_a_end )
     kon = 0, koff = 2, kend = 2; 
     pos_sets.clear();
     pos_sets.push_back({{0,0,0}});
-    f = new filament_ensemble(bead_density, fov, nq, dt, temp, bead_rad, vis, nbead, spring_len, pos_sets, stretching, 1, bending, frac_force, bc, seed);
+    f = new filament_ensemble(bead_density, fov, nq, dt, temp, bead_rad, vis, nbead, spring_len, pos_sets, stretching, 1, bending, frac_force, bc, seed, 0, 0);
 
     m = motor(array<double, 3>{{mx, my, mang}}, mlen, f, state, findex, lindex, fov, dt, temp, v0, mstiff, 1, kon, koff, kend, fstall, rcut, vis, bc);
 
@@ -364,7 +369,7 @@ BOOST_AUTO_TEST_CASE( attach )
     //pos_sets.push_back({{1,1,pi/2}});
     pos_sets.push_back({{0,0,0}});
     //pos_sets.push_back({{-2,3,pi}});
-    filament_ensemble * f = new filament_ensemble(bead_density, fov, nq, dt, temp, bead_rad, vis, nbead, spring_len, pos_sets, stretching, 1, bending, frac_force, bc, seed);
+    filament_ensemble * f = new filament_ensemble(bead_density, fov, nq, dt, temp, bead_rad, vis, nbead, spring_len, pos_sets, stretching, 1, bending, frac_force, bc, seed, 0, 0);
     f->quad_update_serial(); 
     //MOTOR
     double mx = 2.35, my = 0.5, mang = pi/2, mlen = 1;
@@ -427,7 +432,7 @@ BOOST_AUTO_TEST_CASE( step_onehead_periodic )
     bead_sets.push_back(pos1);
     bead_sets.push_back(pos2);
     bead_sets.push_back(pos3);
-    filament_ensemble * f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc);
+    filament_ensemble * f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc, 0, 0);
 //    cout<<f->get_filament(0)->to_string();
     //MOTOR
     double mx = -24.875, my = 0.5, mang = pi/2, mlen = 1;
@@ -500,7 +505,7 @@ BOOST_AUTO_TEST_CASE( attach_periodic )
     bead_sets.push_back(pos2);
     bead_sets.push_back(pos3);
     bead_sets.push_back(pos4);
-    filament_ensemble * f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc);
+    filament_ensemble * f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc, 0, 0);
     f->quad_update_serial(); 
     
     //MOTOR
@@ -571,7 +576,7 @@ BOOST_AUTO_TEST_CASE( attach_twoheads_periodic )
     bead_sets.push_back(pos7);
     bead_sets.push_back(pos8);
     
-    filament_ensemble * f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc);
+    filament_ensemble * f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc, 0, 0);
     f->quad_update_serial(); 
     //cout<<f->get_filament(0)->to_string(); 
     //cout<<f->get_filament(1)->to_string(); 
@@ -672,7 +677,7 @@ BOOST_AUTO_TEST_CASE( step_twoheads )
     bead_sets.push_back(pos7);
     bead_sets.push_back(pos8);
     
-    filament_ensemble * f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc);
+    filament_ensemble * f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc, 0, 0);
     f->quad_update_serial(); 
     //cout<<f->get_filament(0)->to_string(); 
     //cout<<f->get_filament(1)->to_string(); 
@@ -757,7 +762,7 @@ BOOST_AUTO_TEST_CASE( force_attached )
     bead_sets.push_back(pos7);
     bead_sets.push_back(pos8);
     
-    filament_ensemble * f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc);
+    filament_ensemble * f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc, 0, 0);
     f->quad_update_serial(); 
     //cout<<f->get_filament(0)->to_string(); 
     //cout<<f->get_filament(1)->to_string(); 
@@ -836,7 +841,7 @@ BOOST_AUTO_TEST_CASE( dead_head )
     bead_sets.push_back(pos2);
     bead_sets.push_back(pos3);
     bead_sets.push_back(pos4);
-    filament_ensemble * f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc);
+    filament_ensemble * f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc, 0, 0);
     f->quad_update_serial(); 
     
     //MOTOR
@@ -968,7 +973,7 @@ BOOST_AUTO_TEST_CASE( dead_head_upside_down )
     bead_sets.push_back(pos2);
     bead_sets.push_back(pos3);
     bead_sets.push_back(pos4);
-    filament_ensemble * f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc);
+    filament_ensemble * f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc, 0, 0);
     f->quad_update_serial(); 
     
     //MOTOR
@@ -1071,7 +1076,7 @@ BOOST_AUTO_TEST_CASE( dead_head_bwd )
     bead_sets.push_back(pos2);
     bead_sets.push_back(pos3);
     bead_sets.push_back(pos4);
-    filament_ensemble * f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc);
+    filament_ensemble * f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc, 0, 0);
     f->quad_update_serial(); 
     
     //MOTOR
@@ -1201,7 +1206,7 @@ BOOST_AUTO_TEST_CASE( dead_head_bwd_upside_down )
     bead_sets.push_back(pos2);
     bead_sets.push_back(pos3);
     bead_sets.push_back(pos4);
-    filament_ensemble * f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc);
+    filament_ensemble * f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc, 0, 0);
     f->quad_update_serial(); 
     
     //MOTOR
@@ -1309,7 +1314,7 @@ BOOST_AUTO_TEST_CASE( attach_difft_spots )
         pos = {{double(i), 0, bead_rad, 0}};
         bead_sets.push_back(pos);
     }
-    filament_ensemble * f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc);
+    filament_ensemble * f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc, 0, 0);
     f->quad_update_serial(); 
     
     //attachment
@@ -1446,7 +1451,7 @@ BOOST_AUTO_TEST_CASE( attach_difft_spots_rig )
     bead_sets.push_back(pos1);
     bead_sets.push_back(pos2);
     
-    filament_ensemble * f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc);
+    filament_ensemble * f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc, 0, 0);
     f->quad_update_serial(); 
     cout<<f->get_filament(0)->to_string();
     
@@ -1529,7 +1534,7 @@ BOOST_AUTO_TEST_CASE( attach_two_options )
     bead_sets.push_back(pos3);
     bead_sets.push_back(pos4);
     
-    filament_ensemble * f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc);
+    filament_ensemble * f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc, 0, 0);
     f->quad_update_serial(); 
 //    cout<<f->get_filament(0)->to_string();
     
@@ -1564,7 +1569,7 @@ BOOST_AUTO_TEST_CASE( attach_two_options )
     bead_sets.push_back(pos3);
     bead_sets.push_back(pos4);
     
-    f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc);
+    f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc, 0, 0);
     f->quad_update_serial(); 
     
     num_attached[0]=0;
@@ -1608,7 +1613,7 @@ BOOST_AUTO_TEST_CASE( brownian_attach)
     bead_sets.push_back(pos3);
     bead_sets.push_back(pos4);
     
-    filament_ensemble * f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc);
+    filament_ensemble * f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc, 0, 0);
     f->quad_update_serial(); 
 //    cout<<f->get_filament(0)->to_string();
     
@@ -1643,7 +1648,7 @@ BOOST_AUTO_TEST_CASE( brownian_attach)
     bead_sets.push_back(pos3);
     bead_sets.push_back(pos4);
     
-    f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc);
+    f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc, 0, 0);
     f->quad_update_serial(); 
     
     num_attached[0]=0;
@@ -1687,7 +1692,7 @@ BOOST_AUTO_TEST_CASE( motor_slow_down_stall )
         bead_sets.push_back(pos);
     }
 
-    filament_ensemble * f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc);
+    filament_ensemble * f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc, 0, 0);
     f->quad_update_serial(); 
     
     //MOTOR
@@ -1749,7 +1754,7 @@ BOOST_AUTO_TEST_CASE( motor_slow_down_stall )
         bead_sets.push_back(pos);
     }
 
-    f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc);
+    f = new filament_ensemble(bead_sets, fov, nq, dt, temp, vis, spring_len, stretching, 1, bending, frac_force, bc, 0, 0);
     f->quad_update_serial(); 
     mx = 14.75;
     m = motor(array<double, 3>{{mx, my, mang}}, mlen, f, state, findex, lindex, 
@@ -1798,7 +1803,7 @@ BOOST_AUTO_TEST_CASE( attach_detach )
     double frac_force = 0;
     
     pos_sets.push_back({{0,0,0}});
-    filament_ensemble * f = new filament_ensemble(bead_density, fov, nq, dt, temp, bead_rad, vis, nbead, spring_len, pos_sets, stretching, 1, bending, frac_force, bc, seed);
+    filament_ensemble * f = new filament_ensemble(bead_density, fov, nq, dt, temp, bead_rad, vis, nbead, spring_len, pos_sets, stretching, 1, bending, frac_force, bc, seed, 0, 0);
     f->quad_update_serial(); 
     
     //MOTOR

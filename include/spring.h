@@ -19,7 +19,7 @@ class filament;
 //=====================================
 //included dependences
 #include "globals.h"
-
+#include "motor.h"
 //=====================================
 //spring class
 class spring
@@ -66,6 +66,8 @@ class spring
         bool is_similar(const spring& that);    
 
         void update_force(string bc, double shear_dist);
+
+      	//double get_kinetic_energy(); 
         
         void update_force_fraenkel_fene(string bc, double shear_dist);
         
@@ -75,7 +77,9 @@ class spring
 
         array<double,2> get_force();
 
-        void set_aindex1(int i);
+        void set_aindex(array<int,2> idx);
+        
+        void set_l0(double myl0);
         
         double get_distance_sq(string bc, double shear_dist, double xp, double yp);
 
@@ -85,6 +89,14 @@ class spring
         array<double,2> get_intpoint();
 
         void calc_intpoint(string bc, double shear_dist, double xp, double yp);
+ 
+	//void calc_r_c(string bc, double delrx, double x, double y); 
+
+    	bool get_line_intersect(string bc, double delrx, spring *l2); 
+        
+        double get_r_c(string bc, double delrx, double x, double y); 
+
+        array<double,2> get_point(); 
         
         vector<array<int,2> > get_quadrants();
        
@@ -95,18 +107,46 @@ class spring
         array<double, 2> get_disp();
         
         array<double, 2> get_neg_disp();
+        
+        double get_max_ext();
+        
+        void inc_aindex();
 
+        void set_mots(map<int, int>* mymots);
+
+        void set_xlinks(map<int, int>* myxlinks);
+        
+        map<int, int> * get_xlinks();
+    
+        void update_length();
+        
+        // stuff for growing
+        void add_mot(motor * mot, int hd);
+
+        void remove_mot(motor * mot);
+
+        int get_n_mots();
+
+        motor * get_mot(int i);
+        
+        int get_mot_hd(int i);
+        
+        array<int,2> get_aindex();
+        
+        map<motor *, int> & get_mots();
     protected:
 
-        double xcm, ycm, l0, kl, max_ext, eps_ext, llen, llensq;//, force;
+        double xcm, ycm, l0, kl, max_ext, eps_ext, llen, llensq, r_c;//, force;
        
         array<double,2> fov, hx, hy;
-        array<double, 2> disp, force, intpoint, direc;
+        array<double,2> disp, force, intpoint, direc, point;
 
         array<int, 2> nq, half_nq, aindex;
          
         filament *fil;
         
         vector< array<int,2> > quad; //vector of two vectors(x and y quadrants) of integers
+
+        map<motor *, int> mots;
 };
 #endif

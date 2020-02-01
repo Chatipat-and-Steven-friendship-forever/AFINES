@@ -360,6 +360,10 @@ template <typename T> int sgn(T val){
     return (T(0) < val) - (val < T(0));
 }
 
+int mysgn(double d){
+    return d < 0 ? -1 : 1;
+}
+
 vector<int> int_range(int lo, int hi)
 {
     vector<int> out;
@@ -584,9 +588,9 @@ int coord2quad(double fov, int nq, double coord)
         return q;
 }
 
-double angBC(double ang)
+double angBC(double ang, double max)
 {
-    return ang - 2*pi*floor(ang / (2*pi) + 0.5);
+    return ang - max*floor(ang / max + 0.5);
 }
 
 std::string quads_error_message(std::string title, vector<array<int, 2> > equads, vector< array<int, 2> > aquads)

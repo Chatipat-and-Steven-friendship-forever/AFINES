@@ -30,14 +30,14 @@ class filament_ensemble
                 array<double,2> myfov, array<int,2> mynq, double delta_t, double temp,
                 double rad, double vis, double spring_len, vector<array<double, 3> > pos_sets, double stretching, double ext, double bending, 
                 double frac_force, string bc, double seed, bool check_dup_in_quad_);
-
+        
         filament_ensemble(double density, array<double,2> myfov, array<int, 2> mynq, double delta_t, double temp, 
                 double len, double vis, int nbead,
                 double spring_len, vector<array<double, 3> > pos_sets, double stretching, double ext, double bending, double frac_force, 
-                string bc, double seed, bool check_dup_in_quad_);
+                string bc, double seed, double RMAX, double A, bool check_dup_in_quad_);
         
         filament_ensemble(vector< vector<double> > beads, array<double,2> myfov, array<int,2> mynq, double delta_t, double temp,
-                double vis, double spring_len, double stretching, double ext, double bending, double frac_force, string bc, bool check_dup_in_quad_); 
+                double vis, double spring_len, double stretching, double ext, double bending, double frac_force, string bc, double RMAX, double A, bool check_dup_in_quad_); 
         
         ~filament_ensemble();
         
@@ -92,6 +92,10 @@ class filament_ensemble
         double get_stretching_energy();
         
         double get_bending_energy();
+
+        double get_exv_energy();
+        
+        double get_kinetic_energy_vir(); 
         
         int get_nbeads();
         
@@ -120,6 +124,14 @@ class filament_ensemble
         void update_positions_range(int lo, int hi);
         
         void update_forces(int fil, int bead, double f2, double f3);
+
+        void update_spring_forces(int f); 
+
+        void update_spring_forces_from_quads(); 
+
+        void update_force_between_filaments(double n1, double l1, double n2, double l2); 
+
+        void update_excluded_volume(int f); 
 
         void write_beads(ofstream& fout);
         
@@ -162,14 +174,22 @@ class filament_ensemble
         void update_energies();
         
         void turn_quads_off();
-    
+        
+        void set_growing(double, double, double, double, int);
+
     protected:
 
         double t, dt, temperature, spring_rest_len, visc, min_time;
         double gamma, shear_stop, shear_dt, shear_speed, delrx;
-        double max_springs_per_quad_per_filament, max_springs_per_quad; 
+        int nsprings_per_fil_max;
+        
         bool straight_filaments = false, quad_off_flag;
-        double pe_stretch, pe_bend, ke;
+        double pe_stretch, pe_bend, pe_exv, ke_vir;
+        string BC;
+        double rmax; 
+        double kexv;  
+
+        /* Here above is our excluded volume constant */
 
         array<double,2> fov, view;
         array<int, 2> nq, half_nq;

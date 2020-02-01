@@ -19,9 +19,10 @@
 //=====================================
 //included dependences
 #include "motor.h"
+#include "spacer.h"
 
 //motor ensemble class
-
+template <class motor_type>
 class motor_ensemble
 {
     public:
@@ -38,6 +39,8 @@ class motor_ensemble
                 double fstall, double rcut,
                 double vis, string BC, bool use_attach_opt_); 
         
+        motor_ensemble();
+        
         ~motor_ensemble();
 
         int get_nmotors();
@@ -52,31 +55,53 @@ class motor_ensemble
         
         double get_potential_energy();
 
+        double get_kinetic_energy(); 
+
         void motor_write(ostream& fout);
+        
+        void motor_write_doubly_bound(ostream& fout);
 
         void print_ensemble_thermo();
         
         void motor_tension(ofstream& fout);
 
-        void add_motor(motor * m);
+        void add_motor(motor_type * m);
 
         void set_shear(double g);
         
         void kill_heads(int i);
+        
+        void set_binding_two(double, double, double);
 
         void unbind_all_heads();
 
         void revive_heads();
 
-    private:
+    protected:
 
         double mld, gamma, tMove;
         double ke, pe, v;
 
         array<double, 2> fov;
         filament_ensemble *f_network;
-        vector<motor *> n_motors;  
         bool use_attach_opt;
+    
+        vector<motor_type *> n_motors;  
+};
+
+class spacer_ensemble : public motor_ensemble<spacer>
+{
+    public:
+        using motor_ensemble<spacer>::motor_ensemble;    
+        void set_bending(double, double);
+
+};
+
+class xlink_ensemble : public motor_ensemble<motor>
+{
+    public:
+        using motor_ensemble<motor>::motor_ensemble;    
+
 };
 
 #endif
