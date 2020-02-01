@@ -65,7 +65,7 @@ void filament_ensemble::nlist_init_serial()
             springs_per_quad[x]->at(y) = new vector<array<int, 2> >();
         }
     }
-    for (int f = 0; f < network.size(); f++) {
+    for (int f = 0; f < int(network.size()); f++) {
         for (int l = 0; l < network[f]->get_nsprings(); l++) {
             all_springs.push_back({f, l});
         }
