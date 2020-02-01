@@ -57,8 +57,7 @@ void bead::update_force(double f1, double f2)
         force[0]+=f1;
         force[1]+=f2;
     }else{
-        cout<<"\nENCOUNTERED INFINITE FORCE; PROGRAM ABORTING\n";
-        abort();
+        throw std::runtime_error("Encountered infinite force.");
     }
 }
 

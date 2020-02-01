@@ -307,9 +307,7 @@ bead * filament::get_bead(int i)
     }
     catch (int e)
     {
-        cout<<"\nDEBUG: an exception occured while returning the beads[ "<<i<<"]";
-        bead * a;
-        return a;
+        throw std::runtime_error("An exception occurred while returning bead " + std::to_string(i) + ".");
     }
 }
 

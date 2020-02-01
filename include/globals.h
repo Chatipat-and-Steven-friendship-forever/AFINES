@@ -18,7 +18,6 @@
 
 //=====================================
 //included dependences
-#include <iostream> //std::cout
 #include <boost/algorithm/string.hpp>
 #include <boost/range/irange.hpp>
 #include <boost/range/join.hpp>
@@ -28,25 +27,24 @@
 #include <boost/filesystem.hpp>
 #undef BOOST_NO_CXX11_SCOPED_ENUMS
 
-//#include "iomanip"
-#include <math.h>
-#include "fstream"
-#include "string"
-#include "stdint.h"
-#include <stdlib.h>
-#include "vector"
-#include "array"
-#include <stdio.h>
-#include <array>
-#include <map>
-#include <unordered_map>
 #include <algorithm> //std::for_each
-#include <unordered_set>
-#include <set>
-#include <limits>
+#include <array>
+#include <cmath>
 #include <cstddef>
-// #include <omp.h>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <fstream>
+#include <iostream> //std::cout
+#include <limits>
+#include <map>
 #include <random>
+#include <set>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 using namespace std;
 namespace fs = boost::filesystem;
