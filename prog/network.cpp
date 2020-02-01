@@ -84,7 +84,7 @@ int main(int argc, char* argv[]){
     bool shear_motor_flag;
 
     //Options allowed only on command line
-    po::options_description generic("Generic options");
+    po::options_description generic("Command Line Only Options");
     generic.add_options()
         ("version, v", "print version string")
         ("help", "produce help message")
@@ -92,7 +92,7 @@ int main(int argc, char* argv[]){
         ;
 
     //Options allowed in a config file
-    po::options_description config("Configuration");
+    po::options_description config("Configuration Options");
     config.add_options()
         
         ("xrange", po::value<double>(&xrange)->default_value(10), "size of cell in horizontal direction (um)")
@@ -199,28 +199,18 @@ int main(int argc, char* argv[]){
         ("use_attach_opt", po::value<bool>(&use_attach_opt)->default_value(false), "flag to use optimized attachment point search")
         ; 
     
-    //Hidden options, will be allowed both on command line and 
-    //in config file, but will not be shown to user
-    po::options_description hidden("Hidden options");
-    hidden.add_options()
-        ("input-file", po::value< vector<string> >(), "input file")
-        ;
-
     po::options_description cmdline_options;
-    cmdline_options.add(generic).add(config).add(hidden);
-
-    po::options_description config_file_options;
-    config_file_options.add(config).add(hidden);
-
-    po::options_description visible("Allowed options");
-    visible.add(generic).add(config);
-    
-    po::positional_options_description p;
-    p.add("input-file", -1); ///wha in the world is this doing
+    cmdline_options.add(generic).add(config);
 
     po::variables_map vm;
-    store(po::command_line_parser(argc, argv).options(cmdline_options).positional(p).run(), vm);
-    notify(vm);
+    po::store(po::parse_command_line(argc, argv, cmdline_options), vm);
+    po::notify(vm);
+
+    if (vm.count("help")) {
+        std::cout << generic << "\n";
+        std::cout << config << "\n";
+        return 1;
+    }
 
     ifstream ifs(config_file.c_str());
     if (!ifs){
@@ -229,8 +219,8 @@ int main(int argc, char* argv[]){
     }
     else
     {
-        store(parse_config_file(ifs, config_file_options), vm);
-        notify(vm);
+        po::store(po::parse_config_file(ifs, config), vm);
+        po::notify(vm);
     }
    
     
