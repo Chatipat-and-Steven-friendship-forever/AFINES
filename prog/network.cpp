@@ -407,7 +407,6 @@ int main(int argc, char* argv[]){
    
     // Run the simulation
     cout<<"\nUpdating motors, filaments and crosslinks in the network..";
-    string time_str; 
     count=0;
     t = tinit;
     pre_strain = strain_pct * xrange;
@@ -425,43 +424,46 @@ int main(int argc, char* argv[]){
     prev_d_strain = restart_strain;
 
     while (t <= tfinal) {
-        
+
         //print to file
-	    if (t+dt/100 >= tinit && (count-unprinted_count)%n_bw_print==0) {
-	        
-            if (t>tinit) time_str ="\n";
-            time_str += "t = "+to_string(t);
-            
+        if (t+dt/100 >= tinit && (count-unprinted_count)%n_bw_print==0) {
+
+            string time_str = "t = "+to_string(t);
+
             file_a << time_str<<"\tN = "<<to_string(net->get_nbeads());
             net->write_beads(file_a);
+            file_a << endl;
 
             file_l << time_str<<"\tN = "<<to_string(net->get_nsprings());
             net->write_springs(file_l);
+            file_l << endl;
 
             file_am << time_str<<"\tN = "<<to_string(myosins->get_nmotors());
             myosins->motor_write(file_am);
-            
+            file_am << endl;
+
             file_pm << time_str<<"\tN = "<<to_string(crosslks->get_nmotors());
             crosslks->motor_write(file_pm);
+            file_pm << endl;
 
             file_th << time_str<<"\tN = "<<to_string(net->get_nfilaments());
             net->write_thermo(file_th);
+            file_th << endl;
 
-            file_pe <<net->get_stretching_energy()<<"\t"<<net->get_bending_energy()<<"\t"<<net->get_exv_energy()<<"\t"<<myosins->get_potential_energy()<<"\t"<<crosslks->get_potential_energy()<<endl;
+            file_pe
+                <<net->get_stretching_energy()<<"\t"
+                <<net->get_bending_energy()<<"\t"
+                <<net->get_exv_energy()<<"\t"
+                <<myosins->get_potential_energy()<<"\t"
+                <<crosslks->get_potential_energy()<<"\t"
+                <<total_strain<<endl;
 
-	    file_ke <<net->get_kinetic_energy_vir()<<"\t"<<myosins->get_kinetic_energy()<<"\t"<<crosslks->get_kinetic_energy()<<endl;  
-            
-            file_a<<std::flush;
-            file_l<<std::flush;
-            file_am<<std::flush;
-            file_pm<<std::flush;
-            file_th<<std::flush;
-            file_pe<<std::flush;
-            file_ke<<std::flush;
-            
-		}
-        
-        //print time count
+            file_ke
+                <<net->get_kinetic_energy_vir()<<"\t"
+                <<myosins->get_kinetic_energy()<<"\t"
+                <<crosslks->get_kinetic_energy()<<endl;  
+        }
+
       //  if (time_of_strain!=0 && close(t, time_of_strain, dt/(10*time_of_strain))){
             //Perform the shear here
       //      cout<<"\nDEBUG: t = "<<t<<"; adding pre_strain of "<<pre_strain<<" um here";
@@ -512,39 +514,6 @@ int main(int argc, char* argv[]){
 
 	}
 
-	//print to file                                                                                                               
-	if (t+dt/100 >= tinit && (count-unprinted_count)%n_bw_print==0) {
-
-	  if (t>tinit) time_str ="\n";
-	  time_str += "t = "+to_string(t);
-
-	  file_a << time_str<<"\tN = "<<to_string(net->get_nbeads());
-	  net->write_beads(file_a);
-
-	  file_l << time_str<<"\tN = "<<to_string(net->get_nsprings());
-	  net->write_springs(file_l);
-
-	  file_am << time_str<<"\tN = "<<to_string(myosins->get_nmotors());
-	  myosins->motor_write(file_am);
-
-	  file_pm << time_str<<"\tN = "<<to_string(crosslks->get_nmotors());
-	  crosslks->motor_write(file_pm);
-
-	  file_th << time_str<<"\tN = "<<to_string(net->get_nfilaments());
-	  net->write_thermo(file_th);
-
-	  file_pe << net->get_stretching_energy()<<"\t"<<net->get_bending_energy()<<"\t"<<
-	    myosins->get_potential_energy()<<"\t"<<crosslks->get_potential_energy()<<"\t"<<total_strain<<endl;
-
-	  file_a<<std::flush;
-	  file_l<<std::flush;
-	  file_am<<std::flush;
-	  file_pm<<std::flush;
-	  file_th<<std::flush;
-	  file_pe<<std::flush;
-
-	}
-
 
 	//update network
         net->update();//updates all forces, velocities and positions of filaments
@@ -571,18 +540,9 @@ int main(int argc, char* argv[]){
         //clear the vector of fractured filaments
         net->clear_broken();
 
-        
         t+=dt;
-		count++;
-
-        
+        count++;
     }
-
-    file_a << "\n";
-    file_l << "\n";
-    file_am << "\n";
-    file_pm << "\n";
-    file_th << "\n";
 
     file_a.close();
     file_l.close();
