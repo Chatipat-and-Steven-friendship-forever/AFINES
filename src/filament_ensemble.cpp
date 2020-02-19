@@ -117,9 +117,21 @@ vector<array<int, 2>> *filament_ensemble::get_attach_list(double x, double y)
     if (quad_off_flag) {
         return &all_springs;
     } else {
-        int mqx = coord2quad(fov[0], nq[0], x);
-        int mqy = coord2quad(fov[1], nq[1], y);
-        return springs_per_quad[mqx]->at(mqy);
+        int iy = round(nq[1] * (y / fov[1] + 0.5));
+        while (iy < 0) {
+            iy += nq[1];
+            x += delrx;
+        }
+        while (iy >= nq[1]) {
+            iy -= nq[1];
+            x -= delrx;
+        }
+        int ix = round(nq[0] * (x / fov[0] + 0.5));
+        while (ix < 0) ix += nq[0];
+        while (ix >= nq[0]) ix -= nq[0];
+        assert(0 <= ix && ix < nq[0]);
+        assert(0 <= iy && iy < nq[1]);
+        return springs_per_quad[ix]->at(iy);
     }
 }
 
@@ -154,11 +166,23 @@ set<pair<double, array<int, 2>>> filament_ensemble::get_dist(double x, double y)
 {
     fls.clear();
     set<pair<double, array<int, 2>>> t_map;
-    
-    int mqx = coord2quad(fov[0], nq[0], x);
-    int mqy = coord2quad(fov[1], nq[1], y);
-    
-    update_dist_map(t_map, {{mqx, mqy}}, x, y);
+
+    int iy = round(nq[1] * (y / fov[1] + 0.5));
+    while (iy < 0) {
+        iy += nq[1];
+        x += delrx;
+    }
+    while (iy >= nq[1]) {
+        iy -= nq[1];
+        x -= delrx;
+    }
+    int ix = round(nq[0] * (x / fov[0] + 0.5));
+    while (ix < 0) ix += nq[0];
+    while (ix >= nq[0]) ix -= nq[0];
+    assert(0 <= ix && ix < nq[0]);
+    assert(0 <= iy && iy < nq[1]);
+
+    update_dist_map(t_map, {ix, iy}, x, y);
     return t_map;
 }
 

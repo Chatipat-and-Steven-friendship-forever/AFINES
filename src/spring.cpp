@@ -180,43 +180,113 @@ bool spring::is_similar(const spring& that)
 }
 
 // Updates all derived quantities of a monomer
-void spring::quad_update(string bc, double delrx){
-    
-    //quadrant numbers crossed by the bead in x-direction
+void spring::quad_update(string bc, double delrx)
+{
+    // quadrant numbers crossed by the bead in x-direction
     quad.clear();
-    int xlower, xupper, ylower, yupper;
-    
-    if (disp[0] >= 0)
-    {
-        xlower = coord2quad_floor(fov[0], nq[0], hx[0]);
-        xupper = coord2quad_ceil(fov[0], nq[0], hx[1]);
-    }
-    else
-    {
-        xlower = coord2quad_floor(fov[0], nq[0], hx[1]);
-        xupper = coord2quad_ceil(fov[0], nq[0], hx[0]);
-    };
-    
-    if (disp[1] >=0 )
-    {
-        ylower = coord2quad_floor(fov[1], nq[1], hy[0]);
-        yupper = coord2quad_ceil(fov[1], nq[1], hy[1]);
-    }
-    else
-    {
-        ylower = coord2quad_floor(fov[1], nq[1], hy[1]);
-        yupper = coord2quad_ceil(fov[1], nq[1], hy[0]);
-    };
 
-    vector<int> xcoords = range_bc(bc, delrx, 0, nq[0], xlower, xupper);
-    vector<int> ycoords = range_bc(bc, delrx, 0, nq[1], ylower, yupper);
-    for(int xcoord : xcoords)
-        for(int ycoord : ycoords){
-            quad.push_back({{xcoord, ycoord}});
+    if (bc != "PERIODIC" && bc != "LEES-EDWARDS") {
+
+        double xlo = hx[0], xhi = hx[1];
+        if (disp[0] < 0) std::swap(xlo, xhi);
+
+        double ylo = hy[0], yhi = hy[1];
+        if (disp[1] < 0) std::swap(ylo, yhi);
+
+        int xlower = floor(nq[0] * (xlo / fov[0] + 0.5));
+        int xupper = ceil(nq[0] * (xhi / fov[0] + 0.5));
+        if (xlower < 0) {
+            cout << "Warning: x-index of quadrant < 0." << endl;
+            xlower = 0;
         }
+        if (xupper > nq[0]) {
+            cout << "Warning: x-index of quadrant > nq[0]." << endl;
+            xupper = nq[0];
+        }
+        assert(xlower <= xupper);
 
+        int ylower = floor(nq[1] * (ylo / fov[1] + 0.5));
+        int yupper = ceil(nq[1] * (yhi / fov[1] + 0.5));
+        if (ylower < 0) {
+            cout << "Warning: y-index of quadrant < 0." << endl;
+            ylower = 0;
+        }
+        if (yupper > nq[1]) {
+            cout << "Warning: y-index of quadrant > nq[1]." << endl;
+            yupper = nq[1];
+        }
+        assert(ylower <= yupper);
 
+        for (int i = xlower; i <= xupper; i++)
+            for (int j = ylower; j <= yupper; j++)
+                quad.push_back({i, j});
+
+    } else {
+
+        double xlo, xhi;
+        double ylo, yhi;
+        if (disp[1] >= 0) {
+            ylo = hy[0];
+            yhi = hy[0] + disp[1];
+            if (disp[0] >= 0) {
+                xlo = hx[0];
+                xhi = hx[0] + disp[0];
+            } else {
+                xlo = hx[0] + disp[0];
+                xhi = hx[0];
+            }
+        } else {
+            ylo = hy[1];
+            yhi = hy[1] - disp[1];
+            if (disp[0] >= 0) {
+                xlo = hx[1] - disp[0];
+                xhi = hx[1];
+            } else {
+                xlo = hx[1];
+                xhi = hx[1] - disp[0];
+            }
+        }
+        assert(xlo <= xhi);
+        assert(ylo <= yhi);
+
+        int ylower = floor(nq[1] * (ylo / fov[1] + 0.5));
+        int yupper =  ceil(nq[1] * (yhi / fov[1] + 0.5));
+        assert(ylower <= yupper);
+
+        for (int jj = ylower; jj <= yupper; jj++) {
+            int j = jj;
+
+            double xlo_new = xlo;
+            double xhi_new = xhi;
+            while (j < 0) {
+                j += nq[1];
+                xlo_new += delrx;
+                xhi_new += delrx;
+            }
+            while (j >= nq[1]) {
+                j -= nq[1];
+                xlo_new -= delrx;
+                xhi_new -= delrx;
+            }
+            assert(0 <= j && j < nq[1]);
+
+            int xlower = floor(nq[0] * (xlo_new / fov[0] + 0.5));
+            int xupper =  ceil(nq[0] * (xhi_new / fov[0] + 0.5));
+            assert(xlower <= xupper);
+
+            for (int ii = xlower; ii <= xupper; ii++) {
+                int i = ii;
+
+                while (i < 0) i += nq[0];
+                while (i >= nq[0]) i -= nq[0];
+                assert(0 <= i && i < nq[0]);
+
+                quad.push_back({i, j});
+            }
+        }
+    }
 }
+
 
 //shortest(perpendicular) distance between an arbitrary point and the spring
 //SO : 849211
