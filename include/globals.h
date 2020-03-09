@@ -51,6 +51,8 @@
 using namespace std;
 namespace fs = boost::filesystem;
 
+using virial_type = array<array<double, 2>, 2>;
+
 /* distances in microns, time in seconds, forces in pN * 
  * --> Temp in pN-um                                   */
 //const double pi, eps, dt, temperature;
@@ -130,7 +132,8 @@ void intarray_printer(array<int,2> a);
 boost::optional<array<double, 2> > seg_seg_intersection(const array<double, 2>&, const array<double, 2>&, const array<double, 2>&, const array<double, 2>&);
 boost::optional<array<double, 2> > seg_seg_intersection_bc(string, double, const array<double, 2>&, const array<double, 2>&, const array<double, 2>&, const array<double, 2>&, const array<double, 2>&);
 std::string quads_error_message(std::string, vector<array<int, 2> >, vector<array<int, 2> > );
+
+void virial_add(virial_type &, virial_type const &);
+void virial_clear(virial_type &);
+
 #endif
-
-
-

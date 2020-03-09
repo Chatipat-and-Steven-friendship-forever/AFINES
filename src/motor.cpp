@@ -597,6 +597,13 @@ double motor::get_stretching_energy(){
     return (force[0]*force[0]+force[1]*force[1])/(2*mk);
 }
 
+array<array<double, 2>, 2> motor::get_virial() {
+    double k = tension / len;
+    return {
+        array<double, 2>{k * disp[0] * disp[0], k * disp[0] * disp[1]},
+        array<double, 2>{k * disp[0] * disp[1], k * disp[1] * disp[1]}
+    };
+}
 
 double motor::get_stretching_energy_fene()
 {
@@ -647,4 +654,14 @@ string motor::write()
 void motor::revive_head(int hd)
 {
     state[hd] = 0;
+}
+
+void motor::update_d_strain(double g)
+{
+    array<double, 2> pos0 = boundary_check(0, hx[0] + g * hy[0] / fov[1], hy[0]);
+    array<double, 2> pos1 = boundary_check(1, hx[1] + g * hy[1] / fov[1], hy[1]);
+    hx[0] = pos0[0];
+    hx[1] = pos1[0];
+    hy[0] = pos0[1];
+    hy[1] = pos1[1];
 }

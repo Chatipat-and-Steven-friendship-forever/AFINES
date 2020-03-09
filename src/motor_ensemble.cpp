@@ -258,11 +258,17 @@ void motor_ensemble::update_energies()
 {
     ke = 0;
     pe = 0;
+    virial[0][0] = virial[0][1] = 0.0;
+    virial[1][0] = virial[1][1] = 0.0;
+   
     for (unsigned int m = 0; m < n_motors.size(); m++)
     {
         ke += n_motors[m]->get_kinetic_energy();
         pe += n_motors[m]->get_stretching_energy();
         //pe += n_motors[m]->get_stretching_energy_fene();
+        array<array<double, 2>, 2> vir = n_motors[m]->get_virial();
+        virial[0][0] += vir[0][0]; virial[0][1] += vir[0][1];
+        virial[1][0] += vir[1][0]; virial[1][1] += vir[1][1];
     }
 }
 
@@ -271,7 +277,10 @@ double motor_ensemble::get_potential_energy(){
     return pe;
 }
 
- 
+array<array<double, 2>, 2> motor_ensemble::get_virial() {
+    return virial;
+}
+
 void motor_ensemble::print_ensemble_thermo(){
     cout<<"\nAll Motors\t:\tKE = "<<ke<<"\tPEs = "<<pe<<"\tPEb = "<<0<<"\tTE = "<<(ke+pe);
 }
@@ -292,5 +301,12 @@ void motor_ensemble::revive_heads()
     for (int i = 0; i < n_motors.size(); i++) {
         n_motors[i]->revive_head(0);
         n_motors[i]->revive_head(1);
+    }
+}
+
+void motor_ensemble::update_d_strain(double g)
+{
+    for (motor *m : n_motors) {
+        m->update_d_strain(g);
     }
 }

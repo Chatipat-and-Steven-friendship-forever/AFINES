@@ -109,9 +109,13 @@ class filament
 
         double get_bending_energy();
 
+        array<array<double, 2>, 2> get_bending_virial();
+
         double get_stretching_energy();
 
         double get_kinetic_energy();
+
+        array<array<double, 2>, 2> get_stretching_virial();
         
         double get_potential_energy();
         
@@ -128,6 +132,7 @@ class filament
         double kb, temperature, dt, fracture_force, fracture_force_sq, kinetic_energy, damp, kToverLp, bd_prefactor, ubend;
         double gamma, max_shear, delrx, y_thresh;
 
+        array<array<double, 2>, 2> bending_virial;
         array<double,2> fov;
         array<int,2> nq;
         vector<array<double, 2> > prv_rnds;

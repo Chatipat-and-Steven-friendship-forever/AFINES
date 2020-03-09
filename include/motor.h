@@ -77,6 +77,8 @@ class motor
         void update_shape();
         
         void set_shear(double g);
+
+        void update_d_strain(double g);
         
         array<int,2> get_f_index();
         
@@ -109,6 +111,8 @@ class motor
         inline void periodic(double t, double gamma, double x1, double x2, double y1, double y2);
 
         double get_stretching_energy();
+
+        array<array<double, 2>, 2> get_virial();
         
         double get_stretching_energy_fene();
 

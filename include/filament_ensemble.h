@@ -90,9 +90,13 @@ class filament_ensemble
         array<int, 2> get_nq();
         
         double get_stretching_energy();
+
+        array<array<double, 2>, 2> get_stretching_virial();
         
         double get_bending_energy();
-        
+
+        array<array<double, 2>, 2> get_bending_virial();
+
         int get_nbeads();
         
         int get_nsprings();
@@ -170,6 +174,8 @@ class filament_ensemble
         double max_springs_per_quad_per_filament, max_springs_per_quad; 
         bool straight_filaments = false, quad_off_flag;
         double pe_stretch, pe_bend, ke;
+
+        array<array<double, 2>, 2> vir_stretch, vir_bend;
 
         array<double,2> fov, view;
         array<int, 2> nq, half_nq;

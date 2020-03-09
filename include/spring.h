@@ -46,6 +46,8 @@ class spring
         double get_fene_ext();
         
         double get_stretching_energy();
+
+        array<array<double, 2>, 2> get_virial();
         
         double get_xcm();
         

@@ -510,6 +510,9 @@ void filament::lammps_bending_update()
     double f1[2], f3[2];
     double rsq1,rsq2,r1,r2,c,s,a,a11,a12,a22;
 
+    bending_virial[0][0] = bending_virial[0][1] = 0.0;
+    bending_virial[1][0] = bending_virial[1][1] = 0.0;
+
     // 1st bond
     delr1 = springs[0]->get_neg_disp();
     rsq1  = springs[0]->get_length_sq();
@@ -558,6 +561,10 @@ void filament::lammps_bending_update()
         rsq1  = rsq2;
         r1    = r2;
 
+        bending_virial[0][0] += a11 * delr1[0] * delr1[0] + 2.0 * a12 * delr1[0] * delr2[0] + a22 * delr2[0] * delr2[0];
+        bending_virial[0][1] += a11 * delr1[0] * delr1[1] + a12 * (delr1[0] * delr2[1] + delr1[1] * delr2[0]) + a22 * delr2[0] * delr2[1];
+        bending_virial[1][0] += a11 * delr1[0] * delr1[1] + a12 * (delr1[0] * delr2[1] + delr1[1] * delr2[0]) + a22 * delr2[0] * delr2[1];
+        bending_virial[1][1] += a11 * delr1[1] * delr1[1] + 2.0 * a12 * delr1[1] * delr2[1] + a22 * delr2[1] * delr2[1];
     }
 
     ubend = kb*totThetaSq/2;
@@ -582,6 +589,11 @@ double filament::get_bending_energy(){
    
     return ubend;
 
+}
+
+array<array<double, 2>, 2> filament::get_bending_virial()
+{
+    return bending_virial;
 }
 
 void filament::init_ubend(){
@@ -617,6 +629,19 @@ double filament::get_stretching_energy()
 double filament::get_kinetic_energy()
 {
     return kinetic_energy;
+}
+
+array<array<double, 2>, 2> filament::get_stretching_virial()
+{
+    array<array<double, 2>, 2> vir;
+    vir[0][0] = vir[0][1] = 0.0;
+    vir[1][0] = vir[1][1] = 0.0;
+    for (spring *s : springs) {
+        array<array<double, 2>, 2> v = s->get_virial();
+        vir[0][0] += v[0][0]; vir[0][1] += v[0][1];
+        vir[1][0] += v[1][0]; vir[1][1] += v[1][1];
+    }
+    return vir;
 }
 
 double filament::get_potential_energy()

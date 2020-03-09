@@ -19,6 +19,12 @@ ostream& operator<<(ostream& os, const vector<T>& v)
     return os;
 }
 
+ostream &operator<<(ostream &os, const array<array<double, 2>, 2> &a)
+{
+    os << a[0][0] << "\t" << a[0][1] << "\t" << a[1][0] << "\t" << a[1][1];
+    return os;
+}
+
 
 //main method
 int main(int argc, char* argv[]){
@@ -61,7 +67,7 @@ int main(int argc, char* argv[]){
     ios_base::openmode write_mode = ios_base::out;
 
     double strain_pct, time_of_strain, pre_strain, d_strain_pct, d_strain_amp;                                      //External Force
-    double d_strain, prev_d_strain, d_strain_freq, time_of_dstrain, total_strain, restart_strain;
+    double prev_d_strain, d_strain_freq, time_of_dstrain, restart_strain;
     bool link_intersect_flag, motor_intersect_flag, dead_head_flag, p_dead_head_flag, static_cl_flag, quad_off_flag;
     bool diff_strain_flag, osc_strain_flag;
     double p_linkage_prob, a_linkage_prob;                                              
@@ -71,6 +77,9 @@ int main(int argc, char* argv[]){
     double restart_time;
 
     bool check_dup_in_quad, use_attach_opt;
+    
+    bool stress_flag; double stress, stress_rate;
+    bool shear_motor_flag;
 
     //Options allowed only on command line
     po::options_description generic("Generic options");
@@ -176,6 +185,12 @@ int main(int argc, char* argv[]){
         
         ("diff_strain_flag", po::value<bool>(&diff_strain_flag)->default_value(false), "flag to turn on linear differential strain")
         ("osc_strain_flag", po::value<bool>(&osc_strain_flag)->default_value(false), "flag to turn on oscillatory differential strain")
+
+        ("stress_flag", po::value<bool>(&stress_flag)->default_value(false), "flag to turn on constant stress")
+        ("stress", po::value<double>(&stress)->default_value(0.0), "value of constant stress")
+        ("stress_rate", po::value<double>(&stress_rate)->default_value(0.0), "decay rate to specified value of stress, in weird units")
+
+        ("shear_motor_flag", po::value<bool>(&shear_motor_flag)->default_value(false), "flag to turn on shearing for motors")
 
         ("check_dup_in_quad", po::value<bool>(&check_dup_in_quad)->default_value(true), "flag to check for duplicates in quadrants")
         ("use_attach_opt", po::value<bool>(&use_attach_opt)->default_value(false), "flag to use optimized attachment point search")
@@ -424,25 +439,55 @@ int main(int argc, char* argv[]){
       //      net->update_shear();
       //  }
 
-        if (osc_strain_flag && t >= time_of_dstrain && count%n_bw_shear==0){
- 	  d_strain = restart_strain + d_strain_amp*4*d_strain_freq*((t-time_of_dstrain) - 1/(d_strain_freq*2)*floor(2*(t-time_of_dstrain)*d_strain_freq + 0.5))*pow(-1,floor(2*(t-time_of_dstrain)*d_strain_freq + 0.5));
-	  //d_strain = d_strain_amp * sin(2*pi*d_strain_freq * ( t - time_of_dstrain) );
-            net->update_delrx( d_strain );
-            net->update_d_strain( d_strain - prev_d_strain);
-            cout<<"\nDEBUG: t = "<<t<<"; adding d_strain of "<<(d_strain-prev_d_strain)<<" um here; total strain = "<<(pre_strain+d_strain);
-            prev_d_strain = d_strain;
-	    total_strain = d_strain;
-      }
-        
-       	if (diff_strain_flag && t >= time_of_dstrain && count%n_bw_shear==0){
-		 d_strain = restart_strain + d_strain_amp*d_strain_freq*(t - time_of_dstrain);
-		 net->update_delrx( d_strain );
-		 net->update_d_strain( d_strain - prev_d_strain );
-		 cout<<"\nDEBUG: t = "<<t<<"; adding d_strain of "<<(d_strain-prev_d_strain)<<" um here; total strain = "<<(pre_strain+d_strain);
-		 prev_d_strain = d_strain;
-		 total_strain = d_strain;
-       	}
+        if (t >= time_of_dstrain && count % n_bw_shear == 0) {
+            double d_strain = 0.0;
+            if (stress_flag) {
+                virial_type total_virial, virial;
+                virial_clear(total_virial);
 
+                cout << "\nDEBUG: t = " << t;
+
+                virial = net->get_stretching_virial();
+                cout << "\nfilament stretch virial:\t" << virial;
+                virial_add(total_virial, virial);
+
+                virial = net->get_bending_virial();
+                cout << "\nfilament bend virial:\t" << virial;
+                virial_add(total_virial, virial);
+
+                virial = myosins->get_virial();
+                cout << "\nmotor stretch virial:\t" << virial;
+                virial_add(total_virial, virial);
+
+                virial = crosslks->get_virial();
+                cout << "\ncrosslinker stretch virial:\t" << virial;
+                virial_add(total_virial, virial);
+
+                array<double, 2> fov = net->get_fov();
+                double area = fov[0] * fov[1];
+                array<array<double, 2>, 2> stress_tensor;
+                stress_tensor[0][0] = total_virial[0][0] / area;
+                stress_tensor[0][1] = total_virial[0][1] / area;
+                stress_tensor[1][0] = total_virial[1][0] / area;
+                stress_tensor[1][1] = total_virial[1][1] / area;
+                d_strain += prev_d_strain + stress_rate * (stress - stress_tensor[1][0]) * fov[1] * dt;
+            }
+            if (osc_strain_flag) {
+                //d_strain += d_strain_amp * sin(2*pi*d_strain_freq * ( t - time_of_dstrain) );
+                d_strain += restart_strain + d_strain_amp*4*d_strain_freq*((t-time_of_dstrain) - 1/(d_strain_freq*2)*floor(2*(t-time_of_dstrain)*d_strain_freq + 0.5))*pow(-1,floor(2*(t-time_of_dstrain)*d_strain_freq + 0.5));
+            }
+            if (diff_strain_flag) {
+		 d_strain += restart_strain + d_strain_amp*d_strain_freq*(t - time_of_dstrain);
+            }
+            net->update_delrx(d_strain);
+            net->update_d_strain(d_strain - prev_d_strain);
+            if (shear_motor_flag) {
+                myosins->update_d_strain(d_strain - prev_d_strain);
+                crosslks->update_d_strain(d_strain - prev_d_strain);
+            }
+            cout << "\nDEBUG: t = " << t << "; adding d_strain of " << (d_strain - prev_d_strain) << " um here; total strain = " << (pre_strain + d_strain);
+            prev_d_strain = d_strain;
+        }
 
 	// if (diff_strain_flag && t >= time_of_dstrain && count%n_bw_shear==0){
 	//  net->update_delrx( pre_strain + d_strain_amp );
@@ -459,13 +504,6 @@ int main(int argc, char* argv[]){
             crosslks->print_ensemble_thermo();
             myosins->print_ensemble_thermo();
         }
-
-
-	if (!diff_strain_flag && !osc_strain_flag){
-
-	  total_strain = 0;
-
-	}
 
 	//print to file                                                                                                               
 	if (t+dt/100 >= tinit && (count-unprinted_count)%n_bw_print==0) {
@@ -488,8 +526,16 @@ int main(int argc, char* argv[]){
 	  file_th << time_str<<"\tN = "<<to_string(net->get_nfilaments());
 	  net->write_thermo(file_th);
 
-	  file_pe << net->get_stretching_energy()<<"\t"<<net->get_bending_energy()<<"\t"<<
-	    myosins->get_potential_energy()<<"\t"<<crosslks->get_potential_energy()<<"\t"<<total_strain<<endl;
+          file_pe
+              << net->get_stretching_energy() << "\t"
+              << net->get_bending_energy() << "\t"
+              << myosins->get_potential_energy() << "\t"
+              << crosslks->get_potential_energy() << "\t"
+              << prev_d_strain << "\t"
+              << net->get_stretching_virial() << "\t"
+              << net->get_bending_virial() << "\t"
+              << myosins->get_virial() << "\t"
+              << crosslks->get_virial() << endl;
 
 	  file_a<<std::flush;
 	  file_l<<std::flush;

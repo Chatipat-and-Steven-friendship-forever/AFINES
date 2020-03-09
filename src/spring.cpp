@@ -337,6 +337,14 @@ double spring::get_stretching_energy(){
     return (force[0]*force[0]+force[1]*force[1])/(2*kl);
 }
 
+array<array<double, 2>, 2> spring::get_virial() {
+    double k = kl*(llen-l0)/llen;
+    return {
+        array<double, 2>{k * disp[0] * disp[0], k * disp[0] * disp[1]},
+        array<double, 2>{k * disp[0] * disp[1], k * disp[1] * disp[1]}
+    };
+}
+
 double spring::get_stretching_energy_fene(string bc, double shear_dist)
 {
     double ext = abs(l0 - llen);

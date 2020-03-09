@@ -774,3 +774,19 @@ closefiles:
 template int sgn<int>(int);
 template int sgn<double>(double);
 template int sgn<float>(float);
+
+void virial_add(virial_type &a, virial_type const &b)
+{
+    a[0][0] += b[0][0];
+    a[0][1] += b[0][1];
+    a[1][0] += b[1][0];
+    a[1][1] += b[1][1];
+}
+
+void virial_clear(virial_type &a)
+{
+    a[0][0] = 0.0;
+    a[0][1] = 0.0;
+    a[1][0] = 0.0;
+    a[1][1] = 0.0;
+}

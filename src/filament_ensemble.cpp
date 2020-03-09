@@ -349,11 +349,20 @@ void filament_ensemble::update_energies(){
     pe_stretch = 0;
     pe_bend = 0;
     ke = 0;
-    for (unsigned int f = 0; f < network.size(); f++)
-    {
+    vir_stretch[0][0] = vir_stretch[0][1] = 0.0;
+    vir_stretch[1][0] = vir_stretch[1][1] = 0.0;
+    vir_bend[0][0] = vir_bend[0][1] = 0.0;
+    vir_bend[1][0] = vir_bend[1][1] = 0.0;
+    for (unsigned int f = 0; f < network.size(); f++) {
         ke += network[f]->get_kinetic_energy();
         pe_bend += network[f]->get_bending_energy();
-        pe_stretch += network[f]->get_stretching_energy();
+        pe_stretch += network[f]->get_stretching_energy();  
+        array<array<double, 2>, 2> vs = network[f]->get_stretching_virial();
+        array<array<double, 2>, 2> vb = network[f]->get_bending_virial();
+        vir_stretch[0][0] += vs[0][0]; vir_stretch[0][1] += vs[0][1];
+        vir_stretch[1][0] += vs[1][0]; vir_stretch[1][1] += vs[1][1];
+        vir_bend[0][0] += vb[0][0]; vir_bend[0][1] += vb[0][1];
+        vir_bend[1][0] += vb[1][0]; vir_bend[1][1] += vb[1][1];
     }
 }
 
@@ -367,7 +376,14 @@ double filament_ensemble::get_bending_energy(){
     return pe_bend;
 }
 
- 
+array<array<double, 2>, 2> filament_ensemble::get_stretching_virial() {
+    return vir_stretch;
+}
+
+array<array<double, 2>, 2> filament_ensemble::get_bending_virial() {
+    return vir_bend;
+}
+
 void filament_ensemble::print_network_thermo(){
     cout<<"\nAll Fs\t:\tKE = "<<ke<<"\tPEs = "<<pe_stretch<<"\tPEb = "<<pe_bend<<"\tTE = "<<(ke+pe_stretch+pe_bend);
 }
@@ -650,6 +666,11 @@ filament_ensemble::filament_ensemble(int npolymer, int nbeads_min, int nbeads_ex
     pe_bend = 0;
     ke = 0;
     
+    vir_stretch[0][0] = vir_stretch[0][1] = 0.0;
+    vir_stretch[1][0] = vir_stretch[1][1] = 0.0;
+    vir_bend[0][0] = vir_bend[0][1] = 0.0;
+    vir_bend[1][0] = vir_bend[1][1] = 0.0;
+   
     fls = { };
 }
 
@@ -712,7 +733,12 @@ filament_ensemble::filament_ensemble(double density, array<double,2> myfov, arra
     pe_stretch = 0;
     pe_bend = 0;
     ke = 0;
-    
+
+    vir_stretch[0][0] = vir_stretch[0][1] = 0.0;
+    vir_stretch[1][0] = vir_stretch[1][1] = 0.0;
+    vir_bend[0][0] = vir_bend[0][1] = 0.0;
+    vir_bend[1][0] = vir_bend[1][1] = 0.0;
+
     fls = { };
 }
 
@@ -766,6 +792,11 @@ filament_ensemble::filament_ensemble(vector<vector<double> > beads, array<double
     //this->nlist_init();
     this->nlist_init_serial();
     this->update_energies();
-    
+
+    vir_stretch[0][0] = vir_stretch[0][1] = 0.0;
+    vir_stretch[1][0] = vir_stretch[1][1] = 0.0;
+    vir_bend[0][0] = vir_bend[0][1] = 0.0;
+    vir_bend[1][0] = vir_bend[1][1] = 0.0;
+
     fls = { };
 } 

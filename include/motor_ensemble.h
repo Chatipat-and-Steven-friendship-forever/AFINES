@@ -47,10 +47,14 @@ class motor_ensemble
         void motor_walk(double t);
 
         void motor_update();
+
+        void update_d_strain(double g);
         
         void update_energies();
         
         double get_potential_energy();
+
+        array<array<double, 2>, 2> get_virial();
 
         void motor_write(ostream& fout);
 
@@ -77,6 +81,7 @@ class motor_ensemble
         filament_ensemble *f_network;
         vector<motor *> n_motors;  
         bool use_attach_opt;
+        array<array<double, 2>, 2> virial;
 };
 
 #endif
