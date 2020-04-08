@@ -66,8 +66,8 @@ int main(int argc, char* argv[]){
     ofstream o_file, file_a, file_am, file_pm, file_l, file_th, file_pe;
     ios_base::openmode write_mode = ios_base::out;
 
-    double strain_pct, time_of_strain, pre_strain, d_strain_pct, d_strain_amp;                                      //External Force
-    double prev_d_strain, d_strain_freq, time_of_dstrain, restart_strain;
+    double d_strain_pct, d_strain_amp;                                      //External Force
+    double prev_d_strain, d_strain_freq, time_of_dstrain, time_of_dstrain2, restart_strain;
     bool link_intersect_flag, motor_intersect_flag, dead_head_flag, p_dead_head_flag, static_cl_flag, quad_off_flag;
     bool diff_strain_flag, osc_strain_flag;
     double p_linkage_prob, a_linkage_prob;                                              
@@ -78,7 +78,7 @@ int main(int argc, char* argv[]){
 
     bool check_dup_in_quad, use_attach_opt;
     
-    bool stress_flag; double stress, stress_rate;
+    bool stress_flag; double stress1, stress_rate1, stress2, stress_rate2;
     bool shear_motor_flag;
 
     //Options allowed only on command line
@@ -149,20 +149,17 @@ int main(int argc, char* argv[]){
         ("link_stretching_stiffness,ks", po::value<double>(&link_stretching_stiffness)->default_value(1), "stiffness of link, pN/um")
         ("fene_pct", po::value<double>(&fene_pct)->default_value(0.5), "pct of rest length of filament to allow outstretched until fene blowup")
         
-        ("strain_pct", po::value<double>(&strain_pct)->default_value(0), "pct that the boundarys get sheared")
-        ("time_of_strain", po::value<double>(&time_of_strain)->default_value(0), "time at which the step strain occurs")
-
         ("d_strain_freq", po::value<double>(&d_strain_freq)->default_value(1), "differential strain frequency")
         ("d_strain_pct", po::value<double>(&d_strain_pct)->default_value(0), "differential strain amplitude")
         ("time_of_dstrain", po::value<double>(&time_of_dstrain)->default_value(10000), "time when differential strain starts")
-        
+        ("time_of_dstrain2", po::value<double>(&time_of_dstrain2)->default_value(10000), "time when second differential strain starts")
+       
         ("actin_in", po::value<string>(&actin_in)->default_value(""), "input actin positions file")
         ("a_motor_in", po::value<string>(&a_motor_in)->default_value(""), "input motor positions file")
         ("p_motor_in", po::value<string>(&p_motor_in)->default_value(""), "input crosslinker positions file")
         
         ("restart", po::value<bool>(&restart)->default_value(false), "if true, will restart simulation from last timestep recorded")
         ("restart_time", po::value<double>(&restart_time)->default_value(-1), "time to restart simulation from")
-        ("pre_strain", po::value<double>(&pre_strain)->default_value(0),"the starting strain value for the simulation")
         ("restart_strain", po::value<double>(&restart_strain)->default_value(0),"the starting strain for restarting simulation")
 
         ("dir", po::value<string>(&dir)->default_value("."), "output directory")
@@ -187,8 +184,10 @@ int main(int argc, char* argv[]){
         ("osc_strain_flag", po::value<bool>(&osc_strain_flag)->default_value(false), "flag to turn on oscillatory differential strain")
 
         ("stress_flag", po::value<bool>(&stress_flag)->default_value(false), "flag to turn on constant stress")
-        ("stress", po::value<double>(&stress)->default_value(0.0), "value of constant stress")
-        ("stress_rate", po::value<double>(&stress_rate)->default_value(0.0), "decay rate to specified value of stress, in weird units")
+        ("stress", po::value<double>(&stress1)->default_value(0.0), "value of constant stress")
+        ("stress_rate", po::value<double>(&stress_rate1)->default_value(0.0), "decay rate to specified value of stress, in weird units")
+        ("stress2", po::value<double>(&stress2)->default_value(0.0), "second value of constant stress")
+        ("stress_rate2", po::value<double>(&stress_rate2)->default_value(0.0), "second decay rate to specified value of stress, in weird units")
 
         ("shear_motor_flag", po::value<bool>(&shear_motor_flag)->default_value(false), "flag to turn on shearing for motors")
 
@@ -415,33 +414,25 @@ int main(int argc, char* argv[]){
     string time_str; 
     count=0;
     t = tinit;
-    pre_strain = strain_pct * xrange;
     d_strain_amp = d_strain_pct * xrange;
 
-    cout<<"\nDEBUG: time of pre_strain = "<<time_of_strain;
-    //Run the simulation
-    //    if (time_of_strain == 0){
-    //    cout<<"\nDEBUG: t = "<<t<<"; adding pre_strain of "<<pre_strain<<" um here";
-    //    net->update_delrx( pre_strain );
-    //    net->update_shear();
-    // }
-    
     net->update_delrx(restart_strain);
     prev_d_strain = restart_strain;
 
     while (t <= tfinal) {
         
-        //print time count
-      //  if (time_of_strain!=0 && close(t, time_of_strain, dt/(10*time_of_strain))){
-            //Perform the shear here
-      //      cout<<"\nDEBUG: t = "<<t<<"; adding pre_strain of "<<pre_strain<<" um here";
-      //      net->update_delrx( pre_strain );
-      //      net->update_shear();
-      //  }
-
         if (t >= time_of_dstrain && count % n_bw_shear == 0) {
             double d_strain = 0.0;
             if (stress_flag) {
+                double stress, stress_rate;
+                if (t < time_of_dstrain2) {
+                    stress = stress1;
+                    stress_rate = stress_rate1;
+                } else {
+                    stress = stress2;
+                    stress_rate = stress_rate2;
+                }
+
                 virial_type total_virial, virial;
                 virial_clear(total_virial);
 
@@ -485,17 +476,9 @@ int main(int argc, char* argv[]){
                 myosins->update_d_strain(d_strain - prev_d_strain);
                 crosslks->update_d_strain(d_strain - prev_d_strain);
             }
-            cout << "\nDEBUG: t = " << t << "; adding d_strain of " << (d_strain - prev_d_strain) << " um here; total strain = " << (pre_strain + d_strain);
+            cout << "\nDEBUG: t = " << t << "; adding d_strain of " << (d_strain - prev_d_strain) << " um here; total strain = " << d_strain;
             prev_d_strain = d_strain;
         }
-
-	// if (diff_strain_flag && t >= time_of_dstrain && count%n_bw_shear==0){
-	//  net->update_delrx( pre_strain + d_strain_amp );
-	//  net->update_d_strain( d_strain_amp );
-	//  pre_strain += d_strain_amp;
-	//  cout<<"\nDEBUG: t = "<<t<<"; adding d_strain of "<<d_strain_amp<<" um here; total strain = "<<pre_strain<<" um";
-	//  total_strain = pre_strain;
-	//}
 
         if (count%n_bw_stdout==0) {
 			cout<<"\nTime counts: "<<count;
