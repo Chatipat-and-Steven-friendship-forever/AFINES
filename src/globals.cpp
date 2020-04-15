@@ -639,6 +639,30 @@ vector<vector<double> > traj2vecvec(string path, string delim, double tf)
     return out;
 }
 
+double get_restart_strain(string path, int tf)
+{
+
+  double restart_strain = 0;
+  string str = "";
+  vector<string> coords;
+
+  ifstream pe_file;
+  pe_file.open(path);
+
+  for (int i = 1; i <= tf; i++)
+    getline(pe_file, str);
+
+  boost::trim_right(str);
+  boost::split(coords, str, boost::is_any_of("\t "));
+    
+  restart_strain = (double) atof(coords[4].data());
+ 
+  pe_file.close();
+    
+ 
+  return restart_strain;
+}
+
 double last_full_timestep(string path)
 {
     string pos_str = "";

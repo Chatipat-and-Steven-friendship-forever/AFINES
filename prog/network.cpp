@@ -75,6 +75,8 @@ int main(int argc, char* argv[]){
 
     bool restart;
     double restart_time;
+    bool steven_continuation_flag;
+    int continuation_fr;
 
     bool check_dup_in_quad, use_attach_opt;
     
@@ -161,7 +163,9 @@ int main(int argc, char* argv[]){
         ("restart", po::value<bool>(&restart)->default_value(false), "if true, will restart simulation from last timestep recorded")
         ("restart_time", po::value<double>(&restart_time)->default_value(-1), "time to restart simulation from")
         ("restart_strain", po::value<double>(&restart_strain)->default_value(0),"the starting strain for restarting simulation")
-
+        ("steven_continuation_flag", po::value<bool>(&steven_continuation_flag)->default_value(false), "flag to continue from last strain")
+        ("continuation_fr", po::value<int>(&continuation_fr)->default_value(0),"the last saved frame from the simulation to be continued")
+       
         ("dir", po::value<string>(&dir)->default_value("."), "output directory")
         ("myseed", po::value<int>(&myseed)->default_value(time(NULL)), "Random number generator myseed")
         
@@ -309,8 +313,8 @@ int main(int argc, char* argv[]){
         
         write_first_tsteps(thfile, restart_time);
         write_first_nlines( pefile, (int) nprinted);
+	
 
-    
         tinit       = restart_time;
         write_mode  = ios_base::app;
     }
@@ -341,6 +345,10 @@ int main(int argc, char* argv[]){
         xgrid  = (int) round(grid_factor*xrange);
         ygrid  = (int) round(grid_factor*yrange);
     }
+    if (restart && steven_continuation_flag){
+      restart_strain = get_restart_strain(pefile, continuation_fr);
+    }
+
 
     // Create Network Objects
     cout<<"\nCreating actin network..";

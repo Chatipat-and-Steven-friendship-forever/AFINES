@@ -111,6 +111,7 @@ vector<double *> str2ptrvec(string, string, string);
 vector<array<double,3> > str2arrvec(string, string, string);
 vector<vector<double> > file2vecvec(string path, string delim);
 vector<vector<double> > traj2vecvec(string path, string delim, double tf);
+double get_restart_strain(string path, int tf);
 double last_full_timestep(string dirpath);
 void write_first_nlines(string path, int n);
 void write_first_ntsteps(string path, int n);
