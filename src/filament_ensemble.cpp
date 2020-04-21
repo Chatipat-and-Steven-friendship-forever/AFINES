@@ -602,8 +602,8 @@ vector<vector<double> > filament_ensemble::spring_spring_intersections(double le
 
 filament_ensemble::filament_ensemble(int npolymer, int nbeads_min, int nbeads_extra, double nbeads_extra_prob, 
         array<double,2> myfov, array<int,2> mynq, double delta_t, double temp,
-        double rad, double vis, double spring_len, vector<array<double, 3> > pos_sets, double stretching, double ext, double bending, 
-        double frac_force, string bc, double seed, bool check_dup_in_quad_) {
+        double rad, double vis, double spring_len, vector<array<double, 3> > pos_sets, double stretching, double ext, double bending,
+				     double frac_force, string bc, double seed, bool check_dup_in_quad_, double drx) {
     
     check_dup_in_quad = check_dup_in_quad_;
     fov = myfov;
@@ -621,7 +621,7 @@ filament_ensemble::filament_ensemble(int npolymer, int nbeads_min, int nbeads_ex
     shear_stop = 1e10;
     shear_dt = dt;
     t = 0;
-    delrx = 0;
+    delrx = drx;
     
     if (seed == -1){
         straight_filaments = true;
@@ -643,14 +643,15 @@ filament_ensemble::filament_ensemble(int npolymer, int nbeads_min, int nbeads_ex
     for (int i=0; i<npolymer; i++) {
         if ( i < s ){
             network.push_back(new filament(pos_sets[i], nbeads, fov, nq,
-                        visc, dt, temp, straight_filaments, rad, spring_rest_len, stretching, ext, bending, frac_force, bc) );
+			  visc, dt, temp, straight_filaments, rad, spring_rest_len, stretching, ext, bending, frac_force, bc, drx) );
         }else{
             x0 = rng(-0.5*(view[0]*fov[0]),0.5*(view[0]*fov[0])); 
             y0 = rng(-0.5*(view[1]*fov[1]),0.5*(view[1]*fov[1]));
             phi0 =  rng(0, 2*pi);
             
             nbeads = nbeads_min + distribution(generator);
-            network.push_back(new filament({{x0,y0,phi0}}, nbeads, fov, nq, visc, dt, temp, straight_filaments, rad, spring_rest_len, stretching, ext, bending, frac_force, bc) );
+            network.push_back(new filament({{x0,y0,phi0}}, nbeads, fov, nq, visc, dt, temp, straight_filaments, rad, spring_rest_len,
+					   stretching, ext, bending, frac_force, bc, drx) );
         }
     }
     
@@ -675,8 +676,8 @@ filament_ensemble::filament_ensemble(int npolymer, int nbeads_min, int nbeads_ex
 }
 
 filament_ensemble::filament_ensemble(double density, array<double,2> myfov, array<int,2> mynq, double delta_t, double temp,
-        double rad, double vis, int nbeads, double spring_len, vector<array<double, 3> > pos_sets, double stretching, double ext, double bending, 
-        double frac_force, string bc, double seed, bool check_dup_in_quad_) {
+        double rad, double vis, int nbeads, double spring_len, vector<array<double, 3> > pos_sets, double stretching, double ext, 
+				double bending, double frac_force, string bc, double seed, bool check_dup_in_quad_, double drx) {
     
     check_dup_in_quad = check_dup_in_quad_;
     fov = myfov;
@@ -693,7 +694,7 @@ filament_ensemble::filament_ensemble(double density, array<double,2> myfov, arra
     shear_stop = 1e10;
     shear_dt = dt;
     t = 0;
-    delrx = 0;
+    delrx = drx;
     
     if (seed == -1){
         straight_filaments = true;
@@ -712,13 +713,14 @@ filament_ensemble::filament_ensemble(double density, array<double,2> myfov, arra
     for (int i=0; i<npolymer; i++) {
         if ( i < s ){
             network.push_back(new filament(pos_sets[i], nbeads, fov, nq,
-                        visc, dt, temp, straight_filaments, rad, spring_rest_len, stretching, ext, bending, frac_force, bc) );
+	       	   visc, dt, temp, straight_filaments, rad, spring_rest_len, stretching, ext, bending, frac_force, bc, drx) );
         }else{
             x0 = rng(-0.5*(view[0]*fov[0]),0.5*(view[0]*fov[0])); 
             y0 = rng(-0.5*(view[1]*fov[1]),0.5*(view[1]*fov[1]));
             phi0 =  rng(0, 2*pi);
             //phi0=atan2(1+x0-y0*y0, -1-x0*x0+y0); // this is just the first example in mathematica's streamplot documentation
-            network.push_back(new filament({{x0,y0,phi0}}, nbeads, fov, nq, visc, dt, temp, straight_filaments, rad, spring_rest_len, stretching, ext, bending, frac_force, bc) );
+            network.push_back(new filament({{x0,y0,phi0}}, nbeads, fov, nq, visc, dt, temp, straight_filaments, rad, spring_rest_len,
+					   stretching, ext, bending, frac_force, bc, drx) );
         }
     }
     
@@ -743,7 +745,7 @@ filament_ensemble::filament_ensemble(double density, array<double,2> myfov, arra
 }
 
 filament_ensemble::filament_ensemble(vector<vector<double> > beads, array<double,2> myfov, array<int,2> mynq, double delta_t, double temp,
-        double vis, double spring_len, double stretching, double ext, double bending, double frac_force, string bc, bool check_dup_in_quad_) {
+				     double vis, double spring_len, double stretching, double ext, double bending, double frac_force, string bc, bool check_dup_in_quad_, double drx) {
     
     check_dup_in_quad = check_dup_in_quad_;
     fov = myfov;
@@ -768,7 +770,8 @@ filament_ensemble::filament_ensemble(vector<vector<double> > beads, array<double
         
         if (beads[i][3] != fil_idx && avec.size() > 0){
             
-            network.push_back( new filament( avec, fov, nq, spring_rest_len, stretching, ext, bending, delta_t, temp, frac_force, 0, bc) );
+	  network.push_back( new filament( avec, fov, nq, spring_rest_len, stretching, ext, bending, delta_t, temp, frac_force, 0, 
+					   bc, drx) );
             
             sa = avec.size();
             for (j = 0; j < sa; j++) delete avec[j];
@@ -781,7 +784,8 @@ filament_ensemble::filament_ensemble(vector<vector<double> > beads, array<double
 
     sa = avec.size();
     if (sa > 0)
-        network.push_back( new filament( avec, fov, nq, spring_rest_len, stretching, ext, bending, delta_t, temp, frac_force, 0, bc) );
+      network.push_back( new filament( avec, fov, nq, spring_rest_len, stretching, ext, bending, delta_t, temp, frac_force, 0, bc, 
+				       drx) );
     
     for (j = 0; j < sa; j++) delete avec[j];
     avec.clear();

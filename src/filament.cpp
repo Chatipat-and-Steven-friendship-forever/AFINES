@@ -36,14 +36,14 @@ filament::filament(){
 }
 
 filament::filament(array<double, 2> myfov, array<int, 2> mynq, double deltat, double temp, double shear, 
-        double frac, double bending_stiffness, string bndcnd)
+		   double frac, double bending_stiffness, string bndcnd, double drx)
 {
     fov             = myfov;
     nq              = mynq;
     dt              = deltat;
     temperature     = temp;
     gamma           = shear;
-    delrx           = 0;
+    delrx           = drx;
     fracture_force  = frac;
     kb              = bending_stiffness;
     BC              = bndcnd;
@@ -58,7 +58,7 @@ filament::filament(array<double, 2> myfov, array<int, 2> mynq, double deltat, do
 
 filament::filament(array<double, 3> startpos, int nbead, array<double, 2> myfov, array<int, 2> mynq, double visc, 
         double deltat, double temp, bool isStraight, double beadRadius, double spring_length, double stretching_stiffness,
-        double max_ext_ratio, double bending_stiffness, double frac_force, string bdcnd)
+		   double max_ext_ratio, double bending_stiffness, double frac_force, string bdcnd, double drx)
 {
     
     fov = myfov;
@@ -66,7 +66,7 @@ filament::filament(array<double, 3> startpos, int nbead, array<double, 2> myfov,
     dt = deltat;
     temperature = temp;
     gamma = 0;
-    delrx = 0;
+    delrx = drx;
     fracture_force = frac_force;
     BC = bdcnd;
     kb = bending_stiffness;
@@ -110,14 +110,14 @@ filament::filament(array<double, 3> startpos, int nbead, array<double, 2> myfov,
 
 filament::filament(vector<bead *> beadvec, array<double, 2> myfov, array<int, 2> mynq, double spring_length, 
         double stretching_stiffness, double max_ext_ratio, double bending_stiffness, 
-        double deltat, double temp, double frac_force, double g, string bdcnd)
+		   double deltat, double temp, double frac_force, double g, string bdcnd, double drx)
 {
     
     dt = deltat;
     temperature = temp;
     fracture_force = frac_force;
     gamma = g; 
-    delrx = 0;
+    delrx = drx;
     BC = bdcnd;
     kb = bending_stiffness;
     fov = myfov;
@@ -410,6 +410,8 @@ vector<filament *> filament::fracture(int node){
     vector<filament *> newfilaments;
     cout<<"\n\tDEBUG: fracturing at node "<<node;
     
+    double drx = 0;
+
     if(springs.size() == 0)
         return newfilaments;
 
@@ -419,11 +421,11 @@ vector<filament *> filament::fracture(int node){
     if (lower_half.size() > 0)
         newfilaments.push_back(
                 new filament(lower_half, fov, nq, springs[0]->get_l0(), springs[0]->get_kl(), springs[0]->get_fene_ext(), kb, 
-                    dt, temperature, fracture_force, gamma, BC));
+			     dt, temperature, fracture_force, gamma, BC, drx));
     if (upper_half.size() > 0)
         newfilaments.push_back(
                 new filament(upper_half, fov, nq, springs[0]->get_l0(), springs[0]->get_kl(), springs[0]->get_fene_ext(), kb, 
-                    dt, temperature, fracture_force, gamma, BC));
+			     dt, temperature, fracture_force, gamma, BC, drx));
 
     for (int i = 0; i < (int)(lower_half.size()); i++) delete lower_half[i];
     for (int i = 0; i < (int)(upper_half.size()); i++) delete upper_half[i];

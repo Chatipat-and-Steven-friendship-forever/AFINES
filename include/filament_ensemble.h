@@ -29,15 +29,15 @@ class filament_ensemble
         filament_ensemble(int npolymer, int nbeads_min, int nbeads_max, double nbeads_prob,
                 array<double,2> myfov, array<int,2> mynq, double delta_t, double temp,
                 double rad, double vis, double spring_len, vector<array<double, 3> > pos_sets, double stretching, double ext, double bending, 
-                double frac_force, string bc, double seed, bool check_dup_in_quad_);
+			  double frac_force, string bc, double seed, bool check_dup_in_quad_, double drx);
 
         filament_ensemble(double density, array<double,2> myfov, array<int, 2> mynq, double delta_t, double temp, 
                 double len, double vis, int nbead,
                 double spring_len, vector<array<double, 3> > pos_sets, double stretching, double ext, double bending, double frac_force, 
-                string bc, double seed, bool check_dup_in_quad_);
+			  string bc, double seed, bool check_dup_in_quad_, double drx);
         
         filament_ensemble(vector< vector<double> > beads, array<double,2> myfov, array<int,2> mynq, double delta_t, double temp,
-                double vis, double spring_len, double stretching, double ext, double bending, double frac_force, string bc, bool check_dup_in_quad_); 
+			  double vis, double spring_len, double stretching, double ext, double bending, double frac_force, string bc, bool check_dup_in_quad_, double drx); 
         
         ~filament_ensemble();
         

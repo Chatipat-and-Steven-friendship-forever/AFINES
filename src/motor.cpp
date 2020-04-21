@@ -33,7 +33,7 @@ motor::motor( array<double, 3> pos,
         double max_ext_ratio, 
         double ron, double roff, double rend, 
         double fstall, double rcut,
-        double vis, string bc) {
+	double vis, string bc, double dx) {
     
     vs          = v0;
     mk          = stiffness;//rng(10,100); 
@@ -63,7 +63,7 @@ motor::motor( array<double, 3> pos,
     eps_ext     = 0.01*max_ext;
     /*************************/
 
-    shear       = 0;
+    shear       = dx;
     tension     = 0;
     force       = {{0,0}}; // force on the spring  
     kinetic_energy = 0; //assume m = 1
@@ -90,13 +90,13 @@ motor::motor( array<double, 3> pos,
 
     if (state[0] == 1){
         pos_a_end[0] = dist_bc(BC, filament_network->get_end(f_index[0], l_index[0])[0] - hx[0],
-                                   filament_network->get_end(f_index[0], l_index[0])[1] - hy[0], fov[0], fov[1], 0);
+                                   filament_network->get_end(f_index[0], l_index[0])[1] - hy[0], fov[0], fov[1], shear);
         ldir_bind[0] = filament_network->get_direction(f_index[0], l_index[0]);
 
     }
     if (state[1] == 1){
         pos_a_end[1] = dist_bc(BC, filament_network->get_end(f_index[1], l_index[1])[0] - hx[1],
-                                   filament_network->get_end(f_index[1], l_index[1])[1] - hy[1], fov[0], fov[1], 0);
+                                   filament_network->get_end(f_index[1], l_index[1])[1] - hy[1], fov[0], fov[1], shear);
         ldir_bind[1] = filament_network->get_direction(f_index[1], l_index[1]);
     }
     
@@ -119,7 +119,7 @@ motor::motor( array<double, 4> pos,
         double max_ext_ratio, 
         double ron, double roff, double rend, 
         double fstall, double rcut,
-        double vis, string bc) {
+	double vis, string bc, double dx) {
     
     vs          = v0;
     mk          = stiffness;
@@ -150,7 +150,7 @@ motor::motor( array<double, 4> pos,
     eps_ext     = 0.01*max_ext;
     /********************************/
 
-    shear       = 0;
+    shear       = dx;
     tension     = 0;
     force       = {{0,0}}; // force on the spring  
     kinetic_energy = 0;
@@ -178,13 +178,13 @@ motor::motor( array<double, 4> pos,
 
     if (state[0] == 1){
         pos_a_end[0] = dist_bc(BC, filament_network->get_end(f_index[0], l_index[0])[0] - hx[0],
-                                   filament_network->get_end(f_index[0], l_index[0])[1] - hy[0], fov[0], fov[1], 0);
+                                   filament_network->get_end(f_index[0], l_index[0])[1] - hy[0], fov[0], fov[1], shear);
         ldir_bind[0] = filament_network->get_direction(f_index[0], l_index[0]);
 
     }
     if (state[1] == 1){
         pos_a_end[1] = dist_bc(BC, filament_network->get_end(f_index[1], l_index[1])[0] - hx[1],
-                                   filament_network->get_end(f_index[1], l_index[1])[1] - hy[1], fov[0], fov[1], 0);
+                                   filament_network->get_end(f_index[1], l_index[1])[1] - hy[1], fov[0], fov[1], shear);
         ldir_bind[1] = filament_network->get_direction(f_index[1], l_index[1]);
     }
 

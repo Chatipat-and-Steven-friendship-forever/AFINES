@@ -27,14 +27,16 @@ class filament
     public:
 
         filament(array<double, 2> myfov, array<int, 2> mynq, double deltat, double temp, double shear, 
-                double frac, double bending_stiffness, string bndcnd);
+		 double frac, double bending_stiffness, string bndcnd, double drx);
         
         filament(array<double, 3> startpos, int nbead, array<double,2> myfov, array<int,2> mynq,
                 double vis, double deltat, double temp, bool isStraight,
-                double beadLength, double spring_length, double stretching, double ext, double bending, double fracture, string bc); 
+		 double beadLength, double spring_length, double stretching, double ext, double bending, double fracture, string bc,
+		 double drx); 
 
-        filament(vector<bead *> beadvec, array<double, 2> myfov, array<int, 2> mynq, double spring_length, double stretching_stiffness, double ext, double bending_stiffness, 
-                double deltat, double temp, double fracture, double gamma, string bc);
+        filament(vector<bead *> beadvec, array<double, 2> myfov, array<int, 2> mynq, double spring_length, 
+		 double stretching_stiffnes, double ext, double bending_stiffness, 
+		 double deltat, double temp, double fracture, double gamma, string bc, double drx);
        
         filament();
         

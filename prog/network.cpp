@@ -358,12 +358,13 @@ int main(int argc, char* argv[]){
                 temperature, actin_length, viscosity, link_length, 
                 actin_position_arrs, 
                 link_stretching_stiffness, fene_pct, link_bending_stiffness,
-                fracture_force, bnd_cnd, myseed, check_dup_in_quad); 
+				    fracture_force, bnd_cnd, myseed, check_dup_in_quad, restart_strain); 
     }else{
         net = new filament_ensemble(actin_pos_vec, {{xrange, yrange}}, {{xgrid, ygrid}}, dt, 
                 temperature, viscosity, link_length, 
                 link_stretching_stiffness, fene_pct, link_bending_stiffness,
-                fracture_force, bnd_cnd, check_dup_in_quad); 
+				    fracture_force, bnd_cnd, check_dup_in_quad, restart_strain); 
+	net->update_delrx(restart_strain);
     }
    
     if (link_intersect_flag) p_motor_pos_vec = net->spring_spring_intersections(p_motor_length, p_linkage_prob); 
@@ -376,11 +377,11 @@ int main(int argc, char* argv[]){
     if (a_motor_pos_vec.size() == 0 && a_motor_in.size() == 0)
         myosins = new motor_ensemble( a_motor_density, {{xrange, yrange}}, dt, temperature, 
                 a_motor_length, net, a_motor_v, a_motor_stiffness, fene_pct, a_m_kon, a_m_koff,
-                a_m_kend, a_m_stall, a_m_cut, viscosity, a_motor_position_arrs, bnd_cnd, use_attach_opt);
+       	        a_m_kend, a_m_stall, a_m_cut, viscosity, a_motor_position_arrs, bnd_cnd, use_attach_opt, restart_strain);
     else
         myosins = new motor_ensemble( a_motor_pos_vec, {{xrange, yrange}}, dt, temperature, 
                 a_motor_length, net, a_motor_v, a_motor_stiffness, fene_pct, a_m_kon, a_m_koff,
-                a_m_kend, a_m_stall, a_m_cut, viscosity, bnd_cnd, use_attach_opt);
+		a_m_kend, a_m_stall, a_m_cut, viscosity, bnd_cnd, use_attach_opt, restart_strain);
     if (dead_head_flag) myosins->kill_heads(dead_head);
 
     cout<<"Adding passive motors (crosslinkers) ...\n";
@@ -389,11 +390,11 @@ int main(int argc, char* argv[]){
     if(p_motor_pos_vec.size() == 0 && p_motor_in.size() == 0)
         crosslks = new motor_ensemble( p_motor_density, {{xrange, yrange}}, dt, temperature, 
                 p_motor_length, net, p_motor_v, p_motor_stiffness, fene_pct, p_m_kon, p_m_koff,
-                p_m_kend, p_m_stall, p_m_cut, viscosity, p_motor_position_arrs, bnd_cnd, use_attach_opt);
+ 	        p_m_kend, p_m_stall, p_m_cut, viscosity, p_motor_position_arrs, bnd_cnd, use_attach_opt, restart_strain);
     else
         crosslks = new motor_ensemble( p_motor_pos_vec, {{xrange, yrange}}, dt, temperature, 
                 p_motor_length, net, p_motor_v, p_motor_stiffness, fene_pct, p_m_kon, p_m_koff,
-                p_m_kend, p_m_stall, p_m_cut, viscosity, bnd_cnd, use_attach_opt);
+		p_m_kend, p_m_stall, p_m_cut, viscosity, bnd_cnd, use_attach_opt, restart_strain);
     if (p_dead_head_flag) crosslks->kill_heads(p_dead_head);
 
     // Write the full configuration file
