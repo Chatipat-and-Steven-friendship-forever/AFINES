@@ -27,7 +27,7 @@ class spring
     public:
         spring();
         
-        spring(double len, double stiffness, double max_ext, filament* f, array<int, 2> aindex, array<double, 2> fov, array<int, 2> nq);
+        spring(double len, double stiffness, double max_ext, filament* f, array<int, 2> aindex, array<int, 2> nq);
         
         virtual ~spring();
 
@@ -55,11 +55,9 @@ class spring
         
         string to_string();
         
-        string write(string bc, double shear_dist);
+        string write();
         
         void step();
-        
-        void step(string bc, double shear_dist);
         
         void filament_update();
         
@@ -67,30 +65,29 @@ class spring
         
         bool is_similar(const spring& that);    
 
-        void update_force(string bc, double shear_dist);
+        void update_force();
         
-        void update_force_fraenkel_fene(string bc, double shear_dist);
+        void update_force_fraenkel_fene();
         
-        double get_stretching_energy_fene(string bc, double shear_dist);
+        double get_stretching_energy_fene();
         
-        void update_force_marko_siggia(string bc, double shear_dist, double kToverA);
+        void update_force_marko_siggia(double kToverA);
 
         array<double,2> get_force();
 
         void set_aindex1(int i);
         
-        double get_distance_sq(string bc, double shear_dist, double xp, double yp);
+        double get_distance_sq(double xp, double yp);
 
         double get_int_angle(double xp, double yp);
         
-//      array<double,2> get_intpoint(string bc, double shear_dist, double xp, double yp);
         array<double,2> get_intpoint();
 
-        void calc_intpoint(string bc, double shear_dist, double xp, double yp);
+        void calc_intpoint(double xp, double yp);
         
         vector<array<int,2> > get_quadrants();
        
-        void quad_update(string bc, double shear_dist);
+        void quad_update();
         
         array<double, 2> get_direction();
         
@@ -102,7 +99,7 @@ class spring
 
         double xcm, ycm, l0, kl, max_ext, eps_ext, llen, llensq;//, force;
        
-        array<double,2> fov, hx, hy;
+        array<double,2> hx, hy;
         array<double, 2> disp, force, intpoint, direc;
 
         array<int, 2> nq, half_nq, aindex;

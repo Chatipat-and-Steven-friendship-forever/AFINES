@@ -19,13 +19,12 @@
 spring::spring(){ }
 
 spring::spring(double len, double stretching_stiffness, double max_ext_ratio, filament* f, 
-        array<int, 2> myaindex, array<double, 2> myfov, array<int, 2> mynq)
+        array<int, 2> myaindex, array<int, 2> mynq)
 {
     kl      = stretching_stiffness;
     l0      = len;
     fil     = f;
     aindex  = myaindex;
-    fov     = myfov;
     nq      = mynq;
     half_nq = {{nq[0]/2, nq[1]/2}};
 
@@ -53,8 +52,11 @@ array<double,2> spring::get_hy(){
 
 // stepping kinetics
 
-void spring::step(string bc, double shear_dist)
+void spring::step()
 {
+    string bc = fil->get_BC();
+    array<double, 2> fov = fil->get_fov();
+    double shear_dist = fil->get_delrx();
     hx[0] = fil->get_bead(aindex[0])->get_xcm();
     hx[1] = fil->get_bead(aindex[1])->get_xcm();
     hy[0] = fil->get_bead(aindex[0])->get_ycm();
@@ -71,7 +73,7 @@ void spring::step(string bc, double shear_dist)
 
 }
 
-void spring::update_force(string bc, double shear_dist)
+void spring::update_force()
 {
     double kf = kl*(llen-l0);
     force = {{kf*direc[0], kf*direc[1]}};
@@ -79,7 +81,7 @@ void spring::update_force(string bc, double shear_dist)
 
 /* Taken from hsieh, jain, larson, jcp 2006; eqn (5)
  * Adapted by placing a cutoff, similar to how it's done in LAMMPS src/bond_fene.cpp*/
-void spring::update_force_fraenkel_fene(string bc, double shear_dist)
+void spring::update_force_fraenkel_fene()
 {
     double ext = abs(l0 - llen);
     double scaled_ext, klp;
@@ -95,7 +97,7 @@ void spring::update_force_fraenkel_fene(string bc, double shear_dist)
 
 }
 
-void spring::update_force_marko_siggia(string bc, double shear_dist, double kToverLp)
+void spring::update_force_marko_siggia(double kToverLp)
 {
     double xrat = llen/l0, yrat = llen/l0;
     if (xrat != xrat || xrat == 1) xrat = 0;
@@ -145,7 +147,8 @@ double spring::get_length_sq(){
     return llensq;
 }
 
-std::string spring::write(string bc, double shear_dist){
+std::string spring::write()
+{
     return "\n" + std::to_string(hx[0]) + "\t" + std::to_string(hy[0]) + "\t" + std::to_string(disp[0]) + "\t" 
         + std::to_string(disp[1]);
 }
@@ -180,8 +183,11 @@ bool spring::is_similar(const spring& that)
 }
 
 // Updates all derived quantities of a monomer
-void spring::quad_update(string bc, double delrx)
+void spring::quad_update()
 {
+    string bc = fil->get_BC();
+    array<double, 2> fov = fil->get_fov();
+    double delrx = fil->get_delrx();
     // quadrant numbers crossed by the bead in x-direction
     quad.clear();
 
@@ -290,8 +296,11 @@ void spring::quad_update(string bc, double delrx)
 
 //shortest(perpendicular) distance between an arbitrary point and the spring
 //SO : 849211
-double spring::get_distance_sq(string bc, double delrx, double xp, double yp)
+double spring::get_distance_sq(double xp, double yp)
 {
+    string bc = fil->get_BC();
+    array<double, 2> fov = fil->get_fov();
+    double delrx = fil->get_delrx();
     array<double, 2> dr = rij_bc(bc, intpoint[0]-xp, intpoint[1]-yp, fov[0], fov[1], delrx);
     return dr[0]*dr[0] + dr[1]*dr[1];
 }
@@ -301,8 +310,11 @@ array<double,2> spring::get_intpoint()
     return intpoint;
 }
 
-void spring::calc_intpoint(string bc, double delrx, double xp, double yp)
+void spring::calc_intpoint(double xp, double yp)
 {
+    string bc = fil->get_BC();
+    array<double, 2> fov = fil->get_fov();
+    double delrx = fil->get_delrx();
     double l2 = disp[0]*disp[0]+disp[1]*disp[1];
     if (l2==0){
         intpoint = {{hx[0], hy[0]}};
@@ -345,7 +357,7 @@ array<array<double, 2>, 2> spring::get_virial() {
     };
 }
 
-double spring::get_stretching_energy_fene(string bc, double shear_dist)
+double spring::get_stretching_energy_fene()
 {
     double ext = abs(l0 - llen);
     

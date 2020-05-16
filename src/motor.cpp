@@ -261,11 +261,11 @@ bool motor::attach_opt(int hd)
         array<int, 2> fl = attach_list->at(i);
         filament *f = filament_network->get_filament(fl[0]);
         spring *s = f->get_spring(fl[1]);
-        s->calc_intpoint(f->get_BC(), filament_network->get_delrx(), hx[hd], hy[hd]);
+        s->calc_intpoint(hx[hd], hy[hd]);
         array<double ,2> intpoint = s->get_intpoint();
 
         // don't bind if binding site is further away than the cutoff
-        double dist_sq = s->get_distance_sq(f->get_BC(), filament_network->get_delrx(), hx[hd], hy[hd]);
+        double dist_sq = s->get_distance_sq(hx[hd], hy[hd]);
         if (dist_sq > max_bind_dist_sq || !allowed_bind(hd, fl)) {
             return false;
         }

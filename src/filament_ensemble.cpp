@@ -147,8 +147,8 @@ void filament_ensemble::update_dist_map(set<pair<double, array<int,2>>>& t_map, 
         fl = springs_per_quad[mq[0]]->at(mq[1])->at(i); //fl  = {{filament_index, spring_index}}
 
         if (fls.find(fl) == fls.end()){
-            network[fl[0]]->get_spring(fl[1])->calc_intpoint(network[fl[0]]->get_BC(), delrx, x, y); //calculate the point on the spring closest to (x,y)
-            dist_sq = network[fl[0]]->get_spring(fl[1])->get_distance_sq(network[fl[0]]->get_BC(), delrx, x, y); //store the distance to that point
+            network[fl[0]]->get_spring(fl[1])->calc_intpoint(x, y); //calculate the point on the spring closest to (x,y)
+            dist_sq = network[fl[0]]->get_spring(fl[1])->get_distance_sq(x, y); //store the distance to that point
             //cout<<"\nDEBUG : dist = "<<dist;
 
             t_map.insert(pair<double, array<int, 2> >(dist_sq, fl));
@@ -193,8 +193,8 @@ set<pair<double, array<int,2>>> filament_ensemble::get_dist_all(double x, double
     double dist_sq=0;
     for (int f = 0; f < int(network.size()); f++){
         for (int l=0; l < network[f]->get_nsprings(); l++){
-                network[f]->get_spring(l)->calc_intpoint(network[f]->get_BC(), delrx, x, y); //calculate the point on the spring closest to (x,y)
-                dist_sq = network[f]->get_spring(l)->get_distance_sq(network[f]->get_BC(), delrx, x, y); //store the distance to that point
+                network[f]->get_spring(l)->calc_intpoint(x, y); //calculate the point on the spring closest to (x,y)
+                dist_sq = network[f]->get_spring(l)->get_distance_sq(x, y); //store the distance to that point
                 // t_map[dist] = {f,l}; 
                 t_map.insert(pair<double, array<int, 2>>(dist_sq, {{f, l}}));
         }

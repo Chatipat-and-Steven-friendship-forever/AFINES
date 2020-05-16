@@ -95,9 +95,9 @@ filament::filament(array<double, 3> startpos, int nbead, array<double, 2> myfov,
                 {{beads[j-1]->get_xcm() + spring_length*cos(phi), beads[j-1]->get_ycm() + spring_length*sin(phi)}});
         beads.push_back( new bead(next_pos[0], next_pos[1], beadRadius, visc) );
         prv_rnds.push_back({{0,0}});
-        springs.push_back( new spring(spring_length, stretching_stiffness, max_ext_ratio, this, {{j-1, j}}, fov, nq) );  
-        springs[j-1]->step(BC, delrx);  
-        springs[j-1]->update_force(BC, delrx);
+        springs.push_back( new spring(spring_length, stretching_stiffness, max_ext_ratio, this, {{j-1, j}}, nq) );  
+        springs[j-1]->step();  
+        springs[j-1]->update_force();
         
         // Calculate the Next angle on the bead polymer
         if (!isStraight) phi += sqrt(variance)*rng_n();
@@ -137,9 +137,9 @@ filament::filament(vector<bead *> beadvec, array<double, 2> myfov, array<int, 2>
         for (unsigned int j = 1; j < beadvec.size(); j++) {
 
             beads.push_back(new bead(*(beadvec[j])));
-            springs.push_back( new spring(spring_length, stretching_stiffness, max_ext_ratio, this, {{(int)j-1, (int)j}}, fov, nq) );  
-            springs[j-1]->step(BC, delrx);
-            springs[j-1]->update_force(BC, delrx);
+            springs.push_back( new spring(spring_length, stretching_stiffness, max_ext_ratio, this, {{(int)j-1, (int)j}}, nq) );  
+            springs[j-1]->step();
+            springs[j-1]->update_force();
             prv_rnds.push_back({{0,0}});
             
         }
@@ -174,8 +174,8 @@ void filament::add_bead(bead * a, double spring_length, double stretching_stiffn
     prv_rnds.push_back({{0,0}});    
     if (beads.size() > 1){
         int j = (int) beads.size() - 1;
-        springs.push_back( new spring(spring_length, stretching_stiffness, max_ext_ratio, this, {{j-1,  j}}, fov, nq ) );  
-        springs[j-1]->step(BC, delrx);
+        springs.push_back( new spring(spring_length, stretching_stiffness, max_ext_ratio, this, {{j-1,  j}}, nq ) );  
+        springs[j-1]->step();
     }
     if (damp == infty)
         damp = a->get_friction();
@@ -186,7 +186,7 @@ vector<vector<array<int,2> > > filament::get_quadrants()
     //should return a map between bead and x, y coords of quadrant
     vector<vector<array<int,2> > > quads;
     for (unsigned int i=0; i < springs.size(); i++){ 
-        springs[i]->quad_update(BC, delrx);
+        springs[i]->quad_update();
         quads.push_back(springs[i]->get_quadrants());
     }
     
@@ -225,7 +225,7 @@ void filament::update_positions()
     }
 
     for (int i = 0; i < la; i++)
-        springs[i]->step(BC, delrx);
+        springs[i]->step();
 
 }
 
@@ -260,7 +260,7 @@ void filament::update_positions_range(int lo, int hi)
     }
 
     for (unsigned int i = 0; i < springs.size(); i++)
-        springs[i]->step(BC, delrx);
+        springs[i]->step();
 
 }
 
@@ -272,9 +272,9 @@ vector<filament *> filament::update_stretching(double t)
         return newfilaments;
    
     for (unsigned int i=0; i < springs.size(); i++) {
-        springs[i]->update_force(BC, delrx);
+        springs[i]->update_force();
         spring_force = springs[i]->get_force();
-        //springs[i]->update_force_fraenkel_fene(BC, delrx);
+        //springs[i]->update_force_fraenkel_fene();
         if (spring_force[0]*spring_force[0]+spring_force[1]*spring_force[1] > fracture_force_sq){
 //        if ((springs[i]->get_force()[0], springs[i]->get_force()[1]) > fracture_force){
             newfilaments = this->fracture(i);
@@ -379,7 +379,7 @@ string filament::write_springs(int fil){
     string all_springs;
     for (unsigned int i =0; i < springs.size(); i++)
     {
-        all_springs += springs[i]->write(BC, delrx) + "\t" + std::to_string(fil);
+        all_springs += springs[i]->write() + "\t" + std::to_string(fil);
     }
 
     return all_springs;
@@ -479,6 +479,16 @@ string filament::get_BC(){
 
 void filament::set_BC(string s){
     this->BC = s;
+}
+
+array<double, 2> filament::get_fov()
+{
+    return fov;
+}
+
+double filament::get_delrx()
+{
+    return delrx;
 }
 
 inline double filament::angle_between_springs(int i, int j){
@@ -621,7 +631,7 @@ double filament::get_stretching_energy()
     
     double u = 0;
     for (unsigned int i = 0; i < springs.size(); i++)
-        //u += springs[i]->get_stretching_energy_fene(BC, delrx);
+        //u += springs[i]->get_stretching_energy_fene();
         u += springs[i]->get_stretching_energy();
     
     return u;

@@ -100,7 +100,11 @@ class filament
         void set_BC(string s);
 
         string get_BC();
-       
+
+        array<double, 2> get_fov();
+
+        double get_delrx();
+
         inline double angle_between_springs(int i, int j);
 
         void fwd_bwd_bending_update();
