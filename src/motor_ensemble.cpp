@@ -26,7 +26,6 @@ motor_ensemble::motor_ensemble(double mdensity, array<double, 2> myfov, double d
     use_attach_opt = use_attach_opt_; 
     fov = myfov;
     mld =mlen;
-    gamma = 0;
     tMove=0;//10;
     f_network=network;
     v = v0;
@@ -52,8 +51,8 @@ motor_ensemble::motor_ensemble(double mdensity, array<double, 2> myfov, double d
         }
         motor_pos = {{motorx, motory, mang}};
 
-        n_motors.push_back(new motor( motor_pos, mld, f_network,{{0, 0}}, {{-1,-1}}, {{-1,-1}}, fov, delta_t, temp, 
-				      v0, stiffness, max_ext_ratio, ron, roff, rend, fstall, rcut, vis, BC, dx));
+        n_motors.push_back(new motor( motor_pos, mld, f_network,{{0, 0}}, {{-1,-1}}, {{-1,-1}}, delta_t, temp, 
+				      v0, stiffness, max_ext_ratio, ron, roff, rend, fstall, rcut, vis));
         
     }
 }
@@ -67,7 +66,6 @@ motor_ensemble::motor_ensemble(vector<vector<double> > motors, array<double, 2> 
     use_attach_opt = use_attach_opt_; 
     fov = myfov;
     mld = mlen;
-    gamma = 0;
     tMove = 0;
     f_network=network;
     v = v0;
@@ -90,8 +88,8 @@ motor_ensemble::motor_ensemble(vector<vector<double> > motors, array<double, 2> 
 
         state = {{f_index[0] == -1 && l_index[0] == -1 ? 0 : 1, f_index[1] == -1 && l_index[1] == -1 ? 0 : 1}};  
 
-        n_motors.push_back(new motor( motor_pos, mld, f_network, state, f_index, l_index, fov, delta_t, temp, 
-				      v0, stiffness, max_ext_ratio, ron, roff, rend, fstall, rcut, vis, BC, dx));
+        n_motors.push_back(new motor( motor_pos, mld, f_network, state, f_index, l_index, delta_t, temp, 
+				      v0, stiffness, max_ext_ratio, ron, roff, rend, fstall, rcut, vis));
     }
 
     this->update_energies();
@@ -244,16 +242,6 @@ void motor_ensemble::add_motor(motor * m)
     n_motors.push_back(m);
 }
 
-
-void motor_ensemble::set_shear(double g)
-{
-    for (unsigned int i=0; i<n_motors.size(); i++)
-        n_motors[i]->set_shear(g);
-    
-    gamma = g;
-}
-
- 
 void motor_ensemble::update_energies()
 {
     ke = 0;

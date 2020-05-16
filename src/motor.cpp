@@ -25,7 +25,6 @@ motor::motor( array<double, 3> pos,
         array<int, 2> mystate, 
         array<int, 2> myfindex, 
         array<int, 2> mylindex,
-        array<double, 2> myfov, 
         double delta_t, 
         double temp,
         double v0, 
@@ -33,7 +32,7 @@ motor::motor( array<double, 3> pos,
         double max_ext_ratio, 
         double ron, double roff, double rend, 
         double fstall, double rcut,
-	double vis, string bc, double dx) {
+	double vis) {
     
     vs          = v0;
     mk          = stiffness;//rng(10,100); 
@@ -52,8 +51,8 @@ motor::motor( array<double, 3> pos,
     state       = mystate;
     f_index     = myfindex; //filament index for each head
     l_index     = mylindex; //spring index for each head
-    fov         = myfov;
-    BC          = bc; 
+    array<double, 2> fov = network->get_fov();
+    string BC = network->get_BC();
     filament_network = network;
     damp        = (6*pi*vis*mld);
     bd_prefactor= sqrt(temperature/(2*damp*dt)); 
@@ -63,7 +62,7 @@ motor::motor( array<double, 3> pos,
     eps_ext     = 0.01*max_ext;
     /*************************/
 
-    shear       = dx;
+    double shear = filament_network->get_delrx();
     tension     = 0;
     force       = {{0,0}}; // force on the spring  
     kinetic_energy = 0; //assume m = 1
@@ -111,7 +110,6 @@ motor::motor( array<double, 4> pos,
         array<int, 2> mystate, 
         array<int, 2> myfindex, 
         array<int, 2> mylindex,
-        array<double, 2> myfov, 
         double delta_t, 
         double temp,
         double v0, 
@@ -119,7 +117,7 @@ motor::motor( array<double, 4> pos,
         double max_ext_ratio, 
         double ron, double roff, double rend, 
         double fstall, double rcut,
-	double vis, string bc, double dx) {
+	double vis) {
     
     vs          = v0;
     mk          = stiffness;
@@ -139,8 +137,8 @@ motor::motor( array<double, 4> pos,
     state       = mystate;
     f_index     = myfindex; //filament index for each head
     l_index     = mylindex; //spring index for each head
-    fov         = myfov;
-    BC          = bc; 
+    array<double, 2> fov = network->get_fov();
+    string BC = network->get_BC();
     filament_network = network;
     damp        =(6*pi*vis*mld);
     bd_prefactor= sqrt(temperature/(2*damp*dt)); 
@@ -150,7 +148,7 @@ motor::motor( array<double, 4> pos,
     eps_ext     = 0.01*max_ext;
     /********************************/
 
-    shear       = dx;
+    double shear = network->get_delrx();
     tension     = 0;
     force       = {{0,0}}; // force on the spring  
     kinetic_energy = 0;
@@ -214,23 +212,12 @@ array<double, 2> motor::get_hy()
     return hy;
 }
 
-
-string motor::get_BC()
-{
-    return BC;
-}
-
-
-void motor::set_shear(double gamma)
-{
-    shear = gamma;
-}
-
 //metropolis algorithm with rate constant
 //NOTE: while fl_idx doesn't matter for this xlink implementation, it does for "spacers"
 double motor::metropolis_prob(int hd, array<int, 2> fl_idx, array<double, 2> newpos, double maxprob)
 {
-
+    string BC = filament_network->get_BC();
+    array<double, 2> fov = filament_network->get_fov();
     double prob = maxprob;
     double stretch  = dist_bc(BC, newpos[0] - hx[pr(hd)], newpos[1] - hy[pr(hd)], fov[0], fov[1], filament_network->get_delrx()) - mld; 
     double delE = 0.5*mk*stretch*stretch - this->get_stretching_energy();
@@ -247,6 +234,8 @@ bool motor::allowed_bind(int hd, array<int, 2> fl_idx){
 
 bool motor::attach_opt(int hd)
 {
+    string BC = filament_network->get_BC();
+    array<double, 2> fov = filament_network->get_fov();
     double mf_rand = rng_u();
     vector<array<int, 2>> *attach_list = filament_network->get_attach_list(hx[hd], hy[hd]);
     int count = attach_list->size();
@@ -304,6 +293,8 @@ bool motor::attach_opt(int hd)
 //check for attachment of unbound heads given head index (0 for head 1, and 1 for head 2)
 bool motor::attach(int hd)
 {
+    string BC = filament_network->get_BC();
+    array<double, 2> fov = filament_network->get_fov();
     double not_off_prob = 0;
     double mf_rand = rng_u();
     array<double, 2> intPoint;
@@ -422,6 +413,8 @@ void motor::relax_head(int hd)
 
 void motor::update_angle()
 {
+    string BC = filament_network->get_BC();
+    array<double, 2> fov = filament_network->get_fov();
     disp  = rij_bc(BC, hx[1]-hx[0], hy[1]-hy[0], fov[0], fov[1], filament_network->get_delrx()); 
     len   = hypot(disp[0], disp[1]);
     if ( len != 0 ) 
@@ -433,11 +426,15 @@ void motor::update_angle()
 
 array<double, 2> motor::boundary_check(int hd, double x, double y)
 {
+    string BC = filament_network->get_BC();
+    array<double, 2> fov = filament_network->get_fov();
     return pos_bc(BC, filament_network->get_delrx(), dt, fov, {{(x - hx[hd])/dt, (y - hy[hd])/dt}}, {{x, y}});
 }
 
 array<double, 2> motor::generate_off_pos(int hd){
-    
+
+    string BC = filament_network->get_BC();
+    array<double, 2> fov = filament_network->get_fov();
     array<double, 2> ldir = filament_network->get_direction(f_index[hd], l_index[hd]);
     double c = dot(  ldir, ldir_bind[hd]);
     double s = cross(ldir, ldir_bind[hd]);
@@ -627,6 +624,9 @@ string motor::to_string()
     char buffer[1000];
     string out ="";
 
+    string BC = filament_network->get_BC();
+    array<double, 2> fov = filament_network->get_fov();
+    double shear = filament_network->get_delrx();
     sprintf(buffer, "\
             \nhead 0 position = (%f, %f)\t head 1 position=(%f,%f)\
             \nstate = (%d, %d)\t f_index = (%d, %d)\t l_index = (%d, %d)\
@@ -658,6 +658,7 @@ void motor::revive_head(int hd)
 
 void motor::update_d_strain(double g)
 {
+    array<double, 2> fov = filament_network->get_fov();
     array<double, 2> pos0 = boundary_check(0, hx[0] + g * hy[0] / fov[1], hy[0]);
     array<double, 2> pos1 = boundary_check(1, hx[1] + g * hy[1] / fov[1], hy[1]);
     hx[0] = pos0[0];

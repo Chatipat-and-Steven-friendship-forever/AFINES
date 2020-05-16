@@ -85,6 +85,7 @@ class filament_ensemble
        
         double get_bead_friction();
         
+        string get_BC();
         double get_delrx();
         array<double, 2> get_fov();
         array<int, 2> get_nq();
@@ -169,6 +170,7 @@ class filament_ensemble
     
     protected:
 
+        string BC;
         double t, dt, temperature, spring_rest_len, visc, min_time;
         double gamma, shear_stop, shear_dt, shear_speed, delrx;
         double max_springs_per_quad_per_filament, max_springs_per_quad; 

@@ -454,7 +454,10 @@ int filament_ensemble::get_nfilaments(){
     return network.size();
 }
 
- 
+string filament_ensemble::get_BC() {
+    return BC;
+}
+
 double filament_ensemble::get_delrx(){
     return delrx;
 }
@@ -606,6 +609,7 @@ filament_ensemble::filament_ensemble(int npolymer, int nbeads_min, int nbeads_ex
 				     double frac_force, string bc, double seed, bool check_dup_in_quad_, double drx) {
     
     check_dup_in_quad = check_dup_in_quad_;
+    BC = bc;
     fov = myfov;
     view[0] = 1;//(fov[0] - 2*nbeads*len)/fov[0];
     view[1] = 1;//(fov[1] - 2*nbeads*len)/fov[1];
@@ -680,6 +684,7 @@ filament_ensemble::filament_ensemble(double density, array<double,2> myfov, arra
 				double bending, double frac_force, string bc, double seed, bool check_dup_in_quad_, double drx) {
     
     check_dup_in_quad = check_dup_in_quad_;
+    BC = bc;
     fov = myfov;
     view[0] = 1;//(fov[0] - 2*nbeads*len)/fov[0];
     view[1] = 1;//(fov[1] - 2*nbeads*len)/fov[1];
@@ -748,6 +753,7 @@ filament_ensemble::filament_ensemble(vector<vector<double> > beads, array<double
 				     double vis, double spring_len, double stretching, double ext, double bending, double frac_force, string bc, bool check_dup_in_quad_, double drx) {
     
     check_dup_in_quad = check_dup_in_quad_;
+    BC = bc;
     fov = myfov;
 
     visc=vis;

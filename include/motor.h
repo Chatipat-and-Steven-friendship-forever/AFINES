@@ -27,23 +27,21 @@ class motor
 
         motor(array<double, 3> pos, double mlen, filament_ensemble* network, 
                 array<int, 2> mystate, array<int, 2> myfindex, array<int, 2> myrindex,
-                array<double, 2> myfov, double delta_t, double v0, double temp, double stiffness, double max_ext_ratio, 
+                double delta_t, double v0, double temp, double stiffness, double max_ext_ratio, 
                 double ron, double roff, double rend, 
                 double fstall, double rcut,
-	      double vis, string BC, double dx);
+	      double vis);
         
         motor(array<double, 4> pos, double mlen, filament_ensemble* network, 
                 array<int, 2> mystate, array<int, 2> myfindex, array<int, 2> myrindex,
-                array<double, 2> myfov, double delta_t, double v0, double temp, double stiffness, double max_ext_ratio,
+                double delta_t, double v0, double temp, double stiffness, double max_ext_ratio,
                 double ron, double roff, double rend, 
                 double fstall, double rcut,
-	      double vis, string BC, double dx);
+	      double vis);
         
         motor();
         
         ~motor();
-
-        string get_BC();
 
         bool allowed_bind( int hd, array<int, 2> fl_idx);
         
@@ -129,9 +127,9 @@ class motor
     public:
 
         double mld, vs, stall_force, max_bind_dist, max_bind_dist_sq, mk, kon, koff, kend, dt, temperature, 
-               damp, shear, max_ext, eps_ext, kinetic_energy, bd_prefactor, tension, len;
+               damp, max_ext, eps_ext, kinetic_energy, bd_prefactor, tension, len;
         
-        array<double,2> hx, hy, pos_a_end, fov, prv_rnd_x, prv_rnd_y, force, disp, direc;
+        array<double,2> hx, hy, pos_a_end, prv_rnd_x, prv_rnd_y, force, disp, direc;
 
         array<array<double, 2>, 2> ldir_bind, bind_disp;
 
@@ -139,9 +137,7 @@ class motor
         
         map<vector<int>, double> dist;
         array<bool, 2> at_barbed_end;
-        
-        string BC;
-        
+
         filament_ensemble* filament_network;
         
 };
