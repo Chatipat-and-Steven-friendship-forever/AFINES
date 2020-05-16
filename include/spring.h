@@ -27,7 +27,7 @@ class spring
     public:
         spring();
         
-        spring(double len, double stiffness, double max_ext, filament* f, array<int, 2> aindex, array<int, 2> nq);
+        spring(double len, double stiffness, double max_ext, filament* f, array<int, 2> aindex);
         
         virtual ~spring();
 
@@ -84,11 +84,7 @@ class spring
         array<double,2> get_intpoint();
 
         void calc_intpoint(double xp, double yp);
-        
-        vector<array<int,2> > get_quadrants();
-       
-        void quad_update();
-        
+
         array<double, 2> get_direction();
         
         array<double, 2> get_disp();
@@ -102,7 +98,7 @@ class spring
         array<double,2> hx, hy;
         array<double, 2> disp, force, intpoint, direc;
 
-        array<int, 2> nq, half_nq, aindex;
+        array<int, 2> aindex;
          
         filament *fil;
         

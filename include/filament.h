@@ -30,12 +30,12 @@ class filament
         filament(array<double, 2> myfov, array<int, 2> mynq, double deltat, double temp, double shear, 
 		 double frac, double bending_stiffness, string bndcnd, double drx);
 
-        filament(filament_ensemble *net, array<double, 3> startpos, int nbead, array<int,2> mynq,
+        filament(filament_ensemble *net, array<double, 3> startpos, int nbead,
                 double vis, double deltat, double temp, bool isStraight,
                 double beadLength, double spring_length, double stretching, double ext, double bending, double fracture);
 
-        filament(filament_ensemble *net, vector<bead *> beadvec, array<int, 2> mynq, double spring_length, 
-                double stretching_stiffnes, double ext, double bending_stiffness, 
+        filament(filament_ensemble *net, vector<bead *> beadvec, double spring_length,
+                double stretching_stiffnes, double ext, double bending_stiffness,
                 double deltat, double temp, double fracture, double gamma);
 
         filament();
@@ -71,9 +71,6 @@ class filament
         spring * get_spring(int i);
 
         int get_nsprings();
-
-        vector<vector<array<int, 2> > > get_quadrants();
-        //multimap<int, array<int, 2> > > get_quadrants();
 
         string write_beads(int fil);
         
@@ -139,7 +136,6 @@ class filament
         double gamma, max_shear, y_thresh;
 
         array<array<double, 2>, 2> bending_virial;
-        array<int,2> nq;
         vector<array<double, 2> > prv_rnds;
         vector<bead *> beads;
         vector<spring *> springs;

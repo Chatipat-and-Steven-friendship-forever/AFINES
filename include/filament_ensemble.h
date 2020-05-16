@@ -180,7 +180,7 @@ class filament_ensemble
         array<array<double, 2>, 2> vir_stretch, vir_bend;
 
         array<double,2> fov, view;
-        array<int, 2> nq, half_nq;
+        array<int, 2> nq;
         vector<int> broken_filaments, empty_vector;
         
         vector< vector < vector< array<int, 2 > >* > * > springs_per_quad;

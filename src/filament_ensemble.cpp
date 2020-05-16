@@ -72,12 +72,8 @@ void filament_ensemble::nlist_init_serial()
     }
 }
 
- 
 void filament_ensemble::quad_update_serial()
 {
-    int n_quads, net_sz = int(network.size());
-    vector<vector<array<int, 2>>> q;
-
     //initialize all quadrants to have no springs
     for (int x = 0; x < nq[0]; x++){
         for (int y = 0; y < nq[1]; y++){
@@ -85,14 +81,114 @@ void filament_ensemble::quad_update_serial()
         }
     }
 
-    for (int f = 0; f < net_sz; f++){
-        q = network[f]->get_quadrants();
-        for (int l = 0; l < network[f]->get_nsprings(); l++){
-            n_quads = int(q[l].size());
-            for (int i = 0; i < n_quads; i++){
-                int x = q[l][i][0];
-                int y = q[l][i][1];
-                springs_per_quad[x]->at(y)->push_back({{f,l}});
+    for (int f = 0; f < int(network.size()); f++) {
+        for (int l = 0; l < network[f]->get_nsprings(); l++) {
+            // quadrant numbers crossed by the bead in x-direction
+
+            spring *s = network[f]->get_spring(l);
+            array<double, 2> hx = s->get_hx();
+            array<double, 2> hy = s->get_hy();
+            array<double, 2> disp = s->get_disp();
+
+            if (BC != "PERIODIC" && BC != "LEES-EDWARDS") {
+
+                double xlo = hx[0], xhi = hx[1];
+                if (disp[0] < 0) std::swap(xlo, xhi);
+
+                double ylo = hy[0], yhi = hy[1];
+                if (disp[1] < 0) std::swap(ylo, yhi);
+
+                int xlower = floor(nq[0] * (xlo / fov[0] + 0.5));
+                int xupper = ceil(nq[0] * (xhi / fov[0] + 0.5));
+                if (xlower < 0) {
+                    cout << "Warning: x-index of quadrant < 0." << endl;
+                    xlower = 0;
+                }
+                if (xupper > nq[0]) {
+                    cout << "Warning: x-index of quadrant > nq[0]." << endl;
+                    xupper = nq[0];
+                }
+                assert(xlower <= xupper);
+
+                int ylower = floor(nq[1] * (ylo / fov[1] + 0.5));
+                int yupper = ceil(nq[1] * (yhi / fov[1] + 0.5));
+                if (ylower < 0) {
+                    cout << "Warning: y-index of quadrant < 0." << endl;
+                    ylower = 0;
+                }
+                if (yupper > nq[1]) {
+                    cout << "Warning: y-index of quadrant > nq[1]." << endl;
+                    yupper = nq[1];
+                }
+                assert(ylower <= yupper);
+
+                for (int i = xlower; i <= xupper; i++)
+                    for (int j = ylower; j <= yupper; j++)
+                        springs_per_quad[i]->at(j)->push_back({f, l});
+
+            } else {
+
+                double xlo, xhi;
+                double ylo, yhi;
+                if (disp[1] >= 0) {
+                    ylo = hy[0];
+                    yhi = hy[0] + disp[1];
+                    if (disp[0] >= 0) {
+                        xlo = hx[0];
+                        xhi = hx[0] + disp[0];
+                    } else {
+                        xlo = hx[0] + disp[0];
+                        xhi = hx[0];
+                    }
+                } else {
+                    ylo = hy[1];
+                    yhi = hy[1] - disp[1];
+                    if (disp[0] >= 0) {
+                        xlo = hx[1] - disp[0];
+                        xhi = hx[1];
+                    } else {
+                        xlo = hx[1];
+                        xhi = hx[1] - disp[0];
+                    }
+                }
+                assert(xlo <= xhi);
+                assert(ylo <= yhi);
+
+                int ylower = floor(nq[1] * (ylo / fov[1] + 0.5));
+                int yupper =  ceil(nq[1] * (yhi / fov[1] + 0.5));
+                assert(ylower <= yupper);
+
+                for (int jj = ylower; jj <= yupper; jj++) {
+                    int j = jj;
+
+                    double xlo_new = xlo;
+                    double xhi_new = xhi;
+                    while (j < 0) {
+                        j += nq[1];
+                        xlo_new += delrx;
+                        xhi_new += delrx;
+                    }
+                    while (j >= nq[1]) {
+                        j -= nq[1];
+                        xlo_new -= delrx;
+                        xhi_new -= delrx;
+                    }
+                    assert(0 <= j && j < nq[1]);
+
+                    int xlower = floor(nq[0] * (xlo_new / fov[0] + 0.5));
+                    int xupper =  ceil(nq[0] * (xhi_new / fov[0] + 0.5));
+                    assert(xlower <= xupper);
+
+                    for (int ii = xlower; ii <= xupper; ii++) {
+                        int i = ii;
+
+                        while (i < 0) i += nq[0];
+                        while (i >= nq[0]) i -= nq[0];
+                        assert(0 <= i && i < nq[0]);
+
+                        springs_per_quad[i]->at(j)->push_back({f, l});
+                    }
+                }
             }
         }
     }
@@ -108,7 +204,6 @@ void filament_ensemble::quad_update_serial()
             }
         }
     }
-
 }
 
 // return list of possible attachment points for motor head at (x, y)
@@ -610,7 +705,6 @@ filament_ensemble::filament_ensemble(int npolymer, int nbeads_min, int nbeads_ex
     view[0] = 1;//(fov[0] - 2*nbeads*len)/fov[0];
     view[1] = 1;//(fov[1] - 2*nbeads*len)/fov[1];
     nq = mynq;
-    half_nq = {{nq[0]/2, nq[1]/2}};
     
     double nbeads_mean = nbeads_min + nbeads_extra*nbeads_extra_prob;
     
@@ -642,7 +736,7 @@ filament_ensemble::filament_ensemble(int npolymer, int nbeads_min, int nbeads_ex
     double x0, y0, phi0;
     for (int i=0; i<npolymer; i++) {
         if ( i < s ){
-            network.push_back(new filament(this, pos_sets[i], nbeads, nq,
+            network.push_back(new filament(this, pos_sets[i], nbeads,
 			  visc, dt, temp, straight_filaments, rad, spring_rest_len, stretching, ext, bending, frac_force) );
         }else{
             x0 = rng(-0.5*(view[0]*fov[0]),0.5*(view[0]*fov[0])); 
@@ -650,7 +744,7 @@ filament_ensemble::filament_ensemble(int npolymer, int nbeads_min, int nbeads_ex
             phi0 =  rng(0, 2*pi);
             
             nbeads = nbeads_min + distribution(generator);
-            network.push_back(new filament(this, {{x0,y0,phi0}}, nbeads, nq, visc, dt, temp, straight_filaments, rad, spring_rest_len,
+            network.push_back(new filament(this, {{x0,y0,phi0}}, nbeads, visc, dt, temp, straight_filaments, rad, spring_rest_len,
 					   stretching, ext, bending, frac_force) );
         }
     }
@@ -685,7 +779,6 @@ filament_ensemble::filament_ensemble(double density, array<double,2> myfov, arra
     view[0] = 1;//(fov[0] - 2*nbeads*len)/fov[0];
     view[1] = 1;//(fov[1] - 2*nbeads*len)/fov[1];
     nq = mynq;
-    half_nq = {{nq[0]/2, nq[1]/2}};
     
     visc=vis;
     spring_rest_len =spring_len;
@@ -713,14 +806,14 @@ filament_ensemble::filament_ensemble(double density, array<double,2> myfov, arra
     double x0, y0, phi0;
     for (int i=0; i<npolymer; i++) {
         if ( i < s ){
-            network.push_back(new filament(this, pos_sets[i], nbeads, nq,
+            network.push_back(new filament(this, pos_sets[i], nbeads,
 	       	   visc, dt, temp, straight_filaments, rad, spring_rest_len, stretching, ext, bending, frac_force) );
         }else{
             x0 = rng(-0.5*(view[0]*fov[0]),0.5*(view[0]*fov[0])); 
             y0 = rng(-0.5*(view[1]*fov[1]),0.5*(view[1]*fov[1]));
             phi0 =  rng(0, 2*pi);
             //phi0=atan2(1+x0-y0*y0, -1-x0*x0+y0); // this is just the first example in mathematica's streamplot documentation
-            network.push_back(new filament(this, {{x0,y0,phi0}}, nbeads, nq, visc, dt, temp, straight_filaments, rad, spring_rest_len,
+            network.push_back(new filament(this, {{x0,y0,phi0}}, nbeads, visc, dt, temp, straight_filaments, rad, spring_rest_len,
 					   stretching, ext, bending, frac_force) );
         }
     }
@@ -772,7 +865,7 @@ filament_ensemble::filament_ensemble(vector<vector<double> > beads, array<double
         
         if (beads[i][3] != fil_idx && avec.size() > 0){
             
-	  network.push_back( new filament(this, avec, nq, spring_rest_len, stretching, ext, bending, delta_t, temp, frac_force, 0) );
+	  network.push_back( new filament(this, avec, spring_rest_len, stretching, ext, bending, delta_t, temp, frac_force, 0) );
             
             sa = avec.size();
             for (j = 0; j < sa; j++) delete avec[j];
@@ -785,7 +878,7 @@ filament_ensemble::filament_ensemble(vector<vector<double> > beads, array<double
 
     sa = avec.size();
     if (sa > 0)
-      network.push_back( new filament(this, avec, nq, spring_rest_len, stretching, ext, bending, delta_t, temp, frac_force, 0) );
+      network.push_back( new filament(this, avec, spring_rest_len, stretching, ext, bending, delta_t, temp, frac_force, 0) );
     
     for (j = 0; j < sa; j++) delete avec[j];
     avec.clear();

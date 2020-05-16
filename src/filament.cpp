@@ -20,8 +20,8 @@ filament::filament(){
 
     // fov[0] = 50;
     // fov[1] = 50;
-    nq[0] = 100;
-    nq[1] = 100;
+    // nq[0] = 100;
+    // nq[1] = 100;
     dt = 0.001;
     temperature = 0;
     fracture_force = 1000000;
@@ -40,7 +40,7 @@ filament::filament(array<double, 2> myfov, array<int, 2> mynq, double deltat, do
 		   double frac, double bending_stiffness, string bndcnd, double drx)
 {
     // fov             = myfov;
-    nq              = mynq;
+    // nq              = mynq;
     dt              = deltat;
     temperature     = temp;
     gamma           = shear;
@@ -57,14 +57,13 @@ filament::filament(array<double, 2> myfov, array<int, 2> mynq, double deltat, do
 
 }
 
-filament::filament(filament_ensemble *net, array<double, 3> startpos, int nbead, array<int, 2> mynq, double visc,
+filament::filament(filament_ensemble *net, array<double, 3> startpos, int nbead, double visc,
         double deltat, double temp, bool isStraight, double beadRadius, double spring_length, double stretching_stiffness,
         double max_ext_ratio, double bending_stiffness, double frac_force)
 {
     filament_network = net;
 
     array<double, 2> fov = net->get_fov();
-    nq = mynq;
     dt = deltat;
     temperature = temp;
     gamma = 0;
@@ -97,7 +96,7 @@ filament::filament(filament_ensemble *net, array<double, 3> startpos, int nbead,
                 {{beads[j-1]->get_xcm() + spring_length*cos(phi), beads[j-1]->get_ycm() + spring_length*sin(phi)}});
         beads.push_back( new bead(next_pos[0], next_pos[1], beadRadius, visc) );
         prv_rnds.push_back({{0,0}});
-        springs.push_back( new spring(spring_length, stretching_stiffness, max_ext_ratio, this, {{j-1, j}}, nq) );  
+        springs.push_back(new spring(spring_length, stretching_stiffness, max_ext_ratio, this, {j-1, j}));
         springs[j-1]->step();  
         springs[j-1]->update_force();
         
@@ -110,8 +109,8 @@ filament::filament(filament_ensemble *net, array<double, 3> startpos, int nbead,
     fracture_force_sq = fracture_force*fracture_force;
 }
 
-filament::filament(filament_ensemble *net, vector<bead *> beadvec, array<int, 2> mynq, double spring_length, 
-        double stretching_stiffness, double max_ext_ratio, double bending_stiffness, 
+filament::filament(filament_ensemble *net, vector<bead *> beadvec, double spring_length,
+        double stretching_stiffness, double max_ext_ratio, double bending_stiffness,
         double deltat, double temp, double frac_force, double g)
 {
     filament_network = net;
@@ -121,7 +120,6 @@ filament::filament(filament_ensemble *net, vector<bead *> beadvec, array<int, 2>
     fracture_force = frac_force;
     gamma = g; 
     kb = bending_stiffness;
-    nq = mynq;
     y_thresh = 1;
     kinetic_energy = 0;
 
@@ -137,7 +135,7 @@ filament::filament(filament_ensemble *net, vector<bead *> beadvec, array<int, 2>
         for (unsigned int j = 1; j < beadvec.size(); j++) {
 
             beads.push_back(new bead(*(beadvec[j])));
-            springs.push_back( new spring(spring_length, stretching_stiffness, max_ext_ratio, this, {{(int)j-1, (int)j}}, nq) );  
+            springs.push_back(new spring(spring_length, stretching_stiffness, max_ext_ratio, this, {(int)j-1, (int)j}));
             springs[j-1]->step();
             springs[j-1]->update_force();
             prv_rnds.push_back({{0,0}});
@@ -174,23 +172,11 @@ void filament::add_bead(bead * a, double spring_length, double stretching_stiffn
     prv_rnds.push_back({{0,0}});    
     if (beads.size() > 1){
         int j = (int) beads.size() - 1;
-        springs.push_back( new spring(spring_length, stretching_stiffness, max_ext_ratio, this, {{j-1,  j}}, nq ) );  
+        springs.push_back(new spring(spring_length, stretching_stiffness, max_ext_ratio, this, {j-1,  j}));
         springs[j-1]->step();
     }
     if (damp == infty)
         damp = a->get_friction();
-}
-
-vector<vector<array<int,2> > > filament::get_quadrants()
-{
-    //should return a map between bead and x, y coords of quadrant
-    vector<vector<array<int,2> > > quads;
-    for (unsigned int i=0; i < springs.size(); i++){ 
-        springs[i]->quad_update();
-        quads.push_back(springs[i]->get_quadrants());
-    }
-    
-    return quads;
 }
 
 void filament::set_y_thresh(double y){
@@ -428,12 +414,12 @@ vector<filament *> filament::fracture(int node){
 
     if (lower_half.size() > 0)
         newfilaments.push_back(
-                new filament(filament_network, lower_half, nq, springs[0]->get_l0(), springs[0]->get_kl(), springs[0]->get_fene_ext(), kb, 
-			     dt, temperature, fracture_force, gamma));
+                new filament(filament_network, lower_half, springs[0]->get_l0(), springs[0]->get_kl(), springs[0]->get_fene_ext(), kb,
+                    dt, temperature, fracture_force, gamma));
     if (upper_half.size() > 0)
         newfilaments.push_back(
-                new filament(filament_network, upper_half, nq, springs[0]->get_l0(), springs[0]->get_kl(), springs[0]->get_fene_ext(), kb, 
-			     dt, temperature, fracture_force, gamma));
+                new filament(filament_network, upper_half, springs[0]->get_l0(), springs[0]->get_kl(), springs[0]->get_fene_ext(), kb,
+                    dt, temperature, fracture_force, gamma));
 
     for (int i = 0; i < (int)(lower_half.size()); i++) delete lower_half[i];
     for (int i = 0; i < (int)(upper_half.size()); i++) delete upper_half[i];
@@ -458,8 +444,7 @@ bool filament::operator==(const filament& that){
         if (!(springs[i]->is_similar(*(that.springs[i]))))
             return false;
 
-    return (this->nq[0] == that.nq[0] && this->nq[1] == that.nq[1] &&
-            this->gamma == that.gamma && this->temperature == that.temperature &&
+    return (this->gamma == that.gamma && this->temperature == that.temperature &&
             this->dt == that.dt && this->fracture_force == that.fracture_force);
 
 }
@@ -473,6 +458,7 @@ string filament::to_string(){
     for (unsigned int i = 0; i < beads.size(); i++)
         out += beads[i]->to_string();
 
+    array<int, 2> nq = filament_network->get_nq();
     array<double, 2> fov = filament_network->get_fov();
     sprintf(buffer, "fov = (%f, %f)\tnq = (%d, %d)\tgamma = %f\ttemperature = %f\tdt = %f\tfracture_force=%f\n",
             fov[0], fov[1], nq[0], nq[1], gamma, temperature, dt, fracture_force);
