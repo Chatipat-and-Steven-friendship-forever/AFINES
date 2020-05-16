@@ -307,10 +307,6 @@ void filament_ensemble::update_delrx(double drx)
 {
     //cout<<"\nDEBUG: SHEARING"; 
     delrx = drx;
-    for (unsigned int f = 0; f < network.size(); f++)
-    {
-        network[f]->update_delrx(drx);
-    }
 }
 
  
@@ -646,16 +642,16 @@ filament_ensemble::filament_ensemble(int npolymer, int nbeads_min, int nbeads_ex
     double x0, y0, phi0;
     for (int i=0; i<npolymer; i++) {
         if ( i < s ){
-            network.push_back(new filament(pos_sets[i], nbeads, fov, nq,
-			  visc, dt, temp, straight_filaments, rad, spring_rest_len, stretching, ext, bending, frac_force, bc, drx) );
+            network.push_back(new filament(this, pos_sets[i], nbeads, nq,
+			  visc, dt, temp, straight_filaments, rad, spring_rest_len, stretching, ext, bending, frac_force) );
         }else{
             x0 = rng(-0.5*(view[0]*fov[0]),0.5*(view[0]*fov[0])); 
             y0 = rng(-0.5*(view[1]*fov[1]),0.5*(view[1]*fov[1]));
             phi0 =  rng(0, 2*pi);
             
             nbeads = nbeads_min + distribution(generator);
-            network.push_back(new filament({{x0,y0,phi0}}, nbeads, fov, nq, visc, dt, temp, straight_filaments, rad, spring_rest_len,
-					   stretching, ext, bending, frac_force, bc, drx) );
+            network.push_back(new filament(this, {{x0,y0,phi0}}, nbeads, nq, visc, dt, temp, straight_filaments, rad, spring_rest_len,
+					   stretching, ext, bending, frac_force) );
         }
     }
     
@@ -717,15 +713,15 @@ filament_ensemble::filament_ensemble(double density, array<double,2> myfov, arra
     double x0, y0, phi0;
     for (int i=0; i<npolymer; i++) {
         if ( i < s ){
-            network.push_back(new filament(pos_sets[i], nbeads, fov, nq,
-	       	   visc, dt, temp, straight_filaments, rad, spring_rest_len, stretching, ext, bending, frac_force, bc, drx) );
+            network.push_back(new filament(this, pos_sets[i], nbeads, nq,
+	       	   visc, dt, temp, straight_filaments, rad, spring_rest_len, stretching, ext, bending, frac_force) );
         }else{
             x0 = rng(-0.5*(view[0]*fov[0]),0.5*(view[0]*fov[0])); 
             y0 = rng(-0.5*(view[1]*fov[1]),0.5*(view[1]*fov[1]));
             phi0 =  rng(0, 2*pi);
             //phi0=atan2(1+x0-y0*y0, -1-x0*x0+y0); // this is just the first example in mathematica's streamplot documentation
-            network.push_back(new filament({{x0,y0,phi0}}, nbeads, fov, nq, visc, dt, temp, straight_filaments, rad, spring_rest_len,
-					   stretching, ext, bending, frac_force, bc, drx) );
+            network.push_back(new filament(this, {{x0,y0,phi0}}, nbeads, nq, visc, dt, temp, straight_filaments, rad, spring_rest_len,
+					   stretching, ext, bending, frac_force) );
         }
     }
     
@@ -761,7 +757,7 @@ filament_ensemble::filament_ensemble(vector<vector<double> > beads, array<double
     dt = delta_t;
     temperature = temp;
     t = 0;
-    delrx = 0;
+    delrx = drx;
 
     view[0] = 1;
     view[1] = 1;
@@ -776,8 +772,7 @@ filament_ensemble::filament_ensemble(vector<vector<double> > beads, array<double
         
         if (beads[i][3] != fil_idx && avec.size() > 0){
             
-	  network.push_back( new filament( avec, fov, nq, spring_rest_len, stretching, ext, bending, delta_t, temp, frac_force, 0, 
-					   bc, drx) );
+	  network.push_back( new filament(this, avec, nq, spring_rest_len, stretching, ext, bending, delta_t, temp, frac_force, 0) );
             
             sa = avec.size();
             for (j = 0; j < sa; j++) delete avec[j];
@@ -790,8 +785,7 @@ filament_ensemble::filament_ensemble(vector<vector<double> > beads, array<double
 
     sa = avec.size();
     if (sa > 0)
-      network.push_back( new filament( avec, fov, nq, spring_rest_len, stretching, ext, bending, delta_t, temp, frac_force, 0, bc, 
-				       drx) );
+      network.push_back( new filament(this, avec, nq, spring_rest_len, stretching, ext, bending, delta_t, temp, frac_force, 0) );
     
     for (j = 0; j < sa; j++) delete avec[j];
     avec.clear();

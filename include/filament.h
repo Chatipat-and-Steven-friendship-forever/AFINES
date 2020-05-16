@@ -14,6 +14,7 @@
 
 //=====================================
 // forward declared dependencies
+class filament_ensemble;
 
 //=====================================
 //included dependences
@@ -28,16 +29,15 @@ class filament
 
         filament(array<double, 2> myfov, array<int, 2> mynq, double deltat, double temp, double shear, 
 		 double frac, double bending_stiffness, string bndcnd, double drx);
-        
-        filament(array<double, 3> startpos, int nbead, array<double,2> myfov, array<int,2> mynq,
-                double vis, double deltat, double temp, bool isStraight,
-		 double beadLength, double spring_length, double stretching, double ext, double bending, double fracture, string bc,
-		 double drx); 
 
-        filament(vector<bead *> beadvec, array<double, 2> myfov, array<int, 2> mynq, double spring_length, 
-		 double stretching_stiffnes, double ext, double bending_stiffness, 
-		 double deltat, double temp, double fracture, double gamma, string bc, double drx);
-       
+        filament(filament_ensemble *net, array<double, 3> startpos, int nbead, array<int,2> mynq,
+                double vis, double deltat, double temp, bool isStraight,
+                double beadLength, double spring_length, double stretching, double ext, double bending, double fracture);
+
+        filament(filament_ensemble *net, vector<bead *> beadvec, array<int, 2> mynq, double spring_length, 
+                double stretching_stiffnes, double ext, double bending_stiffness, 
+                double deltat, double temp, double fracture, double gamma);
+
         filament();
         
         ~filament();
@@ -46,8 +46,6 @@ class filament
         
         void set_shear(double g);
 
-        void update_delrx(double shear_dist);
-        
         void update_d_strain(double);
 
         void update_shear(double t); 
@@ -134,17 +132,17 @@ class filament
         array<double,2> get_bead_position(int bead);
 
     protected:
-        
+
+        filament_ensemble *filament_network;
+
         double kb, temperature, dt, fracture_force, fracture_force_sq, kinetic_energy, damp, kToverLp, bd_prefactor, ubend;
-        double gamma, max_shear, delrx, y_thresh;
+        double gamma, max_shear, y_thresh;
 
         array<array<double, 2>, 2> bending_virial;
-        array<double,2> fov;
         array<int,2> nq;
         vector<array<double, 2> > prv_rnds;
         vector<bead *> beads;
         vector<spring *> springs;
-        string BC;
 };
 
 #endif
