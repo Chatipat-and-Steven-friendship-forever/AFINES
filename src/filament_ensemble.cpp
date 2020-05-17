@@ -74,6 +74,9 @@ void filament_ensemble::nlist_init_serial()
 
 void filament_ensemble::quad_update_serial()
 {
+    string BC = bc->get_BC();
+    array<double, 2> fov = bc->get_fov();
+    double delrx = bc->get_delrx();
     //initialize all quadrants to have no springs
     for (int x = 0; x < nq[0]; x++){
         for (int y = 0; y < nq[1]; y++){
@@ -209,6 +212,8 @@ void filament_ensemble::quad_update_serial()
 // return list of possible attachment points for motor head at (x, y)
 vector<array<int, 2>> *filament_ensemble::get_attach_list(double x, double y)
 {
+    array<double, 2> fov = bc->get_fov();
+    double delrx = bc->get_delrx();
     if (quad_off_flag) {
         return &all_springs;
     } else {
@@ -259,6 +264,8 @@ void filament_ensemble::update_dist_map(set<pair<double, array<int,2>>>& t_map, 
 
 set<pair<double, array<int, 2>>> filament_ensemble::get_dist(double x, double y)
 {
+    array<double, 2> fov = bc->get_fov();
+    double delrx = bc->get_delrx();
     fls.clear();
     set<pair<double, array<int, 2>>> t_map;
 
@@ -381,6 +388,7 @@ void filament_ensemble::write_thermo(ofstream& fout){
  
 void filament_ensemble::set_shear_rate(double g)
 {
+    array<double, 2> fov = bc->get_fov();
     if (network.size() > 0)
         if (network[0]->get_nbeads() > 0)
             shear_speed = g*fov[1] / (2*network[0]->get_bead(0)->get_friction());
@@ -397,17 +405,9 @@ void filament_ensemble::set_y_thresh(double y)
     for (unsigned int f = 0; f < network.size(); f++) network[f]->set_y_thresh(y);
 }
 
- 
-void filament_ensemble::update_delrx(double drx)
-{
-    //cout<<"\nDEBUG: SHEARING"; 
-    delrx = drx;
-}
-
- 
 void filament_ensemble::update_d_strain(double g)
 {
-    //cout<<"\nDEBUG: SHEARING"; 
+    bc->update_d_strain(g);
     for (unsigned int f = 0; f < network.size(); f++)
     {
         network[f]->update_d_strain(g);
@@ -495,13 +495,6 @@ bool filament_ensemble::is_polymer_start(int fil, int bead){
 
 }
 
- 
-void filament_ensemble::set_fov(double fovx, double fovy){
-    fov[0] = fovx;
-    fov[1] = fovy;
-}
-
- 
 void filament_ensemble::set_nq(double nqx, double nqy){
     nq[0] = nqx;
     nq[1] = nqy;
@@ -546,15 +539,15 @@ int filament_ensemble::get_nfilaments(){
 }
 
 string filament_ensemble::get_BC() {
-    return BC;
+    return bc->get_BC();
 }
 
 double filament_ensemble::get_delrx(){
-    return delrx;
+    return bc->get_delrx();
 }
 
 array<double, 2> filament_ensemble::get_fov() {
-    return fov;
+    return bc->get_fov();
 }
 
 array<int, 2> filament_ensemble::get_nq() {
@@ -653,19 +646,19 @@ void filament_ensemble::update()
 
 
 vector<vector<double> > filament_ensemble::spring_spring_intersections(double len, double prob){
-
     vector< vector<double> > itrs;
     array<double, 2> r1, r2, s1, s2, direc;
     pair<double, double> mmx1, mmy1, mmx2, mmy2;
     boost::optional<array<double, 2> > inter;
-    string bcf1; 
+    string bcf1 = bc->get_BC();
+    array<double, 2> fov = bc->get_fov();
+    double delrx = bc->get_delrx();
     for (unsigned int f1 = 0; f1 < network.size(); f1++){
         
         for (int l1 = 0; l1 < network[f1]->get_nsprings(); l1++){
 
             r1 = {{network[f1]->get_spring(l1)->get_hx()[0], network[f1]->get_spring(l1)->get_hy()[0]}};
             r2 = {{network[f1]->get_spring(l1)->get_hx()[1], network[f1]->get_spring(l1)->get_hy()[1]}};
-            bcf1 = network[f1]->get_BC();
             for (unsigned int f2 = f1+1; f2 < network.size(); f2++){
                 
                 for (int l2 = 0; l2 < network[f2]->get_nsprings(); l2++){
@@ -695,13 +688,12 @@ vector<vector<double> > filament_ensemble::spring_spring_intersections(double le
 ////////////////////////////////////////
 
 filament_ensemble::filament_ensemble(int npolymer, int nbeads_min, int nbeads_extra, double nbeads_extra_prob, 
-        array<double,2> myfov, array<int,2> mynq, double delta_t, double temp,
+        array<double,2> fov, array<int,2> mynq, double delta_t, double temp,
         double rad, double vis, double spring_len, vector<array<double, 3> > pos_sets, double stretching, double ext, double bending,
-				     double frac_force, string bc, double seed, bool check_dup_in_quad_, double drx) {
+				     double frac_force, string BC, double seed, bool check_dup_in_quad_, double delrx) {
     
     check_dup_in_quad = check_dup_in_quad_;
-    BC = bc;
-    fov = myfov;
+    bc = new box(BC, fov[0], fov[1], delrx);
     view[0] = 1;//(fov[0] - 2*nbeads*len)/fov[0];
     view[1] = 1;//(fov[1] - 2*nbeads*len)/fov[1];
     nq = mynq;
@@ -715,7 +707,6 @@ filament_ensemble::filament_ensemble(int npolymer, int nbeads_min, int nbeads_ex
     shear_stop = 1e10;
     shear_dt = dt;
     t = 0;
-    delrx = drx;
     
     if (seed == -1){
         straight_filaments = true;
@@ -769,13 +760,12 @@ filament_ensemble::filament_ensemble(int npolymer, int nbeads_min, int nbeads_ex
     fls = { };
 }
 
-filament_ensemble::filament_ensemble(double density, array<double,2> myfov, array<int,2> mynq, double delta_t, double temp,
+filament_ensemble::filament_ensemble(double density, array<double,2> fov, array<int,2> mynq, double delta_t, double temp,
         double rad, double vis, int nbeads, double spring_len, vector<array<double, 3> > pos_sets, double stretching, double ext, 
-				double bending, double frac_force, string bc, double seed, bool check_dup_in_quad_, double drx) {
+				double bending, double frac_force, string BC, double seed, bool check_dup_in_quad_, double delrx) {
     
     check_dup_in_quad = check_dup_in_quad_;
-    BC = bc;
-    fov = myfov;
+    bc = new box(BC, fov[0], fov[1], delrx);
     view[0] = 1;//(fov[0] - 2*nbeads*len)/fov[0];
     view[1] = 1;//(fov[1] - 2*nbeads*len)/fov[1];
     nq = mynq;
@@ -788,7 +778,6 @@ filament_ensemble::filament_ensemble(double density, array<double,2> myfov, arra
     shear_stop = 1e10;
     shear_dt = dt;
     t = 0;
-    delrx = drx;
     
     if (seed == -1){
         straight_filaments = true;
@@ -838,19 +827,17 @@ filament_ensemble::filament_ensemble(double density, array<double,2> myfov, arra
     fls = { };
 }
 
-filament_ensemble::filament_ensemble(vector<vector<double> > beads, array<double,2> myfov, array<int,2> mynq, double delta_t, double temp,
-				     double vis, double spring_len, double stretching, double ext, double bending, double frac_force, string bc, bool check_dup_in_quad_, double drx) {
+filament_ensemble::filament_ensemble(vector<vector<double> > beads, array<double,2> fov, array<int,2> mynq, double delta_t, double temp,
+				     double vis, double spring_len, double stretching, double ext, double bending, double frac_force, string BC, bool check_dup_in_quad_, double delrx) {
     
     check_dup_in_quad = check_dup_in_quad_;
-    BC = bc;
-    fov = myfov;
+    bc = new box(BC, fov[0], fov[1], delrx);
 
     visc=vis;
     spring_rest_len = spring_len;
     dt = delta_t;
     temperature = temp;
     t = 0;
-    delrx = drx;
 
     view[0] = 1;
     view[1] = 1;

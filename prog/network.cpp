@@ -364,7 +364,6 @@ int main(int argc, char* argv[]){
                 temperature, viscosity, link_length, 
                 link_stretching_stiffness, fene_pct, link_bending_stiffness,
 				    fracture_force, bnd_cnd, check_dup_in_quad, restart_strain); 
-	net->update_delrx(restart_strain);
     }
    
     if (link_intersect_flag) p_motor_pos_vec = net->spring_spring_intersections(p_motor_length, p_linkage_prob); 
@@ -425,7 +424,6 @@ int main(int argc, char* argv[]){
     t = tinit;
     d_strain_amp = d_strain_pct * xrange;
 
-    net->update_delrx(restart_strain);
     prev_d_strain = restart_strain;
 
     while (t <= tfinal) {
@@ -479,7 +477,6 @@ int main(int argc, char* argv[]){
             if (diff_strain_flag) {
 		 d_strain += restart_strain + d_strain_amp*d_strain_freq*(t - time_of_dstrain);
             }
-            net->update_delrx(d_strain);
             net->update_d_strain(d_strain - prev_d_strain);
             if (shear_motor_flag) {
                 myosins->update_d_strain(d_strain - prev_d_strain);

@@ -18,6 +18,7 @@
 //=====================================
 //included dependences
 #include "filament.h"
+#include "box.h"
 //=====================================
 //filament network class
 class filament_ensemble
@@ -85,6 +86,7 @@ class filament_ensemble
        
         double get_bead_friction();
         
+        box *get_box();
         string get_BC();
         double get_delrx();
         array<double, 2> get_fov();
@@ -170,16 +172,16 @@ class filament_ensemble
     
     protected:
 
-        string BC;
+        box *bc;
         double t, dt, temperature, spring_rest_len, visc, min_time;
-        double gamma, shear_stop, shear_dt, shear_speed, delrx;
+        double gamma, shear_stop, shear_dt, shear_speed;
         double max_springs_per_quad_per_filament, max_springs_per_quad; 
         bool straight_filaments = false, quad_off_flag;
         double pe_stretch, pe_bend, ke;
 
         array<array<double, 2>, 2> vir_stretch, vir_bend;
 
-        array<double,2> fov, view;
+        array<double,2> view;
         array<int, 2> nq;
         vector<int> broken_filaments, empty_vector;
         
