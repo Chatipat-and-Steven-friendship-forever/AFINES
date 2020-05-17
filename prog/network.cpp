@@ -83,6 +83,9 @@ int main(int argc, char* argv[]){
     bool stress_flag; double stress1, stress_rate1, stress2, stress_rate2;
     bool shear_motor_flag;
 
+    bool circle_flag;
+    double circle_radius, circle_spring_constant;
+
     //Options allowed only on command line
     po::options_description generic("Generic options");
     generic.add_options()
@@ -197,6 +200,10 @@ int main(int argc, char* argv[]){
 
         ("check_dup_in_quad", po::value<bool>(&check_dup_in_quad)->default_value(true), "flag to check for duplicates in quadrants")
         ("use_attach_opt", po::value<bool>(&use_attach_opt)->default_value(false), "flag to use optimized attachment point search")
+
+        ("circle_flag", po::value<bool>(&circle_flag)->default_value(false), "flag to add a circular wall")
+        ("circle_radius", po::value<double>(&circle_radius)->default_value(INFINITY), "radius of circular wall")
+        ("circle_spring_constant", po::value<double>(&circle_spring_constant)->default_value(0.0), "spring constant of circular wall")
         ; 
     
     //Hidden options, will be allowed both on command line and 
@@ -418,6 +425,10 @@ int main(int argc, char* argv[]){
             o_file << it->first <<"="<< boost::any_cast<string>(val) <<endl;
     }
    
+    if (circle_flag) {
+        net->set_circle_wall(circle_radius, circle_spring_constant);
+    }
+
     // Run the simulation
     cout<<"\nUpdating motors, filaments and crosslinks in the network..";
     string time_str; 

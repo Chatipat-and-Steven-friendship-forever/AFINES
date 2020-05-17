@@ -20,6 +20,9 @@
 #include "filament.h"
 //=====================================
 //filament network class
+
+int const CIRCLE = 1;
+
 class filament_ensemble
 {
     public:
@@ -166,8 +169,15 @@ class filament_ensemble
         void update_energies();
         
         void turn_quads_off();
-    
+        
+        void set_circle_wall(double radius, double spring_constant);
+
+        array<double, 2> external_force(array<double, 2> pos);
+
     protected:
+
+        int external_force_flag;
+        double circle_wall_radius, circle_wall_spring_constant;
 
         double t, dt, temperature, spring_rest_len, visc, min_time;
         double gamma, shear_stop, shear_dt, shear_speed, delrx;
