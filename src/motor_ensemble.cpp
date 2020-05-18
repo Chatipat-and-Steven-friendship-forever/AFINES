@@ -18,13 +18,14 @@
 
 //motor_ensemble class
 
-motor_ensemble::motor_ensemble(double mdensity, array<double, 2> myfov, double delta_t, double temp, 
-        double mlen, filament_ensemble * network, double v0, double stiffness, double max_ext_ratio, 
-        double ron, double roff, double rend, 
+motor_ensemble::motor_ensemble(double mdensity, double delta_t, double temp,
+        double mlen, filament_ensemble *network, double v0, double stiffness, double max_ext_ratio,
+        double ron, double roff, double rend,
         double fstall, double rcut,
-	double vis, vector<array<double,3> > positions, string BC, bool use_attach_opt_, double dx) {
+        double vis, vector<array<double, 3>> positions, bool use_attach_opt_)
+{
+    array<double, 2> fov = network->get_box()->get_fov();
     use_attach_opt = use_attach_opt_; 
-    fov = myfov;
     mld =mlen;
     tMove=0;//10;
     f_network=network;
@@ -58,13 +59,13 @@ motor_ensemble::motor_ensemble(double mdensity, array<double, 2> myfov, double d
 }
 
 
-motor_ensemble::motor_ensemble(vector<vector<double> > motors, array<double, 2> myfov, double delta_t, double temp, 
-        double mlen, filament_ensemble * network, double v0, double stiffness, double max_ext_ratio, 
-        double ron, double roff, double rend, 
+motor_ensemble::motor_ensemble(vector<vector<double>> motors, double delta_t, double temp,
+        double mlen, filament_ensemble *network, double v0, double stiffness, double max_ext_ratio,
+        double ron, double roff, double rend,
         double fstall, double rcut,
-	double vis, string BC, bool use_attach_opt_, double dx) {
+        double vis, bool use_attach_opt_)
+{
     use_attach_opt = use_attach_opt_; 
-    fov = myfov;
     mld = mlen;
     tMove = 0;
     f_network=network;

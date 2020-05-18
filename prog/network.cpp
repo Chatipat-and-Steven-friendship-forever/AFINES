@@ -373,28 +373,30 @@ int main(int argc, char* argv[]){
 
     cout<<"\nAdding active motors...";
     motor_ensemble * myosins;
-    
-    if (a_motor_pos_vec.size() == 0 && a_motor_in.size() == 0)
-        myosins = new motor_ensemble( a_motor_density, {{xrange, yrange}}, dt, temperature, 
+
+    if (a_motor_pos_vec.size() == 0 && a_motor_in.size() == 0) {
+        myosins = new motor_ensemble(a_motor_density, dt, temperature,
                 a_motor_length, net, a_motor_v, a_motor_stiffness, fene_pct, a_m_kon, a_m_koff,
-       	        a_m_kend, a_m_stall, a_m_cut, viscosity, a_motor_position_arrs, bnd_cnd, use_attach_opt, restart_strain);
-    else
-        myosins = new motor_ensemble( a_motor_pos_vec, {{xrange, yrange}}, dt, temperature, 
+                a_m_kend, a_m_stall, a_m_cut, viscosity, a_motor_position_arrs, use_attach_opt);
+    } else {
+        myosins = new motor_ensemble( a_motor_pos_vec, dt, temperature,
                 a_motor_length, net, a_motor_v, a_motor_stiffness, fene_pct, a_m_kon, a_m_koff,
-		a_m_kend, a_m_stall, a_m_cut, viscosity, bnd_cnd, use_attach_opt, restart_strain);
+                a_m_kend, a_m_stall, a_m_cut, viscosity, use_attach_opt);
+    }
     if (dead_head_flag) myosins->kill_heads(dead_head);
 
     cout<<"Adding passive motors (crosslinkers) ...\n";
     motor_ensemble * crosslks; 
-    
-    if(p_motor_pos_vec.size() == 0 && p_motor_in.size() == 0)
-        crosslks = new motor_ensemble( p_motor_density, {{xrange, yrange}}, dt, temperature, 
+
+    if (p_motor_pos_vec.size() == 0 && p_motor_in.size() == 0) {
+        crosslks = new motor_ensemble( p_motor_density, dt, temperature,
                 p_motor_length, net, p_motor_v, p_motor_stiffness, fene_pct, p_m_kon, p_m_koff,
- 	        p_m_kend, p_m_stall, p_m_cut, viscosity, p_motor_position_arrs, bnd_cnd, use_attach_opt, restart_strain);
-    else
-        crosslks = new motor_ensemble( p_motor_pos_vec, {{xrange, yrange}}, dt, temperature, 
+                p_m_kend, p_m_stall, p_m_cut, viscosity, p_motor_position_arrs, use_attach_opt);
+    } else {
+        crosslks = new motor_ensemble( p_motor_pos_vec, dt, temperature,
                 p_motor_length, net, p_motor_v, p_motor_stiffness, fene_pct, p_m_kon, p_m_koff,
-		p_m_kend, p_m_stall, p_m_cut, viscosity, bnd_cnd, use_attach_opt, restart_strain);
+                p_m_kend, p_m_stall, p_m_cut, viscosity, use_attach_opt);
+    }
     if (p_dead_head_flag) crosslks->kill_heads(p_dead_head);
 
     // Write the full configuration file
@@ -582,6 +584,7 @@ int main(int argc, char* argv[]){
     delete myosins;
     delete crosslks;
     delete net;
+    delete bc;
     
     
     
