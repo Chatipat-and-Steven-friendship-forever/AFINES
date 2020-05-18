@@ -675,13 +675,14 @@ vector<vector<double> > filament_ensemble::spring_spring_intersections(double le
 ///SPECIFIC FILAMENT IMPLEMENTATIONS////
 ////////////////////////////////////////
 
-filament_ensemble::filament_ensemble(int npolymer, int nbeads_min, int nbeads_extra, double nbeads_extra_prob, 
-        array<double,2> fov, array<int,2> mynq, double delta_t, double temp,
+filament_ensemble::filament_ensemble(box *bc_, int npolymer, int nbeads_min, int nbeads_extra, double nbeads_extra_prob,
+        array<int,2> mynq, double delta_t, double temp,
         double rad, double vis, double spring_len, vector<array<double, 3> > pos_sets, double stretching, double ext, double bending,
-				     double frac_force, string BC, double seed, bool check_dup_in_quad_, double delrx) {
-    
+        double frac_force, double seed, bool check_dup_in_quad_)
+{
     check_dup_in_quad = check_dup_in_quad_;
-    bc = new box(BC, fov[0], fov[1], delrx);
+    bc = bc_;
+    array<double, 2> fov = bc->get_fov();
     view[0] = 1;//(fov[0] - 2*nbeads*len)/fov[0];
     view[1] = 1;//(fov[1] - 2*nbeads*len)/fov[1];
     nq = mynq;
@@ -748,12 +749,13 @@ filament_ensemble::filament_ensemble(int npolymer, int nbeads_min, int nbeads_ex
     fls = { };
 }
 
-filament_ensemble::filament_ensemble(double density, array<double,2> fov, array<int,2> mynq, double delta_t, double temp,
-        double rad, double vis, int nbeads, double spring_len, vector<array<double, 3> > pos_sets, double stretching, double ext, 
-				double bending, double frac_force, string BC, double seed, bool check_dup_in_quad_, double delrx) {
-    
+filament_ensemble::filament_ensemble(box *bc_, double density, array<int,2> mynq, double delta_t, double temp,
+        double rad, double vis, int nbeads, double spring_len, vector<array<double, 3> > pos_sets, double stretching, double ext,
+        double bending, double frac_force, double seed, bool check_dup_in_quad_)
+{
     check_dup_in_quad = check_dup_in_quad_;
-    bc = new box(BC, fov[0], fov[1], delrx);
+    bc = bc_;
+    array<double, 2> fov = bc->get_fov();
     view[0] = 1;//(fov[0] - 2*nbeads*len)/fov[0];
     view[1] = 1;//(fov[1] - 2*nbeads*len)/fov[1];
     nq = mynq;
@@ -815,11 +817,11 @@ filament_ensemble::filament_ensemble(double density, array<double,2> fov, array<
     fls = { };
 }
 
-filament_ensemble::filament_ensemble(vector<vector<double> > beads, array<double,2> fov, array<int,2> mynq, double delta_t, double temp,
-				     double vis, double spring_len, double stretching, double ext, double bending, double frac_force, string BC, bool check_dup_in_quad_, double delrx) {
-    
+filament_ensemble::filament_ensemble(box *bc_, vector<vector<double> > beads, array<int,2> mynq, double delta_t, double temp,
+        double vis, double spring_len, double stretching, double ext, double bending, double frac_force, bool check_dup_in_quad_)
+{
     check_dup_in_quad = check_dup_in_quad_;
-    bc = new box(BC, fov[0], fov[1], delrx);
+    bc = bc_;
 
     visc=vis;
     spring_rest_len = spring_len;

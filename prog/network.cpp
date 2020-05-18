@@ -352,20 +352,21 @@ int main(int argc, char* argv[]){
 
     // Create Network Objects
     cout<<"\nCreating actin network..";
+    box *bc = new box(bnd_cnd, xrange, yrange, restart_strain);
     filament_ensemble * net;
-    if (actin_pos_vec.size() == 0 && actin_in.size() == 0){
-        net = new filament_ensemble(npolymer, nmonomer, nmonomer_extra, extra_bead_prob, {{xrange, yrange}}, {{xgrid, ygrid}}, dt, 
+    if (actin_pos_vec.size() == 0 && actin_in.size() == 0) {
+        net = new filament_ensemble(bc, npolymer, nmonomer, nmonomer_extra, extra_bead_prob, {{xgrid, ygrid}}, dt, 
                 temperature, actin_length, viscosity, link_length, 
                 actin_position_arrs, 
                 link_stretching_stiffness, fene_pct, link_bending_stiffness,
-				    fracture_force, bnd_cnd, myseed, check_dup_in_quad, restart_strain); 
-    }else{
-        net = new filament_ensemble(actin_pos_vec, {{xrange, yrange}}, {{xgrid, ygrid}}, dt, 
+                fracture_force, myseed, check_dup_in_quad); 
+    } else {
+        net = new filament_ensemble(bc, actin_pos_vec, {{xgrid, ygrid}}, dt, 
                 temperature, viscosity, link_length, 
                 link_stretching_stiffness, fene_pct, link_bending_stiffness,
-				    fracture_force, bnd_cnd, check_dup_in_quad, restart_strain); 
+                fracture_force, check_dup_in_quad); 
     }
-   
+
     if (link_intersect_flag) p_motor_pos_vec = net->spring_spring_intersections(p_motor_length, p_linkage_prob); 
     if (motor_intersect_flag) a_motor_pos_vec = net->spring_spring_intersections(a_motor_length, a_linkage_prob); 
     if (quad_off_flag) net->turn_quads_off();
