@@ -19,6 +19,7 @@ class filament_ensemble;
 //=====================================
 //included dependences
 #include "globals.h"
+#include "box.h"
 
 //motor class
 class motor 
@@ -125,6 +126,8 @@ class motor
         string write();
     
     public:
+
+        box *bc;
 
         double mld, vs, stall_force, max_bind_dist, max_bind_dist_sq, mk, kon, koff, kend, dt, temperature, 
                damp, max_ext, eps_ext, kinetic_energy, bd_prefactor, tension, len;

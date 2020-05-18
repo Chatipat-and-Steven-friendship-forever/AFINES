@@ -21,6 +21,7 @@ spring::spring(){ }
 spring::spring(double len, double stretching_stiffness, double max_ext_ratio, filament* f, 
         array<int, 2> myaindex)
 {
+    bc = f->get_box();
     kl      = stretching_stiffness;
     l0      = len;
     fil     = f;
@@ -52,15 +53,12 @@ array<double,2> spring::get_hy(){
 
 void spring::step()
 {
-    string bc = fil->get_BC();
-    array<double, 2> fov = fil->get_fov();
-    double shear_dist = fil->get_delrx();
     hx[0] = fil->get_bead(aindex[0])->get_xcm();
     hx[1] = fil->get_bead(aindex[1])->get_xcm();
     hy[0] = fil->get_bead(aindex[0])->get_ycm();
     hy[1] = fil->get_bead(aindex[1])->get_ycm();
 
-    disp   = rij_bc(bc, hx[1]-hx[0], hy[1]-hy[0], fov[0], fov[1], shear_dist); 
+    disp   = bc->rij_bc({hx[1]-hx[0], hy[1]-hy[0]});
     llensq = disp[0]*disp[0] + disp[1]*disp[1];
     llen   = sqrt(llensq);
 
@@ -184,10 +182,7 @@ bool spring::is_similar(const spring& that)
 //SO : 849211
 double spring::get_distance_sq(double xp, double yp)
 {
-    string bc = fil->get_BC();
-    array<double, 2> fov = fil->get_fov();
-    double delrx = fil->get_delrx();
-    array<double, 2> dr = rij_bc(bc, intpoint[0]-xp, intpoint[1]-yp, fov[0], fov[1], delrx);
+    array<double, 2> dr = bc->rij_bc({intpoint[0]-xp, intpoint[1]-yp});
     return dr[0]*dr[0] + dr[1]*dr[1];
 }
 
@@ -198,16 +193,13 @@ array<double,2> spring::get_intpoint()
 
 void spring::calc_intpoint(double xp, double yp)
 {
-    string bc = fil->get_BC();
-    array<double, 2> fov = fil->get_fov();
-    double delrx = fil->get_delrx();
     double l2 = disp[0]*disp[0]+disp[1]*disp[1];
     if (l2==0){
         intpoint = {{hx[0], hy[0]}};
     }else{
         //Consider the line extending the spring, parameterized as h0 + tp ( h1 - h0 )
         //tp = projection of (xp, yp) onto the line
-        double tp=dot_bc(bc, xp-hx[0], yp-hy[0], hx[1]-hx[0], hy[1]-hy[0], fov[0], fov[1], delrx)/l2;
+        double tp = bc->dot_bc({xp-hx[0], yp-hy[0]}, {hx[1]-hx[0], hy[1]-hy[0]})/l2;
         if (tp<0){ 
             intpoint = {{hx[0], hy[0]}};
         }
@@ -216,7 +208,7 @@ void spring::calc_intpoint(double xp, double yp)
         }
         else{
             array<double, 2> proj   = {{hx[0] + tp*disp[0], hy[0] + tp*disp[1]}};
-            intpoint                = pos_bc(bc, delrx, 0, fov, {{0,0}}, proj); //velocity and dt are 0 since not relevant
+            intpoint                = bc->pos_bc(proj, {0.0, 0.0}, 0.0); //velocity and dt are 0 since not relevant
         }
     }
 }

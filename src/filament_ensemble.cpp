@@ -385,7 +385,11 @@ void filament_ensemble::write_thermo(ofstream& fout){
     
 }
 
- 
+box *filament_ensemble::get_box()
+{
+    return bc;
+}
+
 void filament_ensemble::set_shear_rate(double g)
 {
     array<double, 2> fov = bc->get_fov();
@@ -536,18 +540,6 @@ int filament_ensemble::get_nsprings(){
  
 int filament_ensemble::get_nfilaments(){
     return network.size();
-}
-
-string filament_ensemble::get_BC() {
-    return bc->get_BC();
-}
-
-double filament_ensemble::get_delrx(){
-    return bc->get_delrx();
-}
-
-array<double, 2> filament_ensemble::get_fov() {
-    return bc->get_fov();
 }
 
 array<int, 2> filament_ensemble::get_nq() {

@@ -50,6 +50,8 @@ class filament
 
         void update_shear(double t); 
 
+        box *get_box();
+
         void pull_on_ends(double f);
         
         void affine_pull(double f);
@@ -91,14 +93,6 @@ class filament
         bool operator==(const filament& that);
         
         void add_bead(bead * a, double l0, double kl, double me);
-        
-        void set_BC(string s);
-
-        string get_BC();
-
-        array<double, 2> get_fov();
-
-        double get_delrx();
 
         inline double angle_between_springs(int i, int j);
 
@@ -130,6 +124,7 @@ class filament
 
     protected:
 
+        box *bc;
         filament_ensemble *filament_network;
 
         double kb, temperature, dt, fracture_force, fracture_force_sq, kinetic_energy, damp, kToverLp, bd_prefactor, ubend;

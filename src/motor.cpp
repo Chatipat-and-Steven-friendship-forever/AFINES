@@ -33,7 +33,8 @@ motor::motor( array<double, 3> pos,
         double ron, double roff, double rend, 
         double fstall, double rcut,
 	double vis) {
-    
+
+    bc = network->get_box();
     vs          = v0;
     mk          = stiffness;//rng(10,100); 
     
@@ -51,8 +52,6 @@ motor::motor( array<double, 3> pos,
     state       = mystate;
     f_index     = myfindex; //filament index for each head
     l_index     = mylindex; //spring index for each head
-    array<double, 2> fov = network->get_fov();
-    string BC = network->get_BC();
     filament_network = network;
     damp        = (6*pi*vis*mld);
     bd_prefactor= sqrt(temperature/(2*damp*dt)); 
@@ -62,7 +61,6 @@ motor::motor( array<double, 3> pos,
     eps_ext     = 0.01*max_ext;
     /*************************/
 
-    double shear = filament_network->get_delrx();
     tension     = 0;
     force       = {{0,0}}; // force on the spring  
     kinetic_energy = 0; //assume m = 1
@@ -74,7 +72,7 @@ motor::motor( array<double, 3> pos,
     hx[1] = posH1[0];
     hy[1] = posH1[1];
     
-    disp = rij_bc(BC, hx[1]-hx[0], hy[1]-hy[0], fov[0], fov[1], filament_network->get_delrx()); 
+    disp = bc->rij_bc({hx[1]-hx[0], hy[1]-hy[0]});
     
     pos_a_end = {{0, 0}}; // pos_a_end = distance from pointy end -- by default 0
                         // i.e., if l_index[hd] = j, then pos_a_end[hd] is the distance to the "j+1"th bead
@@ -88,14 +86,14 @@ motor::motor( array<double, 3> pos,
     at_barbed_end = {{false, false}};
 
     if (state[0] == 1){
-        pos_a_end[0] = dist_bc(BC, filament_network->get_end(f_index[0], l_index[0])[0] - hx[0],
-                                   filament_network->get_end(f_index[0], l_index[0])[1] - hy[0], fov[0], fov[1], shear);
+        pos_a_end[0] = bc->dist_bc({filament_network->get_end(f_index[0], l_index[0])[0] - hx[0],
+                                    filament_network->get_end(f_index[0], l_index[0])[1] - hy[0]});
         ldir_bind[0] = filament_network->get_direction(f_index[0], l_index[0]);
 
     }
     if (state[1] == 1){
-        pos_a_end[1] = dist_bc(BC, filament_network->get_end(f_index[1], l_index[1])[0] - hx[1],
-                                   filament_network->get_end(f_index[1], l_index[1])[1] - hy[1], fov[0], fov[1], shear);
+        pos_a_end[1] = bc->dist_bc({filament_network->get_end(f_index[1], l_index[1])[0] - hx[1],
+                                    filament_network->get_end(f_index[1], l_index[1])[1] - hy[1]});
         ldir_bind[1] = filament_network->get_direction(f_index[1], l_index[1]);
     }
     
@@ -118,7 +116,8 @@ motor::motor( array<double, 4> pos,
         double ron, double roff, double rend, 
         double fstall, double rcut,
 	double vis) {
-    
+
+    bc = network->get_box();
     vs          = v0;
     mk          = stiffness;
     
@@ -137,8 +136,6 @@ motor::motor( array<double, 4> pos,
     state       = mystate;
     f_index     = myfindex; //filament index for each head
     l_index     = mylindex; //spring index for each head
-    array<double, 2> fov = network->get_fov();
-    string BC = network->get_BC();
     filament_network = network;
     damp        =(6*pi*vis*mld);
     bd_prefactor= sqrt(temperature/(2*damp*dt)); 
@@ -148,7 +145,6 @@ motor::motor( array<double, 4> pos,
     eps_ext     = 0.01*max_ext;
     /********************************/
 
-    double shear = network->get_delrx();
     tension     = 0;
     force       = {{0,0}}; // force on the spring  
     kinetic_energy = 0;
@@ -175,14 +171,14 @@ motor::motor( array<double, 4> pos,
     at_barbed_end = {{false, false}};
 
     if (state[0] == 1){
-        pos_a_end[0] = dist_bc(BC, filament_network->get_end(f_index[0], l_index[0])[0] - hx[0],
-                                   filament_network->get_end(f_index[0], l_index[0])[1] - hy[0], fov[0], fov[1], shear);
+        pos_a_end[0] = bc->dist_bc({filament_network->get_end(f_index[0], l_index[0])[0] - hx[0],
+                                    filament_network->get_end(f_index[0], l_index[0])[1] - hy[0]});
         ldir_bind[0] = filament_network->get_direction(f_index[0], l_index[0]);
 
     }
     if (state[1] == 1){
-        pos_a_end[1] = dist_bc(BC, filament_network->get_end(f_index[1], l_index[1])[0] - hx[1],
-                                   filament_network->get_end(f_index[1], l_index[1])[1] - hy[1], fov[0], fov[1], shear);
+        pos_a_end[1] = bc->dist_bc({filament_network->get_end(f_index[1], l_index[1])[0] - hx[1],
+                                    filament_network->get_end(f_index[1], l_index[1])[1] - hy[1]});
         ldir_bind[1] = filament_network->get_direction(f_index[1], l_index[1]);
     }
 
@@ -216,10 +212,8 @@ array<double, 2> motor::get_hy()
 //NOTE: while fl_idx doesn't matter for this xlink implementation, it does for "spacers"
 double motor::metropolis_prob(int hd, array<int, 2> fl_idx, array<double, 2> newpos, double maxprob)
 {
-    string BC = filament_network->get_BC();
-    array<double, 2> fov = filament_network->get_fov();
     double prob = maxprob;
-    double stretch  = dist_bc(BC, newpos[0] - hx[pr(hd)], newpos[1] - hy[pr(hd)], fov[0], fov[1], filament_network->get_delrx()) - mld; 
+    double stretch  = bc->dist_bc({newpos[0] - hx[pr(hd)], newpos[1] - hy[pr(hd)]}) - mld;
     double delE = 0.5*mk*stretch*stretch - this->get_stretching_energy();
 
     if( delE > 0 )
@@ -234,8 +228,6 @@ bool motor::allowed_bind(int hd, array<int, 2> fl_idx){
 
 bool motor::attach_opt(int hd)
 {
-    string BC = filament_network->get_BC();
-    array<double, 2> fov = filament_network->get_fov();
     double mf_rand = rng_u();
     vector<array<int, 2>> *attach_list = filament_network->get_attach_list(hx[hd], hy[hd]);
     int count = attach_list->size();
@@ -269,16 +261,15 @@ bool motor::attach_opt(int hd)
 
             //record displacement of head and orientation of spring for future unbinding move
             ldir_bind[hd] = filament_network->get_direction(f_index[hd], l_index[hd]);
-            bind_disp[hd] = rij_bc(BC, intpoint[0]-hx[hd], intpoint[1]-hy[hd], fov[0], fov[1], filament_network->get_delrx());
+            bind_disp[hd] = bc->rij_bc({intpoint[0]-hx[hd], intpoint[1]-hy[hd]});
 
             //update head position
             hx[hd] = intpoint[0];
             hy[hd] = intpoint[1];
 
             //update relative head position
-            pos_a_end[hd]=dist_bc(BC, filament_network->get_end(f_index[hd], l_index[hd])[0] - hx[hd],
-                    filament_network->get_end(f_index[hd], l_index[hd])[1] - hy[hd], fov[0], fov[1], 
-                    filament_network->get_delrx());
+            pos_a_end[hd] = bc->dist_bc({filament_network->get_end(f_index[hd], l_index[hd])[0] - hx[hd],
+                                         filament_network->get_end(f_index[hd], l_index[hd])[1] - hy[hd]});
 
             //(even if its at the barbed end upon binding, could have negative velocity, so always set this to false, until it steps)
             at_barbed_end[hd] = false; 
@@ -293,8 +284,6 @@ bool motor::attach_opt(int hd)
 //check for attachment of unbound heads given head index (0 for head 1, and 1 for head 2)
 bool motor::attach(int hd)
 {
-    string BC = filament_network->get_BC();
-    array<double, 2> fov = filament_network->get_fov();
     double not_off_prob = 0;
     double mf_rand = rng_u();
     array<double, 2> intPoint;
@@ -326,17 +315,16 @@ bool motor::attach(int hd)
                     
                     //record displacement of head and orientation of spring for future unbinding move
                     ldir_bind[hd] = filament_network->get_direction(f_index[hd], l_index[hd]);
-                    bind_disp[hd] = rij_bc(BC, intPoint[0]-hx[hd], intPoint[1]-hy[hd], fov[0], fov[1], filament_network->get_delrx());
+                    bind_disp[hd] = bc->rij_bc({intPoint[0]-hx[hd], intPoint[1]-hy[hd]});
 
                     //update head position
                     hx[hd] = intPoint[0];
                     hy[hd] = intPoint[1];
 
                     //update relative head position
-                    pos_a_end[hd]=dist_bc(BC, filament_network->get_end(f_index[hd], l_index[hd])[0] - hx[hd],
-                                              filament_network->get_end(f_index[hd], l_index[hd])[1] - hy[hd], fov[0], fov[1], 
-                                              filament_network->get_delrx());
-                    
+                    pos_a_end[hd] = bc->dist_bc({filament_network->get_end(f_index[hd], l_index[hd])[0] - hx[hd],
+                                                 filament_network->get_end(f_index[hd], l_index[hd])[1] - hy[hd]});
+
                     //(even if its at the barbed end upon binding, could have negative velocity, so always set this to false, until it steps)
                     at_barbed_end[hd] = false; 
                  
@@ -413,9 +401,7 @@ void motor::relax_head(int hd)
 
 void motor::update_angle()
 {
-    string BC = filament_network->get_BC();
-    array<double, 2> fov = filament_network->get_fov();
-    disp  = rij_bc(BC, hx[1]-hx[0], hy[1]-hy[0], fov[0], fov[1], filament_network->get_delrx()); 
+    disp  = bc->rij_bc({hx[1]-hx[0], hy[1]-hy[0]});
     len   = hypot(disp[0], disp[1]);
     if ( len != 0 ) 
         direc = {{disp[0]/len, disp[1]/len}};
@@ -426,28 +412,21 @@ void motor::update_angle()
 
 array<double, 2> motor::boundary_check(int hd, double x, double y)
 {
-    string BC = filament_network->get_BC();
-    array<double, 2> fov = filament_network->get_fov();
-    return pos_bc(BC, filament_network->get_delrx(), dt, fov, {{(x - hx[hd])/dt, (y - hy[hd])/dt}}, {{x, y}});
+    return bc->pos_bc({x, y}, {(x - hx[hd])/dt, (y - hy[hd])/dt}, dt);
 }
 
 array<double, 2> motor::generate_off_pos(int hd){
 
-    string BC = filament_network->get_BC();
-    array<double, 2> fov = filament_network->get_fov();
     array<double, 2> ldir = filament_network->get_direction(f_index[hd], l_index[hd]);
     double c = dot(  ldir, ldir_bind[hd]);
     double s = cross(ldir, ldir_bind[hd]);
 
     array<double, 2> bind_disp_rot = {{bind_disp[hd][0]*c - bind_disp[hd][1]*s, bind_disp[hd][0]*s + bind_disp[hd][1]*c}};
 
-    return pos_bc(BC, filament_network->get_delrx(), dt, fov, 
-            {{-bind_disp_rot[0]/dt, -bind_disp_rot[1]/dt}}, 
-            {{hx[hd] - bind_disp_rot[0], hy[hd] - bind_disp_rot[1]}}
-            ); 
-    //array<double, 2> newpos = {{hx[hd]-bind_disp_rot[0], hy[hd]-bind_disp_rot[1]}};
-    //return boundary_check(hd, newpos[0], newpos[1]);
-} 
+    return bc->pos_bc(
+            {hx[hd] - bind_disp_rot[0], hy[hd] - bind_disp_rot[1]},
+            {-bind_disp_rot[0]/dt, -bind_disp_rot[1]/dt}, dt);
+}
 
 
 //stepping and detachment kinetics of a single bound head 
@@ -624,9 +603,9 @@ string motor::to_string()
     char buffer[1000];
     string out ="";
 
-    string BC = filament_network->get_BC();
-    array<double, 2> fov = filament_network->get_fov();
-    double shear = filament_network->get_delrx();
+    string BC = bc->get_BC();
+    array<double, 2> fov = bc->get_fov();
+    double shear = bc->get_delrx();
     sprintf(buffer, "\
             \nhead 0 position = (%f, %f)\t head 1 position=(%f,%f)\
             \nstate = (%d, %d)\t f_index = (%d, %d)\t l_index = (%d, %d)\
@@ -658,7 +637,7 @@ void motor::revive_head(int hd)
 
 void motor::update_d_strain(double g)
 {
-    array<double, 2> fov = filament_network->get_fov();
+    array<double, 2> fov = bc->get_fov();
     array<double, 2> pos0 = boundary_check(0, hx[0] + g * hy[0] / fov[1], hy[0]);
     array<double, 2> pos1 = boundary_check(1, hx[1] + g * hy[1] / fov[1], hy[1]);
     hx[0] = pos0[0];

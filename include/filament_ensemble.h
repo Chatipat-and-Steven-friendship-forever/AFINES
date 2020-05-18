@@ -87,9 +87,6 @@ class filament_ensemble
         double get_bead_friction();
         
         box *get_box();
-        string get_BC();
-        double get_delrx();
-        array<double, 2> get_fov();
         array<int, 2> get_nq();
         
         double get_stretching_energy();

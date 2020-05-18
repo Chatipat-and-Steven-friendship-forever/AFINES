@@ -461,7 +461,7 @@ int main(int argc, char* argv[]){
                 cout << "\ncrosslinker stretch virial:\t" << virial;
                 virial_add(total_virial, virial);
 
-                array<double, 2> fov = net->get_fov();
+                array<double, 2> fov = net->get_box()->get_fov();
                 double area = fov[0] * fov[1];
                 array<array<double, 2>, 2> stress_tensor;
                 stress_tensor[0][0] = total_virial[0][0] / area;

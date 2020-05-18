@@ -63,13 +63,11 @@ filament::filament(filament_ensemble *net, array<double, 3> startpos, int nbead,
 {
     filament_network = net;
 
-    array<double, 2> fov = net->get_fov();
+    bc = net->get_box();
     dt = deltat;
     temperature = temp;
     gamma = 0;
-    double delrx = net->get_delrx();
     fracture_force = frac_force;
-    string BC = net->get_BC();
     kb = bending_stiffness;
     kinetic_energy  = 0;
     
@@ -89,11 +87,9 @@ filament::filament(filament_ensemble *net, array<double, 3> startpos, int nbead,
     else variance = 0;
 
     for (int j = 1; j < nbead; j++) {
-
-        //next_pos = boundary_check(j-1, beads[j-1]->get_xcm() + spring_length*cos(phi), beads[j-1]->get_ycm() + spring_length*sin(phi));
-        next_pos = pos_bc(BC, delrx, dt, fov, 
-                {{spring_length*cos(phi)/dt, spring_length*sin(phi)/dt}},
-                {{beads[j-1]->get_xcm() + spring_length*cos(phi), beads[j-1]->get_ycm() + spring_length*sin(phi)}});
+        next_pos = bc->pos_bc(
+                {beads[j-1]->get_xcm() + spring_length*cos(phi), beads[j-1]->get_ycm() + spring_length*sin(phi)},
+                {spring_length*cos(phi)/dt, spring_length*sin(phi)/dt}, dt);
         beads.push_back( new bead(next_pos[0], next_pos[1], beadRadius, visc) );
         prv_rnds.push_back({{0,0}});
         springs.push_back(new spring(spring_length, stretching_stiffness, max_ext_ratio, this, {j-1, j}));
@@ -115,6 +111,7 @@ filament::filament(filament_ensemble *net, vector<bead *> beadvec, double spring
 {
     filament_network = net;
     
+    bc = net->get_box();
     dt = deltat;
     temperature = temp;
     fracture_force = frac_force;
@@ -185,14 +182,11 @@ void filament::set_y_thresh(double y){
 
 void filament::update_positions()
 {
-    string BC = filament_network->get_BC();
-    array<double, 2> fov = filament_network->get_fov();
-    double delrx = filament_network->get_delrx();
     double vx, vy;
     array<double, 2> new_rnds;
     array<double, 2> newpos;
     kinetic_energy = 0;  
-    double top_y = y_thresh*fov[1]/2.; 
+    double top_y = y_thresh*bc->get_ybox()/2.;
     int sa = int(beads.size());
     int la = int(springs.size());
     for (int i = 0; i < sa; i++){
@@ -207,7 +201,7 @@ void filament::update_positions()
         prv_rnds[i] = new_rnds;
         //cout<<"\nDEBUG: bead force = ("<<beads[i]->get_force()[0]<<" , "<<beads[i]->get_force()[1]<<")";
         kinetic_energy += vx*vx + vy*vy;
-        newpos = pos_bc(BC, delrx, dt, fov, {{vx, vy}}, {{beads[i]->get_xcm() + vx*dt, beads[i]->get_ycm() + vy*dt}});
+        newpos = bc->pos_bc({beads[i]->get_xcm() + vx*dt, beads[i]->get_ycm() + vy*dt}, {vx, vy}, dt);
         beads[i]->set_xcm(newpos[0]);
         beads[i]->set_ycm(newpos[1]);
         beads[i]->reset_force(); 
@@ -220,14 +214,11 @@ void filament::update_positions()
 
 void filament::update_positions_range(int lo, int hi)
 {
-    string BC = filament_network->get_BC();
-    array<double, 2> fov = filament_network->get_fov();
-    double delrx = filament_network->get_delrx();
     double vx, vy;
     array<double, 2> new_rnds;
     array<double, 2> newpos;
     kinetic_energy = 0;  
-    double top_y = y_thresh*fov[1]/2.; 
+    double top_y = y_thresh*bc->get_ybox()/2.;
 
     int low = max(0, lo);
     int high = min(hi, (int)beads.size());
@@ -244,8 +235,7 @@ void filament::update_positions_range(int lo, int hi)
         prv_rnds[i] = new_rnds;
         //cout<<"\nDEBUG: bead force = ("<<beads[i]->get_force()[0]<<" , "<<beads[i]->get_force()[1]<<")";
         kinetic_energy += vx*vx + vy*vy;
-        //newpos = boundary_check(i, beads[i]->get_xcm() + vx*dt, beads[i]->get_ycm() + vy*dt); 
-        newpos = pos_bc(BC, delrx, dt, fov, {{vx, vy}}, {{beads[i]->get_xcm() + vx*dt, beads[i]->get_ycm() + vy*dt}});
+        newpos = bc->pos_bc({beads[i]->get_xcm() + vx*dt, beads[i]->get_ycm() + vy*dt}, {vx, vy}, dt);
         beads[i]->set_xcm(newpos[0]);
         beads[i]->set_ycm(newpos[1]);
         beads[i]->reset_force(); 
@@ -298,22 +288,21 @@ spring * filament::get_spring(int i)
     return springs[i];
 }
 
-void filament::update_shear(double t){
-    array<double, 2> fov = filament_network->get_fov();
-    double delrx = filament_network->get_delrx();
-    double local_shear;
-    for (unsigned int i = 0; i < beads.size(); i++){
-        local_shear = delrx * beads[i]->get_ycm() / fov[1];
-        beads[i]->set_xcm(beads[i]->get_xcm() + local_shear);
-        //cout<<"\nDEBUG: local_shear = "<<local_shear;
+void filament::update_shear(double t)
+{
+    update_d_strain(bc->get_delrx());
+}
+
+void filament::update_d_strain(double g)
+{
+    for (size_t i = 0; i < beads.size(); i++) {
+        beads[i]->set_xcm(beads[i]->get_xcm() + g * beads[i]->get_ycm() / bc->get_ybox());
     }
 }
 
-void filament::update_d_strain(double g){
-    array<double, 2> fov = filament_network->get_fov();
-    for (unsigned int i = 0; i < beads.size(); i++){
-        beads[i]->set_xcm(beads[i]->get_xcm() + g * beads[i]->get_ycm() / fov[1]);
-    }
+box *filament::get_box()
+{
+    return bc;
 }
 
 void filament::update_forces(int index, double f1, double f2)
@@ -323,13 +312,10 @@ void filament::update_forces(int index, double f1, double f2)
 
 void filament::pull_on_ends(double f)
 {
-    string BC = filament_network->get_BC();
-    array<double, 2> fov = filament_network->get_fov();
-    double delrx = filament_network->get_delrx();
     if (beads.size() < 2) return;
     int last = beads.size() - 1; 
-    array<double, 2> dr = rij_bc(BC, beads[last]->get_xcm() - beads[0]->get_xcm(),  
-                                     beads[last]->get_ycm() - beads[0]->get_ycm(), fov[0], fov[1], delrx);
+    array<double, 2> dr = bc->rij_bc({beads[last]->get_xcm() - beads[0]->get_xcm(),
+                                      beads[last]->get_ycm() - beads[0]->get_ycm()});
     double len = hypot(dr[0], dr[1]);
     
     beads[ 0  ]->update_force(-0.5*f*dr[0]/len, -0.5*f*dr[1]/len);
@@ -338,13 +324,10 @@ void filament::pull_on_ends(double f)
 
 void filament::affine_pull(double f)
 {
-    string BC = filament_network->get_BC();
-    array<double, 2> fov = filament_network->get_fov();
-    double delrx = filament_network->get_delrx();
     if (beads.size() < 2) return;
     int last = beads.size() - 1; 
-    array<double, 2> dr = rij_bc(BC, beads[last]->get_xcm() - beads[0]->get_xcm(),  
-                                     beads[last]->get_ycm() - beads[0]->get_ycm(), fov[0], fov[1], delrx);
+    array<double, 2> dr = bc->rij_bc({beads[last]->get_xcm() - beads[0]->get_xcm(),
+                                      beads[last]->get_ycm() - beads[0]->get_ycm()});
     double len = hypot(dr[0], dr[1]);
     //cout<<"\nDEBUG: angle = "<<ang;
     double frac, fcos = f*dr[0]/len, fsin = f*dr[1]/len;
@@ -356,9 +339,8 @@ void filament::affine_pull(double f)
 }
 
 void filament::set_shear(double g){
-    array<double, 2> fov = filament_network->get_fov();
     gamma = g;
-    max_shear = gamma*fov[1]*0.5;
+    max_shear = gamma*bc->get_ybox()*0.5;
 }
 
 string filament::write_beads(int fil){
@@ -459,26 +441,12 @@ string filament::to_string(){
         out += beads[i]->to_string();
 
     array<int, 2> nq = filament_network->get_nq();
-    array<double, 2> fov = filament_network->get_fov();
+    array<double, 2> fov = bc->get_fov();
     sprintf(buffer, "fov = (%f, %f)\tnq = (%d, %d)\tgamma = %f\ttemperature = %f\tdt = %f\tfracture_force=%f\n",
             fov[0], fov[1], nq[0], nq[1], gamma, temperature, dt, fracture_force);
    
     return out + buffer; 
 
-}
-
-string filament::get_BC(){
-    return filament_network->get_BC();
-}
-
-array<double, 2> filament::get_fov()
-{
-    return filament_network->get_fov();
-}
-
-double filament::get_delrx()
-{
-    return filament_network->get_delrx();
 }
 
 inline double filament::angle_between_springs(int i, int j){
@@ -672,10 +640,7 @@ double filament::get_end2end()
     if (beads.size() < 2) {
         return 0;
     } else {
-        string BC = filament_network->get_BC();
-        array<double, 2> fov = filament_network->get_fov();
-        double delrx = filament_network->get_delrx();
-        return dist_bc(BC, beads[beads.size() - 1]->get_xcm() - beads[0]->get_xcm(),  
-                           beads[beads.size() - 1]->get_ycm() - beads[0]->get_ycm(), fov[0], fov[1], delrx);
+        return bc->dist_bc({beads[beads.size() - 1]->get_xcm() - beads[0]->get_xcm(),
+                            beads[beads.size() - 1]->get_ycm() - beads[0]->get_ycm()});
     }
 }

@@ -19,6 +19,7 @@ class filament;
 //=====================================
 //included dependences
 #include "globals.h"
+#include "box.h"
 
 //=====================================
 //spring class
@@ -92,6 +93,8 @@ class spring
         array<double, 2> get_neg_disp();
 
     protected:
+
+        box *bc;
 
         double xcm, ycm, l0, kl, max_ext, eps_ext, llen, llensq;//, force;
        
