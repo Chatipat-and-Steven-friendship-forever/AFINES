@@ -72,10 +72,6 @@ double rng_n(double mean, double var);
 bool event(double prob);
 int event(double rate, double timestep);
 
-array<double, 2> rij_periodic(double dx, double dy, double xbox, double ybox);
-array<double, 2> rij_lees_edwards(double dx, double dy, double xbox, double ybox, double shear_dist);
-array<double, 2> rij_bc(string bc, double dx, double dy, double xbox, double ybox, double shear_dist);
-
 vector<int> range_bc(string bc, double delrx, int botq, int topq, int low, int high);
 vector<int> range_bc(string bc, double delrx, int botq, int topq, int low, int high, int di);
 vector<int> int_range(int lo, int hi);
@@ -85,9 +81,6 @@ double mean_periodic(const vector<double>& nums, double bnd);
 double mean(const vector<double>& nums);
 array<double, 2> cm_bc(string bc, const vector<double>& xi, const vector<double>& yi, double xbox, double ybox, double shear_dist);
 
-double dist_bc(string bc, double dx, double dy, double xbox, double ybox, double shear_dist);
-double dot_bc(string bc, double dx1, double dy1, double dx2, double dy2, double xbox, double ybox, double shear_dist);
-array<double, 2> pos_bc(string bc, double delrx, double dt, const array<double, 2>& fov, const array<double, 2>& vel, const array<double, 2>& pos);
 array<int, 2> coord2quad(const array<double, 2>& fov, const array<int, 2>& nq, const array<double, 2>& pos);
 int coord2quad_floor(double fov, int nq, double pos);
 int coord2quad_ceil(double fov, int nq, double pos);
@@ -131,7 +124,6 @@ map<array<int, 2>, double> invert_block_diagonal(map<array<int, 2>, double> mat)
 void intarray_printer(array<int,2> a);
 
 boost::optional<array<double, 2> > seg_seg_intersection(const array<double, 2>&, const array<double, 2>&, const array<double, 2>&, const array<double, 2>&);
-boost::optional<array<double, 2> > seg_seg_intersection_bc(string, double, const array<double, 2>&, const array<double, 2>&, const array<double, 2>&, const array<double, 2>&, const array<double, 2>&);
 std::string quads_error_message(std::string, vector<array<int, 2> >, vector<array<int, 2> > );
 
 void virial_add(virial_type &, virial_type const &);

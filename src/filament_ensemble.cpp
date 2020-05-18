@@ -641,10 +641,6 @@ vector<vector<double> > filament_ensemble::spring_spring_intersections(double le
     vector< vector<double> > itrs;
     array<double, 2> r1, r2, s1, s2, direc;
     pair<double, double> mmx1, mmy1, mmx2, mmy2;
-    boost::optional<array<double, 2> > inter;
-    string bcf1 = bc->get_BC();
-    array<double, 2> fov = bc->get_fov();
-    double delrx = bc->get_delrx();
     for (unsigned int f1 = 0; f1 < network.size(); f1++){
         
         for (int l1 = 0; l1 < network[f1]->get_nsprings(); l1++){
@@ -662,8 +658,8 @@ vector<vector<double> > filament_ensemble::spring_spring_intersections(double le
                     s1 = {{network[f2]->get_spring(l2)->get_hx()[0], network[f2]->get_spring(l2)->get_hy()[0]}};
                     s2 = {{network[f2]->get_spring(l2)->get_hx()[1], network[f2]->get_spring(l2)->get_hy()[1]}};
 
-                    inter = seg_seg_intersection_bc(bcf1, delrx, fov, r1, r2, s1, s2);
-                    
+                    boost::optional<array<double, 2>> inter = seg_seg_intersection_bc(bc, r1, r2, s1, s2);
+
                     if (inter && rng(0,1) <= prob){
                         direc = network[f2]->get_spring(l2)->get_direction();
                         itrs.push_back({inter->at(0), inter->at(1), len*direc[0], len*direc[1], 

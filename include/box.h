@@ -25,4 +25,6 @@ class box {
         double xbox, ybox, delrx;
 };
 
+boost::optional<array<double, 2> > seg_seg_intersection_bc(box *bc, array<double, 2> r1, array<double, 2> r2, array<double, 2> r3, array<double, 2> r4);
+
 #endif

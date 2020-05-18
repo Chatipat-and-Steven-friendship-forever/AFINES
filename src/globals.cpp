@@ -20,14 +20,6 @@ normal_distribution<double> distribution(0,1);
 
 /*generic functions to be used below*/
 
-//source: www.cplusplus.com/forum/articles/3638/ 
-template <typename FloatType>
-FloatType roundhalfup( const FloatType& value)
-{
-    return floor(value+0.5);
-}
-
-
 double rng(double start, double end)
 {
 	return start+(end-start)*((double)rand()/(RAND_MAX));
@@ -78,64 +70,6 @@ int event(double rate, double timestep)
     }
     else
         return 0;
-}
-
-array<double, 2> rij_periodic(double dx, double dy, double xbox, double ybox)
-{
-    //Using the minimum image convention
-    //Allen and Tildesley, page 30
-    double rxij = dx - xbox * roundhalfup(dx / xbox);
-    double ryij = dy - ybox * roundhalfup(dy / ybox);
-    return {{rxij, ryij}};
-}
-
-array<double, 2> rij_xperiodic(double dx, double dy, double xbox, double ybox)
-{
-    //Using the minimum image convention
-    //Allen and Tildesley, page 30
-    double rxij = dx - xbox * roundhalfup(dx / xbox);
-    double ryij = dy;
-    return {{rxij, ryij}};
-}
-
-array<double, 2> rij_lees_edwards(double dx, double dy, double xbox, double ybox, double delrx)
-{
-    //Using the minimum image convention
-    //Allen and Tildesley, page 247 
-    double cory, rxij, ryij;
-    cory = roundhalfup(dy / ybox);
-    rxij = dx   - cory * delrx;
-    rxij = rxij - roundhalfup(rxij / xbox) * xbox;
-    ryij = dy   - cory * ybox;
-    return {{rxij, ryij}};
-}
-
-double dist_bc(string bc, double dx, double dy, double xbox, double ybox, double delrx){
-    
-    array<double, 2> rij = rij_bc(bc, dx, dy, xbox, ybox, delrx);
-    return hypot(rij[0], rij[1]);
-}
-
-array<double, 2> rij_bc(string bc, double dx, double dy, double xbox, double ybox, double delrx){
-    
-    if (bc == "PERIODIC")
-        return rij_periodic(dx, dy, xbox, ybox);
-    else if (bc == "XPERIODIC")
-        return rij_xperiodic(dx, dy, xbox, ybox);
-    else if (bc =="LEES-EDWARDS")
-        return rij_lees_edwards(dx, dy, xbox, ybox, delrx);
-    else
-        return {{dx, dy}};
-
-}
-
-double dot_bc(string bc, double dx1, double dy1, double dx2, double dy2, double xbox, double ybox, double delrx)
-{
-    array<double, 2> 
-        rij1 = rij_bc(bc, dx1, dy1, xbox, ybox, delrx), 
-        rij2 = rij_bc(bc, dx2, dy2, xbox, ybox, delrx);
-    
-    return dot(rij1[0], rij1[1], rij2[0], rij2[1]);
 }
 
 double my_velocity(double vel0, double force, double fstall)
@@ -422,65 +356,6 @@ vector<int> range_bc(string bc, double delrx, int botq, int topq, int lo, int hi
     return out;
 }
 
-array<double, 2> pos_bc(string bc, double delrx, double dt, const array<double, 2>& fov, const array<double, 2>& vel, const array<double, 2>& pos)
-{
-    double xnew = pos[0], ynew = pos[1];
-       
-    if(bc == "PERIODIC")
-    {
-        xnew = xnew - fov[0] * roundhalfup(xnew / fov[0]);
-        ynew = ynew - fov[1] * roundhalfup(ynew / fov[1]);
-    }
-    else if(bc == "LEES-EDWARDS")
-    {
-        double cory = roundhalfup(ynew/fov[1]);
-        xnew = xnew - delrx  * cory;
-        xnew = xnew - fov[0] * roundhalfup(xnew / fov[0]);
-        ynew = ynew - fov[1] * cory;
-    }
-    
-    else { 
-        double xleft  = -fov[0] * 0.5;
-        double xright =  fov[0] * 0.5;
-        double yleft  = -fov[1] * 0.5;
-        double yright =  fov[1] * 0.5;
-
-        if(bc == "REFLECTIVE")
-        {
-            double local_shear = delrx * 2 * ynew / fov[1];
-            xleft  += local_shear; //sheared simulation bounds
-            xright += local_shear;
-            if (xnew <= xleft || xnew >= xright) xnew -= 2*dt*vel[0];
-            if (ynew <= yleft || ynew >= yright) ynew -= 2*dt*vel[1];
-
-        }
-        else if(bc == "INFINITE")
-        {
-            double local_shear = delrx * 2 * ynew / fov[1];
-            xleft  += local_shear; //sheared simulation bounds
-            xright += local_shear;
-            if      (xnew <= xleft)  xnew = xleft;
-            else if (xnew >= xright) xnew = xright;
-            if      (ynew <= yleft)  ynew = yleft;
-            else if (ynew >= yright) ynew = yright;
-
-        }
-        else if(bc == "XPERIODIC")
-        {
-            if      (xnew < xleft)  xnew += fov[0];
-            else if (xnew > xright) xnew -= fov[0];
-
-            if      (ynew < yleft)  ynew = yleft;
-            else if (ynew > yright) ynew = yright;
-
-        }
-    }
-    
-    return {{xnew, ynew}};
-
-}
-
-
 // Method to sort a map by value; source, for more general formulation:
 // http://stackoverflow.com/questions/5056645/sorting-stdmap-using-value/5056797#5056797
 pair<double, array<int, 2> > flip_pair(const pair<array<int, 2>, double> &p)
@@ -538,23 +413,6 @@ boost::optional<array<double, 2> > seg_seg_intersection(const array<double, 2>& 
 string print_pair(string name, const array<double, 2>& p)
 {
     return name + ": ("+std::to_string(p[0])+","+std::to_string(p[1])+")";
-}
-
-boost::optional<array<double, 2> > seg_seg_intersection_bc(string bc, double delrx, const array<double, 2>& fov, const array<double, 2>& r1, const array<double, 2>& r2, const array<double, 2>& r3, const array<double, 2>& r4)
-{
-    array<double, 2> rij12, rij13, rij34, rij14;
-    rij12 = rij_bc(bc, r2[0] - r1[0], r2[1] - r1[1], fov[0], fov[1], delrx);
-    rij13 = rij_bc(bc, r3[0] - r1[0], r3[1] - r1[1], fov[0], fov[1], delrx);
-    rij34 = rij_bc(bc, r4[0] - r3[0], r4[1] - r3[1], fov[0], fov[1], delrx);
-    rij14 = {{rij13[0] + rij34[0], rij13[1] + rij34[1]}};
-
-    boost::optional<array<double, 2> > inter = seg_seg_intersection({{0,0}}, rij12, rij13, rij14);
-    if (inter){
-        return pos_bc(bc, delrx, 0, fov, {{0,0}}, {{inter->at(0) + r1[0], inter->at(1) + r1[1]}}); 
-    }
-    else 
-        return boost::none;
-
 }
 
 int coord2quad_floor(double fov, int nq, double coord)
