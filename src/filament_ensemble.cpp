@@ -618,24 +618,46 @@ void filament_ensemble::update_int_forces()
 /* Overdamped Langevin Dynamics Integrator (Leimkuhler, 2013) */
 
 void filament_ensemble::update()
-
-{      
-    int net_sz = network.size();
-    // #pragma omp parallel for
-    
-    for (int f = 0; f < net_sz; f++){
-      //  if (f==0) cout<<"\nDEBUG: filament updates using "<<omp_get_num_threads()<<" cores";  
-        this->update_filament_stretching(f);
+{
+    for (int f = 0; f < int(network.size()); f++) {
+        update_filament_stretching(f);
         network[f]->update_bending(t);
+        if (external_force_flag) {
+            for (int i = 0; i < network[f]->get_nbeads(); i++) {
+                array<double, 2> pos = network[f]->get_bead_position(i);
+                array<double, 2> force = external_force(pos);
+                update_forces(f, i, force[0], force[1]);
+            }
+        }
         network[f]->update_positions();
     }
-    
-    this->update_energies();
-    
+    update_energies();
     t += dt;
-
 }
 
+array<double, 2> filament_ensemble::external_force(array<double, 2> pos)
+{
+    if (external_force_flag == CIRCLE) {
+        double x = pos[0];
+        double y = pos[1];
+        double rsq = x * x + y * y;
+        if (rsq < circle_wall_radius * circle_wall_radius) {
+            return {0, 0};
+        }
+        double r = sqrt(rsq);
+        double k = -circle_wall_spring_constant * (1.0 - circle_wall_radius / r);
+        return {k * x, k * y};
+    } else {
+        throw std::logic_error("External force flag not recognized.");
+    }
+}
+
+void filament_ensemble::set_circle_wall(double radius, double spring_constant)
+{
+    external_force_flag = CIRCLE;
+    circle_wall_radius = radius;
+    circle_wall_spring_constant = spring_constant;
+}
 
 vector<vector<double> > filament_ensemble::spring_spring_intersections(double len, double prob){
     vector< vector<double> > itrs;
@@ -680,6 +702,7 @@ filament_ensemble::filament_ensemble(box *bc_, int npolymer, int nbeads_min, int
         double rad, double vis, double spring_len, vector<array<double, 3> > pos_sets, double stretching, double ext, double bending,
         double frac_force, double seed, bool check_dup_in_quad_)
 {
+    external_force_flag = 0;
     check_dup_in_quad = check_dup_in_quad_;
     bc = bc_;
     array<double, 2> fov = bc->get_fov();
@@ -753,6 +776,7 @@ filament_ensemble::filament_ensemble(box *bc_, double density, array<int,2> mynq
         double rad, double vis, int nbeads, double spring_len, vector<array<double, 3> > pos_sets, double stretching, double ext,
         double bending, double frac_force, double seed, bool check_dup_in_quad_)
 {
+    external_force_flag = 0;
     check_dup_in_quad = check_dup_in_quad_;
     bc = bc_;
     array<double, 2> fov = bc->get_fov();
@@ -820,6 +844,7 @@ filament_ensemble::filament_ensemble(box *bc_, double density, array<int,2> mynq
 filament_ensemble::filament_ensemble(box *bc_, vector<vector<double> > beads, array<int,2> mynq, double delta_t, double temp,
         double vis, double spring_len, double stretching, double ext, double bending, double frac_force, bool check_dup_in_quad_)
 {
+    external_force_flag = 0;
     check_dup_in_quad = check_dup_in_quad_;
     bc = bc_;
 
