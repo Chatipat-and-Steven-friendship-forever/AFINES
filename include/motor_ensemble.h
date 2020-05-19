@@ -26,12 +26,6 @@ class motor_ensemble
 {
     public:
 
-        motor_ensemble(double mdensity, double delta_t, double temp, double mlen, filament_ensemble *network, double v0,
-                double stiffness, double max_ext_ratio,
-                double ron, double roff, double rend,
-                double fstall, double rcut,
-                double vis, vector<array<double, 3>> positions, bool use_attach_opt_);
-
         motor_ensemble(vector<vector<double>> motors, double delta_t, double temp,
                 double mlen, filament_ensemble * network, double v0, double stiffness, double max_ext_ratio,
                 double ron, double roff, double rend,

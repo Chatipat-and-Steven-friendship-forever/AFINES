@@ -26,13 +26,6 @@ class motor
 {
     public:
 
-        motor(array<double, 3> pos, double mlen, filament_ensemble* network, 
-                array<int, 2> mystate, array<int, 2> myfindex, array<int, 2> myrindex,
-                double delta_t, double v0, double temp, double stiffness, double max_ext_ratio, 
-                double ron, double roff, double rend, 
-                double fstall, double rcut,
-	      double vis);
-        
         motor(array<double, 4> pos, double mlen, filament_ensemble* network, 
                 array<int, 2> mystate, array<int, 2> myfindex, array<int, 2> myrindex,
                 double delta_t, double v0, double temp, double stiffness, double max_ext_ratio,

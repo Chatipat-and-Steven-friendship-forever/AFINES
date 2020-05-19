@@ -1,6 +1,7 @@
 #include "filament_ensemble.h"
 #include "motor_ensemble.h"
 #include "globals.h"
+#include "generate.h"
 
 #include <iostream>
 #include <fstream> 
@@ -348,52 +349,40 @@ int main(int argc, char* argv[]){
 
 
     // Create Network Objects
-    cout<<"\nCreating actin network..";
     box *bc = new box(bnd_cnd, xrange, yrange, restart_strain);
-    filament_ensemble * net;
-    if (actin_pos_vec.size() == 0 && actin_in.size() == 0) {
-        net = new filament_ensemble(bc, npolymer, nmonomer, nmonomer_extra, extra_bead_prob, {{xgrid, ygrid}}, dt, 
-                temperature, actin_length, viscosity, link_length, 
-                actin_position_arrs, 
-                link_stretching_stiffness, fene_pct, link_bending_stiffness,
-                fracture_force, myseed, check_dup_in_quad); 
-    } else {
-        net = new filament_ensemble(bc, actin_pos_vec, {{xgrid, ygrid}}, dt, 
-                temperature, viscosity, link_length, 
-                link_stretching_stiffness, fene_pct, link_bending_stiffness,
-                fracture_force, check_dup_in_quad); 
-    }
+
+    cout<<"\nCreating actin network..";
+    if (actin_pos_vec.size() == 0 && actin_in.size() == 0)
+        actin_pos_vec = generate_filament_ensemble(
+                bc, npolymer, nmonomer, nmonomer_extra, extra_bead_prob,
+                dt, temperature, actin_length, link_length,
+                actin_position_arrs, link_bending_stiffness, myseed);
+    filament_ensemble *net = new filament_ensemble(
+            bc, actin_pos_vec, {xgrid, ygrid}, dt,
+            temperature, viscosity, link_length,
+            link_stretching_stiffness, fene_pct, link_bending_stiffness,
+            fracture_force, check_dup_in_quad);
 
     if (link_intersect_flag) p_motor_pos_vec = net->spring_spring_intersections(p_motor_length, p_linkage_prob); 
     if (motor_intersect_flag) a_motor_pos_vec = net->spring_spring_intersections(a_motor_length, a_linkage_prob); 
     if (quad_off_flag) net->turn_quads_off();
 
     cout<<"\nAdding active motors...";
-    motor_ensemble * myosins;
-
-    if (a_motor_pos_vec.size() == 0 && a_motor_in.size() == 0) {
-        myosins = new motor_ensemble(a_motor_density, dt, temperature,
-                a_motor_length, net, a_motor_v, a_motor_stiffness, fene_pct, a_m_kon, a_m_koff,
-                a_m_kend, a_m_stall, a_m_cut, viscosity, a_motor_position_arrs, use_attach_opt);
-    } else {
-        myosins = new motor_ensemble( a_motor_pos_vec, dt, temperature,
-                a_motor_length, net, a_motor_v, a_motor_stiffness, fene_pct, a_m_kon, a_m_koff,
-                a_m_kend, a_m_stall, a_m_cut, viscosity, use_attach_opt);
-    }
+    if (a_motor_pos_vec.size() == 0 && a_motor_in.size() == 0)
+        a_motor_pos_vec = generate_motor_ensemble(bc, a_motor_density, a_motor_length, a_motor_position_arrs);
+    motor_ensemble *myosins = new motor_ensemble(
+            a_motor_pos_vec, dt, temperature,
+            a_motor_length, net, a_motor_v, a_motor_stiffness, fene_pct, a_m_kon, a_m_koff,
+            a_m_kend, a_m_stall, a_m_cut, viscosity, use_attach_opt);
     if (dead_head_flag) myosins->kill_heads(dead_head);
 
     cout<<"Adding passive motors (crosslinkers) ...\n";
-    motor_ensemble * crosslks; 
-
-    if (p_motor_pos_vec.size() == 0 && p_motor_in.size() == 0) {
-        crosslks = new motor_ensemble( p_motor_density, dt, temperature,
-                p_motor_length, net, p_motor_v, p_motor_stiffness, fene_pct, p_m_kon, p_m_koff,
-                p_m_kend, p_m_stall, p_m_cut, viscosity, p_motor_position_arrs, use_attach_opt);
-    } else {
-        crosslks = new motor_ensemble( p_motor_pos_vec, dt, temperature,
-                p_motor_length, net, p_motor_v, p_motor_stiffness, fene_pct, p_m_kon, p_m_koff,
-                p_m_kend, p_m_stall, p_m_cut, viscosity, use_attach_opt);
-    }
+    if (p_motor_pos_vec.size() == 0 && p_motor_in.size() == 0)
+        p_motor_pos_vec = generate_motor_ensemble(bc, p_motor_density, p_motor_length, p_motor_position_arrs);
+    motor_ensemble *crosslks = new motor_ensemble(
+            p_motor_pos_vec, dt, temperature,
+            p_motor_length, net, p_motor_v, p_motor_stiffness, fene_pct, p_m_kon, p_m_koff,
+            p_m_kend, p_m_stall, p_m_cut, viscosity, use_attach_opt);
     if (p_dead_head_flag) crosslks->kill_heads(p_dead_head);
 
     // Write the full configuration file

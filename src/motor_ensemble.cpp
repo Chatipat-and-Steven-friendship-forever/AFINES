@@ -16,49 +16,6 @@
 #include "motor_ensemble.h"
 #include "filament_ensemble.h"
 
-//motor_ensemble class
-
-motor_ensemble::motor_ensemble(double mdensity, double delta_t, double temp,
-        double mlen, filament_ensemble *network, double v0, double stiffness, double max_ext_ratio,
-        double ron, double roff, double rend,
-        double fstall, double rcut,
-        double vis, vector<array<double, 3>> positions, bool use_attach_opt_)
-{
-    array<double, 2> fov = network->get_box()->get_fov();
-    use_attach_opt = use_attach_opt_; 
-    mld =mlen;
-    tMove=0;//10;
-    f_network=network;
-    v = v0;
-    
-    ke = 0;
-    pe = 0;
-
-    int nm = int(ceil(mdensity*fov[0]*fov[1]));
-    cout<<"\nDEBUG: Number of motors:"<<nm<<"\n";
-
-    double alpha = 1, motorx, motory, mang;
-    array<double, 3> motor_pos; 
-    for (int i=0; i< nm; i++) {
-        
-        if ((unsigned int)i < positions.size()){
-            motorx = positions[i][0];
-            motory = positions[i][1];
-            mang   = positions[i][2];
-        }else{
-            motorx = rng(-0.5*(fov[0]*alpha-mld),0.5*(fov[0]*alpha-mld));
-            motory = rng(-0.5*(fov[1]*alpha-mld),0.5*(fov[1]*alpha-mld));
-            mang   = rng(0,2*pi);
-        }
-        motor_pos = {{motorx, motory, mang}};
-
-        n_motors.push_back(new motor( motor_pos, mld, f_network,{{0, 0}}, {{-1,-1}}, {{-1,-1}}, delta_t, temp, 
-				      v0, stiffness, max_ext_ratio, ron, roff, rend, fstall, rcut, vis));
-        
-    }
-}
-
-
 motor_ensemble::motor_ensemble(vector<vector<double>> motors, double delta_t, double temp,
         double mlen, filament_ensemble *network, double v0, double stiffness, double max_ext_ratio,
         double ron, double roff, double rend,
