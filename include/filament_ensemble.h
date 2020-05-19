@@ -24,18 +24,6 @@
 class filament_ensemble
 {
     public:
-        
-        filament_ensemble();
-
-        filament_ensemble(box *bc, int npolymer, int nbeads_min, int nbeads_max, double nbeads_prob,
-                array<int,2> mynq, double delta_t, double temp,
-                double rad, double vis, double spring_len, vector<array<double, 3> > pos_sets, double stretching, double ext, double bending,
-                double frac_force, double seed, bool check_dup_in_quad_);
-
-        filament_ensemble(box *bc, double density, array<int, 2> mynq, double delta_t, double temp,
-                double len, double vis, int nbead,
-                double spring_len, vector<array<double, 3> > pos_sets, double stretching, double ext, double bending, double frac_force,
-                double seed, bool check_dup_in_quad_);
 
         filament_ensemble(box *bc, vector< vector<double> > beads, array<int,2> mynq, double delta_t, double temp,
                 double vis, double spring_len, double stretching, double ext, double bending, double frac_force, bool check_dup_in_quad_);

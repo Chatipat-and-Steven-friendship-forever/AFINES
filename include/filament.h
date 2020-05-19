@@ -27,19 +27,10 @@ class filament
 {
     public:
 
-        filament(array<double, 2> myfov, array<int, 2> mynq, double deltat, double temp, double shear, 
-		 double frac, double bending_stiffness, string bndcnd, double drx);
-
-        filament(filament_ensemble *net, array<double, 3> startpos, int nbead,
-                double vis, double deltat, double temp, bool isStraight,
-                double beadLength, double spring_length, double stretching, double ext, double bending, double fracture);
-
         filament(filament_ensemble *net, vector<bead *> beadvec, double spring_length,
                 double stretching_stiffnes, double ext, double bending_stiffness,
                 double deltat, double temp, double fracture, double gamma);
 
-        filament();
-        
         ~filament();
     
         void set_y_thresh(double y);
