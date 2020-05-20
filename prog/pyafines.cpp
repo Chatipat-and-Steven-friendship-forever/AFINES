@@ -154,11 +154,52 @@ PYBIND11_MODULE(pyafines, m) {
         .def("clear_broken", &filament_ensemble::clear_broken)
         ;
 
-    py::class_<motor>(m, "Motor");
+    py::class_<motor>(m, "Motor")
+        // constructors
+        .def(py::init<array<double, 4>, double, filament_ensemble *, array<int, 2>, array<int, 2>, array<int, 2>, double, double, double, double, double, double, double, double, double, double, double>())
+        // get/set state
+        .def_property_readonly("f_index", &motor::get_f_index)
+        .def_property_readonly("l_index", &motor::get_l_index)
+        .def_property_readonly("pos_a_end", &motor::get_pos_a_end)
+        .def_property_readonly("force", &motor::get_force)
+        .def_property_readonly("state", &motor::get_states)
+        .def_property_readonly("hx", &motor::get_hx)
+        .def_property_readonly("hy", &motor::get_hy)
+        // get thermo
+        .def_property_readonly("ke", &motor::get_kinetic_energy)
+        .def_property_readonly("pe_stretch", &motor::get_stretching_energy)
+        .def_property_readonly("vir_stretch", &motor::get_virial)
+        // output state
+        .def("write", &motor::write)
+        // change state
+        .def("relax_head", &motor::relax_head)
+        .def("kill_head", &motor::kill_head)
+        .def("detach_head", (void (motor::*)(int)) &motor::detach_head)
+        .def("detach_head", (void (motor::*)(int, array<double, 2>)) &motor::detach_head)
+        .def("detach_head_without_moving", &motor::detach_head_without_moving)
+        .def("revive_head", &motor::revive_head)
+        .def("deactivate_head", &motor::deactivate_head)
+        // methods
+        .def("add_delrx", &motor::update_d_strain)
+        .def("get_positions_from_filament", &motor::update_position_attached)
+        .def("brownian_relax", &motor::brownian_relax)
+        .def("update_angle", &motor::update_angle)
+        .def("update_force", &motor::update_force)
+        .def("attach", &motor::attach)
+        .def("attach_opt", &motor::attach_opt)
+        .def("step_head", &motor::step_onehead)
+        .def("apply_forces_to_filament", &motor::filament_update_hd)
+        // misc
+        .def("allowed_bind", &motor::allowed_bind)
+        .def("generate_off_pos", &motor::generate_off_pos)
+        .def("metropolis_prob", &motor::metropolis_prob)
+        .def("update_pos_a_end", &motor::update_pos_a_end)
+        ;
+
     py::class_<motor_ensemble>(m, "MotorEnsemble");
 
-    m.def("generate_filaments", (vector<vector<double>>(*)(box *, int, int, int, int, double, double, double, double, vector<array<double, 3>>, double, double)) generate_filament_ensemble);
-    m.def("generate_filaments", (vector<vector<double>>(*)(box *, double, double, double, double, int, double, vector<array<double, 3>>, double, double)) generate_filament_ensemble);
+    m.def("generate_filaments", (vector<vector<double>> (*)(box *, int, int, int, int, double, double, double, double, vector<array<double, 3>>, double, double)) &generate_filament_ensemble);
+    m.def("generate_filaments", (vector<vector<double>> (*)(box *, double, double, double, double, int, double, vector<array<double, 3>>, double, double)) &generate_filament_ensemble);
     m.def("generate_motors", generate_motor_ensemble);
 
 }
