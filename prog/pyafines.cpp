@@ -1,5 +1,6 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
+#include <pybind11/stl.h>
 
 #include "box.h"
 #include "bead.h"
@@ -78,7 +79,40 @@ PYBIND11_MODULE(pyafines, m) {
         .def("update_intpoint", &spring::calc_intpoint)
         ;
 
-    py::class_<filament>(m, "Filament");
+    py::class_<filament>(m, "Filament")
+        .def(py::init<filament_ensemble *, vector<bead *>, double, double, double, double, double, double, double, double>())
+        // get/set state
+        .def_property_readonly("num_beads", &filament::get_nbeads)
+        .def_property_readonly("num_springs", &filament::get_nsprings)
+        .def("bead", &filament::get_bead)
+        .def("spring", &filament::get_spring)
+        .def("add_bead", &filament::add_bead)
+        // get thermo
+        .def_property_readonly("ke", &filament::get_kinetic_energy)
+        .def_property_readonly("pe", &filament::get_potential_energy)
+        .def_property_readonly("te", &filament::get_total_energy)
+        .def_property_readonly("pe_stretch", &filament::get_stretching_energy)
+        .def_property_readonly("pe_bend", &filament::get_bending_energy)
+        .def_property_readonly("vir_stretch", &filament::get_stretching_virial)
+        .def_property_readonly("vir_bend", &filament::get_bending_virial)
+        // output state
+        .def("write_beads", &filament::write_beads)
+        .def("write_springs", &filament::write_springs)
+        // output thermo
+        .def("write_thermo", &filament::write_thermo)
+        // methods
+        .def("add_delrx", &filament::update_d_strain)
+        .def("update_pos", &filament::update_positions)
+        .def("add_stretch_forces", &filament::update_stretching)
+        .def("add_bend_forces", &filament::update_bending)
+        .def("add_forces", &filament::update_forces)
+        .def("fracture", &filament::fracture)
+        // pulling
+        .def_property_readonly("end_to_end", &filament::get_end2end)
+        .def("pull_on_ends", &filament::pull_on_ends)
+        .def("affine_pull", &filament::affine_pull)
+        ;
+
     py::class_<filament_ensemble>(m, "FilamentEnsemble");
     py::class_<motor>(m, "Motor");
     py::class_<motor_ensemble>(m, "MotorEnsemble");
