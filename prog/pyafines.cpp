@@ -113,7 +113,47 @@ PYBIND11_MODULE(pyafines, m) {
         .def("affine_pull", &filament::affine_pull)
         ;
 
-    py::class_<filament_ensemble>(m, "FilamentEnsemble");
+    py::class_<filament_ensemble>(m, "FilamentEnsemble")
+        .def(py::init<box *, vector<vector<double>>, array<int, 2>, double, double, double, double, double, double, double, double, bool>())
+        // quadrants
+        .def("disable_quads", &filament_ensemble::turn_quads_off)
+        .def("update_quads", &filament_ensemble::quad_update_serial)
+        .def("attach_map", &filament_ensemble::get_dist)
+        .def("attach_map_all", &filament_ensemble::get_dist_all)
+        .def("attach_list", &filament_ensemble::get_attach_list)
+        .def_property_readonly("nq", &filament_ensemble::get_nq)
+        // get/set state
+        .def_property_readonly("friction", &filament_ensemble::get_bead_friction)
+        .def_property_readonly("box", &filament_ensemble::get_box)
+        .def_property_readonly("num_filaments", &filament_ensemble::get_nfilaments)
+        .def_property_readonly("num_beads", &filament_ensemble::get_nbeads)
+        .def_property_readonly("num_springs", &filament_ensemble::get_nsprings)
+        .def("filament", &filament_ensemble::get_filament)
+        // get thermo
+        .def_property_readonly("pe_stretch", &filament_ensemble::get_stretching_energy)
+        .def_property_readonly("pe_bend", &filament_ensemble::get_bending_energy)
+        .def_property_readonly("vir_stretch", &filament_ensemble::get_stretching_virial)
+        .def_property_readonly("vir_bend", &filament_ensemble::get_bending_virial)
+        // output state
+        .def("write_beads", &filament_ensemble::write_beads)
+        .def("write_springs", &filament_ensemble::write_springs)
+        // output thermo
+        .def("write_thermo", &filament_ensemble::write_thermo)
+        // methods
+        .def("add_delrx", &filament_ensemble::update_delrx)
+        .def("update_pos", &filament_ensemble::update_positions)
+        .def("add_stretch_forces", &filament_ensemble::update_stretching)
+        .def("add_bend_forces", &filament_ensemble::update_bending)
+        .def("add_forces", &filament_ensemble::update_forces)
+        .def("update_energies", &filament_ensemble::update_energies)
+        .def("step", &filament_ensemble::update)
+        // misc
+        .def("add_circle_wall", &filament_ensemble::set_circle_wall)
+        .def("spring_spring_intersections", &filament_ensemble::spring_spring_intersections)
+        .def_property_readonly("broken", &filament_ensemble::get_broken)
+        .def("clear_broken", &filament_ensemble::clear_broken)
+        ;
+
     py::class_<motor>(m, "Motor");
     py::class_<motor_ensemble>(m, "MotorEnsemble");
 
