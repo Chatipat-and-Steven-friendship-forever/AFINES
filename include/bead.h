@@ -45,6 +45,14 @@ class bead
         
         void reset_force();
 
+        double get_fx();
+
+        double get_fy();
+
+        void set_fx(double);
+
+        void set_fy(double);
+
         array<double,2> get_force();
 
         double get_friction();

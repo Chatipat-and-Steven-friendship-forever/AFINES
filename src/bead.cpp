@@ -67,6 +67,26 @@ void bead::reset_force()
     force[1] = 0;
 }
 
+double bead::get_fx()
+{
+    return force[0];
+}
+
+double bead::get_fy()
+{
+    return force[1];
+}
+
+void bead::set_fx(double fx)
+{
+    force[0] = fx;
+}
+
+void bead::set_fy(double fy)
+{
+    force[1] = fy;
+}
+
 double bead::get_xcm()
 {
     return x;
