@@ -5,7 +5,7 @@
 #include "motor_ensemble.h"
 
 vector<vector<double>> generate_filament_ensemble(
-        box *bc, int npolymer, int nbeads_min, int nbeads_extra, int nbeads_extra_prob,
+        box *bc, int npolymer, int nbeads_min, int nbeads_extra, double nbeads_extra_prob,
         double dt, double temp, double radius, double l0,
         vector<array<double, 3>> pos_sets, double kb, double seed);
 
