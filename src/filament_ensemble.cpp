@@ -655,32 +655,35 @@ filament_ensemble::filament_ensemble(int npolymer, int nbeads_min, int nbeads_ex
     cout<<"DEBUG: Number of filament:"<<npolymer<<"\n";
     cout<<"DEBUG: Avg number of monomers per filament:"<<nbeads_mean<<"\n"; 
     cout<<"DEBUG: Monomer Length:"<<rad<<"\n"; 
-   
-    int nbeads = 0;
+
     binomial_distribution<int> distribution(nbeads_extra, nbeads_extra_prob);
     default_random_engine generator(seed+2);
+    int maxbeads = 0;
 
     int s = pos_sets.size();
     double x0, y0, phi0;
     for (int i=0; i<npolymer; i++) {
         if ( i < s ){
-            network.push_back(new filament(pos_sets[i], nbeads, fov, nq,
-			  visc, dt, temp, straight_filaments, rad, spring_rest_len, stretching, ext, bending, frac_force, bc, drx) );
+            x0 = pos_sets[i][0];
+            y0 = pos_sets[i][1];
+            phi0 = pos_sets[i][2];
         }else{
             x0 = rng(-0.5*(view[0]*fov[0]),0.5*(view[0]*fov[0])); 
             y0 = rng(-0.5*(view[1]*fov[1]),0.5*(view[1]*fov[1]));
             phi0 =  rng(0, 2*pi);
-            
-            nbeads = nbeads_min + distribution(generator);
-            network.push_back(new filament({{x0,y0,phi0}}, nbeads, fov, nq, visc, dt, temp, straight_filaments, rad, spring_rest_len,
-					   stretching, ext, bending, frac_force, bc, drx) );
+
         }
+        int nbeads = nbeads_min + distribution(generator);
+        if (nbeads > maxbeads) maxbeads = nbeads;
+        network.push_back(new filament(
+                    {x0,y0,phi0}, nbeads, fov, nq, visc, dt, temp, straight_filaments,
+                    rad, spring_rest_len, stretching, ext, bending, frac_force, bc, drx));
     }
     
     //Neighbor List Initialization
     quad_off_flag = false;
-    max_springs_per_quad              = npolymer*(nbeads-1);
-    max_springs_per_quad_per_filament = nbeads - 1;
+    max_springs_per_quad              = npolymer*(maxbeads-1);
+    max_springs_per_quad_per_filament = maxbeads - 1;
     
     //this->nlist_init();
     this->nlist_init_serial();
