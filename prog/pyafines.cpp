@@ -140,7 +140,7 @@ PYBIND11_MODULE(pyafines, m) {
         // output thermo
         .def("write_thermo", &filament_ensemble::write_thermo)
         // methods
-        .def("add_delrx", &filament_ensemble::update_delrx)
+        .def("add_delrx", &filament_ensemble::update_d_strain)
         .def("update_pos", &filament_ensemble::update_positions)
         .def("add_stretch_forces", &filament_ensemble::update_stretching)
         .def("add_bend_forces", &filament_ensemble::update_bending)
