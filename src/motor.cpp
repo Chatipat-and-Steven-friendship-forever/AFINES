@@ -533,6 +533,12 @@ string motor::to_string()
     return buffer;
 }
 
+vector<double> motor::output()
+{
+    return {hx[0], hy[0], disp[0], disp[1],
+        double(f_index[0]), double(f_index[1]),
+        double(l_index[0]), double(l_index[1])};
+}
 
 string motor::write()
 {

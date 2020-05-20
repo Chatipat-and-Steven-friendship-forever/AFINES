@@ -357,7 +357,35 @@ void filament_ensemble::update_positions_range(int lo, int hi)
 
 }
 
- 
+vector<vector<double>> filament_ensemble::output_beads()
+{
+    vector<vector<double>> out;
+    for (size_t i = 0; i < network.size(); i++) {
+        vector<vector<double>> tmp = network[i]->output_beads(i);
+        out.insert(out.end(), tmp.begin(), tmp.end());
+    }
+    return out;
+}
+
+vector<vector<double>> filament_ensemble::output_springs()
+{
+    vector<vector<double>> out;
+    for (size_t i = 0; i < network.size(); i++) {
+        vector<vector<double>> tmp = network[i]->output_springs(i);
+        out.insert(out.end(), tmp.begin(), tmp.end());
+    }
+    return out;
+}
+
+vector<vector<double>> filament_ensemble::output_thermo()
+{
+    vector<vector<double>> out;
+    for (size_t i = 0; i < network.size(); i++) {
+        out.push_back(network[i]->output_thermo(i));
+    }
+    return out;
+}
+
 void filament_ensemble::write_beads(ofstream& fout)
 {
     for (unsigned int i=0; i<network.size(); i++) {

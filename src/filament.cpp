@@ -252,6 +252,31 @@ void filament::set_shear(double g){
     max_shear = gamma*bc->get_ybox()*0.5;
 }
 
+vector<vector<double>> filament::output_beads(int fil)
+{
+    vector<vector<double>> out;
+    for (size_t i = 0; i < beads.size(); i++) {
+        out.push_back(beads[i]->output());
+        out[-1].push_back(double(i));
+    }
+    return out;
+}
+
+vector<vector<double>> filament::output_springs(int fil)
+{
+    vector<vector<double>> out;
+    for (size_t i = 0; i < springs.size(); i++) {
+        out.push_back(springs[i]->output());
+        out[-1].push_back(double(i));
+    }
+    return out;
+}
+
+vector<double> filament::output_thermo(int fil)
+{
+    return {get_kinetic_energy(), get_potential_energy(), get_total_energy(), double(fil)};
+}
+
 string filament::write_beads(int fil){
     string all_beads;
     for (unsigned int i =0; i < beads.size(); i++)

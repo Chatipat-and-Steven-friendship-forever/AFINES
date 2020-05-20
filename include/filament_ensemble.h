@@ -116,6 +116,10 @@ class filament_ensemble
         
         void update_forces(int fil, int bead, double f2, double f3);
 
+        vector<vector<double>> output_beads();
+        vector<vector<double>> output_springs();
+        vector<vector<double>> output_thermo();
+
         void write_beads(ofstream& fout);
         
         void write_springs(ofstream& fout);

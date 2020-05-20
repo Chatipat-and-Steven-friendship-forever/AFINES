@@ -115,7 +115,9 @@ class motor
         array<double, 2> generate_off_pos(int hd);
 
         string to_string();
-        
+
+        vector<double> output();
+
         string write();
     
     public:

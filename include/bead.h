@@ -63,6 +63,8 @@ class bead
 
         void set_ycm(double ycm);
 
+        vector<double> output();
+
         string write();
         
         string to_string();
