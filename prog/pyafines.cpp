@@ -51,7 +51,33 @@ PYBIND11_MODULE(pyafines, m) {
         .def("write", &bead::write)
         ;
 
-    py::class_<spring>(m, "Spring");
+    py::class_<spring>(m, "Spring")
+        // constructors
+        .def(py::init<double, double, double, filament *, array<int, 2>>())
+        // get/set state
+        .def_property_readonly("x", &spring::get_hx)
+        .def_property_readonly("y", &spring::get_hy)
+        .def_property_readonly("length", &spring::get_length)
+        .def_property_readonly("force", &spring::get_force)
+        .def_property_readonly("direction", &spring::get_direction)
+        .def_property_readonly("displacement", &spring::get_disp)
+        // get parameters
+        .def_property_readonly("kl", &spring::get_kl)
+        .def_property_readonly("l0", &spring::get_l0)
+        // get thermo
+        .def_property_readonly("pe_stretch", &spring::get_stretching_energy)
+        .def_property_readonly("vir_stretch", &spring::get_virial)
+        // output state
+        .def("write", &spring::write)
+        // methods
+        .def("get_positions_from_filament", &spring::step)
+        .def("update_forces", &spring::update_force)
+        .def("apply_forces_to_filament", &spring::filament_update)
+        // intpoint
+        .def_property_readonly("intpoint", &spring::get_intpoint)
+        .def("update_intpoint", &spring::calc_intpoint)
+        ;
+
     py::class_<filament>(m, "Filament");
     py::class_<filament_ensemble>(m, "FilamentEnsemble");
     py::class_<motor>(m, "Motor");
