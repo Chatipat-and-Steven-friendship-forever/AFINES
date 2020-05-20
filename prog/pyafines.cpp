@@ -196,7 +196,27 @@ PYBIND11_MODULE(pyafines, m) {
         .def("update_pos_a_end", &motor::update_pos_a_end)
         ;
 
-    py::class_<motor_ensemble>(m, "MotorEnsemble");
+    py::class_<motor_ensemble>(m, "MotorEnsemble")
+        // constructors
+        .def(py::init<vector<vector<double>>, double, double, double, filament_ensemble *, double, double, double, double, double, double, double, double, double, bool>())
+        .def_property_readonly("num_motors", &motor_ensemble::get_nmotors)
+        // get thermo
+        .def("pe_stretch", &motor_ensemble::get_potential_energy)
+        .def("vir_stretch", &motor_ensemble::get_virial)
+        // output state
+        .def("write", &motor_ensemble::motor_write)
+        // change state
+        .def("kill_heads", &motor_ensemble::kill_heads)
+        .def("unbind_all_heads", &motor_ensemble::unbind_all_heads)
+        .def("revive_heads", &motor_ensemble::revive_heads)
+        // methods
+        .def("add_motor", &motor_ensemble::add_motor)
+        .def("add_delrx", &motor_ensemble::update_d_strain)
+        .def("walk", &motor_ensemble::motor_walk)
+        .def("step", &motor_ensemble::motor_update)
+        .def("detach_from_broken", &motor_ensemble::check_broken_filaments)
+        .def("update_energies", &motor_ensemble::update_energies)
+        ;
 
     m.def("generate_filaments", (vector<vector<double>> (*)(box *, int, int, int, int, double, double, double, double, vector<array<double, 3>>, double, double)) &generate_filament_ensemble);
     m.def("generate_filaments", (vector<vector<double>> (*)(box *, double, double, double, double, int, double, vector<array<double, 3>>, double, double)) &generate_filament_ensemble);
