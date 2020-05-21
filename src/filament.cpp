@@ -257,7 +257,7 @@ vector<vector<double>> filament::output_beads(int fil)
     vector<vector<double>> out;
     for (size_t i = 0; i < beads.size(); i++) {
         out.push_back(beads[i]->output());
-        out[-1].push_back(double(i));
+        out[i].push_back(double(i));
     }
     return out;
 }
@@ -267,7 +267,7 @@ vector<vector<double>> filament::output_springs(int fil)
     vector<vector<double>> out;
     for (size_t i = 0; i < springs.size(); i++) {
         out.push_back(springs[i]->output());
-        out[-1].push_back(double(i));
+        out[i].push_back(double(i));
     }
     return out;
 }
