@@ -129,10 +129,6 @@ vector<vector<double>> spring_spring_intersections(box *bc, vector<vector<double
         filaments.push_back(current_filament);
         current_filament.clear();
     }
-    cout << filaments.size() << endl;
-    for (size_t i = 0; i < filaments.size(); i++) {
-        cout << filaments[i].size() << endl;
-    }
 
     vector<vector<double>> motors;
     for (size_t f1 = 0; f1 < filaments.size(); f1++) {
