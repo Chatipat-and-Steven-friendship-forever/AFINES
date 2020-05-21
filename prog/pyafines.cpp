@@ -149,7 +149,6 @@ PYBIND11_MODULE(pyafines, m) {
         .def("step", &filament_ensemble::update)
         // misc
         .def("add_circle_wall", &filament_ensemble::set_circle_wall)
-        .def("spring_spring_intersections", &filament_ensemble::spring_spring_intersections)
         .def_property_readonly("broken", &filament_ensemble::get_broken)
         .def("clear_broken", &filament_ensemble::clear_broken)
         ;
@@ -220,6 +219,7 @@ PYBIND11_MODULE(pyafines, m) {
 
     m.def("generate_filaments", (vector<vector<double>> (*)(box *, int, int, int, double, double, double, double, double, vector<array<double, 3>>, double, double)) &generate_filament_ensemble);
     m.def("generate_filaments", (vector<vector<double>> (*)(box *, double, double, double, double, int, double, vector<array<double, 3>>, double, double)) &generate_filament_ensemble);
-    m.def("generate_motors", generate_motor_ensemble);
+    m.def("generate_motors", &generate_motor_ensemble);
+    m.def("spring_spring_intersections", &spring_spring_intersections);
 
 }
