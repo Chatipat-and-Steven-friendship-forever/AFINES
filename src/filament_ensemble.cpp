@@ -682,40 +682,6 @@ void filament_ensemble::set_circle_wall(double radius, double spring_constant)
     circle_wall_spring_constant = spring_constant;
 }
 
-vector<vector<double> > filament_ensemble::spring_spring_intersections(double len, double prob){
-    vector< vector<double> > itrs;
-    array<double, 2> r1, r2, s1, s2, direc;
-    pair<double, double> mmx1, mmy1, mmx2, mmy2;
-    for (unsigned int f1 = 0; f1 < network.size(); f1++){
-        
-        for (int l1 = 0; l1 < network[f1]->get_nsprings(); l1++){
-
-            r1 = {{network[f1]->get_spring(l1)->get_hx()[0], network[f1]->get_spring(l1)->get_hy()[0]}};
-            r2 = {{network[f1]->get_spring(l1)->get_hx()[1], network[f1]->get_spring(l1)->get_hy()[1]}};
-            for (unsigned int f2 = f1+1; f2 < network.size(); f2++){
-                
-                for (int l2 = 0; l2 < network[f2]->get_nsprings(); l2++){
-
-                    if (f1 == f2 && fabs(double(l1) - double(l2)) < 2){ //springs should be at least two away to get crosslinked
-                        continue;
-                    }
-
-                    s1 = {{network[f2]->get_spring(l2)->get_hx()[0], network[f2]->get_spring(l2)->get_hy()[0]}};
-                    s2 = {{network[f2]->get_spring(l2)->get_hx()[1], network[f2]->get_spring(l2)->get_hy()[1]}};
-
-                    boost::optional<array<double, 2>> inter = seg_seg_intersection_bc(bc, r1, r2, s1, s2);
-
-                    if (inter && rng(0,1) <= prob){
-                        direc = network[f2]->get_spring(l2)->get_direction();
-                        itrs.push_back({inter->at(0), inter->at(1), len*direc[0], len*direc[1], 
-                                double(f1), double(f2), double(l1), double(l2)}); 
-                    }
-                }
-            }
-        }
-    }
-    return itrs;
-}
 ////////////////////////////////////////
 ///SPECIFIC FILAMENT IMPLEMENTATIONS////
 ////////////////////////////////////////

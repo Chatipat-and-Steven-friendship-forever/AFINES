@@ -363,8 +363,10 @@ int main(int argc, char* argv[]){
             link_stretching_stiffness, fene_pct, link_bending_stiffness,
             fracture_force, check_dup_in_quad);
 
-    if (link_intersect_flag) p_motor_pos_vec = net->spring_spring_intersections(p_motor_length, p_linkage_prob); 
-    if (motor_intersect_flag) a_motor_pos_vec = net->spring_spring_intersections(a_motor_length, a_linkage_prob); 
+    if (link_intersect_flag)
+        p_motor_pos_vec = spring_spring_intersections(bc, actin_pos_vec, p_motor_length, p_linkage_prob);
+    if (motor_intersect_flag)
+        a_motor_pos_vec = spring_spring_intersections(bc, actin_pos_vec, a_motor_length, a_linkage_prob);
     if (quad_off_flag) net->turn_quads_off();
 
     cout<<"\nAdding active motors...";

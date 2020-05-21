@@ -94,8 +94,6 @@ class filament_ensemble
         
         int get_nfilaments();
 
-        vector<vector<double> > spring_spring_intersections(double cllen, double prob);
-
         void update_shear();
         
         void update_d_strain(double);
