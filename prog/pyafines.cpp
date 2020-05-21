@@ -199,6 +199,7 @@ PYBIND11_MODULE(pyafines, m) {
         // constructors
         .def(py::init<vector<vector<double>>, double, double, double, filament_ensemble *, double, double, double, double, double, double, double, double, double, bool>())
         .def_property_readonly("num_motors", &motor_ensemble::get_nmotors)
+        .def("motor", &motor_ensemble::get_motor)
         // get thermo
         .def_property_readonly("pe_stretch", &motor_ensemble::get_potential_energy)
         .def_property_readonly("vir_stretch", &motor_ensemble::get_virial)

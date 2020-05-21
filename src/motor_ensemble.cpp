@@ -68,6 +68,10 @@ int motor_ensemble::get_nmotors( ){
     return n_motors.size();
 }
 
+motor *motor_ensemble::get_motor(int i)
+{
+    return n_motors[i];
+}
 
 void motor_ensemble::kill_heads(int hd){
     for (unsigned int i = 0; i < n_motors.size(); i++)

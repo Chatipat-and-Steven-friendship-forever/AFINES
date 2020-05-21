@@ -36,6 +36,8 @@ class motor_ensemble
 
         int get_nmotors();
 
+        motor *get_motor(int);
+
         void check_broken_filaments();
 
         void motor_walk(double t);
