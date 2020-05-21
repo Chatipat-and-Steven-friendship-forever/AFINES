@@ -143,6 +143,11 @@ double spring::get_length_sq(){
     return llensq;
 }
 
+vector<double> spring::output()
+{
+    return {hx[0], hy[0], disp[0], disp[1]};
+}
+
 std::string spring::write()
 {
     return "\n" + std::to_string(hx[0]) + "\t" + std::to_string(hy[0]) + "\t" + std::to_string(disp[0]) + "\t" 

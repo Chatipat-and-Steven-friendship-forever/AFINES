@@ -15,4 +15,6 @@ vector<vector<double>> generate_filament_ensemble(
 
 vector<vector<double>> generate_motor_ensemble(box *bc, double density, double l0, vector<array<double, 3>> positions);
 
+vector<vector<double>> spring_spring_intersections(box *bc, vector<vector<double>> beads, double len, double prob);
+
 #endif

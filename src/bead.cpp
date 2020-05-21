@@ -117,6 +117,11 @@ bool bead::operator==(const bead& that)
            );
 }
 
+vector<double> bead::output()
+{
+    return {x, y, rad};
+}
+
 string bead::write()
 {
     return "\n" + std::to_string(x) + "\t" + std::to_string(y) + "\t" + std::to_string(rad);

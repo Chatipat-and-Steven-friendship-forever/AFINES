@@ -65,6 +65,10 @@ class filament
 
         int get_nsprings();
 
+        vector<vector<double>> output_beads(int fil);
+        vector<vector<double>> output_springs(int fil);
+        vector<double> output_thermo(int fil);
+
         string write_beads(int fil);
         
         string write_springs(int fil);

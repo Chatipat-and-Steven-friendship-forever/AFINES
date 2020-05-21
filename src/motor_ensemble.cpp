@@ -187,6 +187,15 @@ void motor_ensemble::motor_update()
     
 }
 
+vector<vector<double>> motor_ensemble::output()
+{
+    vector<vector<double>> out;
+    for (size_t i = 0; i < n_motors.size(); i++) {
+        out.push_back(n_motors[i]->output());
+    }
+    return out;
+}
+
 void motor_ensemble::motor_write(ostream& fout)
 {
     for (unsigned int i=0; i<n_motors.size(); i++) {

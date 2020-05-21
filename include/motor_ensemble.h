@@ -50,6 +50,8 @@ class motor_ensemble
 
         array<array<double, 2>, 2> get_virial();
 
+        vector<vector<double>> output();
+
         void motor_write(ostream& fout);
 
         void print_ensemble_thermo();

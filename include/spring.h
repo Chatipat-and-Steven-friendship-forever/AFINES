@@ -55,7 +55,9 @@ class spring
         double get_ycm();
         
         string to_string();
-        
+
+        vector<double> output();
+
         string write();
         
         void step();

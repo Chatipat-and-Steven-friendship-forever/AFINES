@@ -49,7 +49,7 @@ PYBIND11_MODULE(pyafines, m) {
         .def_property("fy", &bead::get_fy, &bead::set_fy)
         .def("zero_forces", &bead::reset_force)
         // output state
-        .def("write", &bead::write)
+        .def("output", &bead::output)
         ;
 
     py::class_<spring>(m, "Spring")
@@ -69,7 +69,7 @@ PYBIND11_MODULE(pyafines, m) {
         .def_property_readonly("pe_stretch", &spring::get_stretching_energy)
         .def_property_readonly("vir_stretch", &spring::get_virial)
         // output state
-        .def("write", &spring::write)
+        .def("output", &spring::output)
         // methods
         .def("get_positions_from_filament", &spring::step)
         .def("update_forces", &spring::update_force)
@@ -96,10 +96,10 @@ PYBIND11_MODULE(pyafines, m) {
         .def_property_readonly("vir_stretch", &filament::get_stretching_virial)
         .def_property_readonly("vir_bend", &filament::get_bending_virial)
         // output state
-        .def("write_beads", &filament::write_beads)
-        .def("write_springs", &filament::write_springs)
+        .def("output_beads", &filament::output_beads)
+        .def("output_springs", &filament::output_springs)
         // output thermo
-        .def("write_thermo", &filament::write_thermo)
+        .def("output_thermo", &filament::output_thermo)
         // methods
         .def("add_delrx", &filament::update_d_strain)
         .def("update_pos", &filament::update_positions)
@@ -135,10 +135,10 @@ PYBIND11_MODULE(pyafines, m) {
         .def_property_readonly("vir_stretch", &filament_ensemble::get_stretching_virial)
         .def_property_readonly("vir_bend", &filament_ensemble::get_bending_virial)
         // output state
-        .def("write_beads", &filament_ensemble::write_beads)
-        .def("write_springs", &filament_ensemble::write_springs)
+        .def("output_beads", &filament_ensemble::output_beads)
+        .def("output_springs", &filament_ensemble::output_springs)
         // output thermo
-        .def("write_thermo", &filament_ensemble::write_thermo)
+        .def("output_thermo", &filament_ensemble::output_thermo)
         // methods
         .def("add_delrx", &filament_ensemble::update_d_strain)
         .def("update_pos", &filament_ensemble::update_positions)
@@ -149,7 +149,6 @@ PYBIND11_MODULE(pyafines, m) {
         .def("step", &filament_ensemble::update)
         // misc
         .def("add_circle_wall", &filament_ensemble::set_circle_wall)
-        .def("spring_spring_intersections", &filament_ensemble::spring_spring_intersections)
         .def_property_readonly("broken", &filament_ensemble::get_broken)
         .def("clear_broken", &filament_ensemble::clear_broken)
         ;
@@ -170,7 +169,7 @@ PYBIND11_MODULE(pyafines, m) {
         .def_property_readonly("pe_stretch", &motor::get_stretching_energy)
         .def_property_readonly("vir_stretch", &motor::get_virial)
         // output state
-        .def("write", &motor::write)
+        .def("output", &motor::output)
         // change state
         .def("relax_head", &motor::relax_head)
         .def("kill_head", &motor::kill_head)
@@ -188,7 +187,7 @@ PYBIND11_MODULE(pyafines, m) {
         .def("attach", &motor::attach)
         .def("attach_opt", &motor::attach_opt)
         .def("step_head", &motor::step_onehead)
-        .def("apply_forces_to_filament", &motor::filament_update_hd)
+        .def("apply_forces_to_filament", &motor::filament_update)
         // misc
         .def("allowed_bind", &motor::allowed_bind)
         .def("generate_off_pos", &motor::generate_off_pos)
@@ -201,10 +200,10 @@ PYBIND11_MODULE(pyafines, m) {
         .def(py::init<vector<vector<double>>, double, double, double, filament_ensemble *, double, double, double, double, double, double, double, double, double, bool>())
         .def_property_readonly("num_motors", &motor_ensemble::get_nmotors)
         // get thermo
-        .def("pe_stretch", &motor_ensemble::get_potential_energy)
-        .def("vir_stretch", &motor_ensemble::get_virial)
+        .def_property_readonly("pe_stretch", &motor_ensemble::get_potential_energy)
+        .def_property_readonly("vir_stretch", &motor_ensemble::get_virial)
         // output state
-        .def("write", &motor_ensemble::motor_write)
+        .def("output", &motor_ensemble::output)
         // change state
         .def("kill_heads", &motor_ensemble::kill_heads)
         .def("unbind_all_heads", &motor_ensemble::unbind_all_heads)
@@ -218,8 +217,9 @@ PYBIND11_MODULE(pyafines, m) {
         .def("update_energies", &motor_ensemble::update_energies)
         ;
 
-    m.def("generate_filaments", (vector<vector<double>> (*)(box *, int, int, int, int, double, double, double, double, vector<array<double, 3>>, double, double)) &generate_filament_ensemble);
+    m.def("generate_filaments", (vector<vector<double>> (*)(box *, int, int, int, double, double, double, double, double, vector<array<double, 3>>, double, double)) &generate_filament_ensemble);
     m.def("generate_filaments", (vector<vector<double>> (*)(box *, double, double, double, double, int, double, vector<array<double, 3>>, double, double)) &generate_filament_ensemble);
-    m.def("generate_motors", generate_motor_ensemble);
+    m.def("generate_motors", &generate_motor_ensemble);
+    m.def("spring_spring_intersections", &spring_spring_intersections);
 
 }
