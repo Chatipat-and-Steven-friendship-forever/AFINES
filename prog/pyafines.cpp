@@ -218,6 +218,7 @@ PYBIND11_MODULE(pyafines, m) {
         .def("update_energies", &motor_ensemble::update_energies)
         ;
 
+    m.def("set_seed", &set_seed);
     m.def("generate_filaments", (vector<vector<double>> (*)(box *, int, int, int, double, double, double, double, double, vector<array<double, 3>>, double, double)) &generate_filament_ensemble);
     m.def("generate_filaments", (vector<vector<double>> (*)(box *, double, double, double, double, int, double, vector<array<double, 3>>, double, double)) &generate_filament_ensemble);
     m.def("generate_motors", &generate_motor_ensemble);
