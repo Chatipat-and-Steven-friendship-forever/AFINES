@@ -30,7 +30,7 @@ vector<vector<double>> generate_filament_ensemble(
             y = rng(-0.5 * view[1] * fov[1], 0.5 * view[1] * fov[1]);
             phi = rng(0.0, 2.0 * pi);
         }
-        beads.push_back({x, y, radius, i});
+        beads.push_back({x, y, radius, double(i)});
         int nbeads = nbeads_min + distribution(generator);
         for (int j = 1; j < nbeads; j++) {
             array<double, 2> pos = bc->pos_bc(
@@ -38,7 +38,7 @@ vector<vector<double>> generate_filament_ensemble(
                     {l0 * cos(phi) / dt, l0 * sin(phi) / dt}, dt);
             x = pos[0];
             y = pos[1];
-            beads.push_back({x, y, radius, i});
+            beads.push_back({x, y, radius, double(i)});
             if (!is_straight) phi += sqrt(var) * rng_n();
         }
     }
@@ -73,14 +73,14 @@ vector<vector<double>> generate_filament_ensemble(
             phi = rng(0.0, 2.0 * pi);
             // phi = atan2(1+x-y*y, -1-x*x+y); first example in Mathematica's streamplot documentation
         }
-        beads.push_back({x, y, radius, i});
+        beads.push_back({x, y, radius, double(i)});
         for (int j = 1; j < nbeads; j++) {
             array<double, 2> pos = bc->pos_bc(
                     {x + l0 * cos(phi), y + l0 * sin(phi)},
                     {l0 * cos(phi) / dt, l0 * sin(phi) / dt}, dt);
             x = pos[0];
             y = pos[1];
-            beads.push_back({x, y, radius, i});
+            beads.push_back({x, y, radius, double(i)});
             if (!is_straight) phi += sqrt(var) * rng_n();
         }
     }
