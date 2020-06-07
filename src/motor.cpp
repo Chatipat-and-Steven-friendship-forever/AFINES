@@ -15,39 +15,40 @@
 #include "motor.h"
 #include "filament_ensemble.h"
 
-motor::motor( array<double, 4> pos, 
-        double mlen, filament_ensemble * network, 
-        array<int, 2> mystate, 
-        array<int, 2> myfindex, 
-        array<int, 2> mylindex,
-        double delta_t, 
+motor::motor(vector<double> mvec,
+        double mlen, filament_ensemble * network,
+        double delta_t,
         double temp,
-        double v0, 
-        double stiffness, 
-        double max_ext_ratio, 
-        double ron, double roff, double rend, 
+        double v0,
+        double stiffness,
+        double max_ext_ratio,
+        double ron, double roff, double rend,
         double fstall, double rcut,
-	double vis) {
-
+        double vis)
+{
     bc = network->get_box();
     vs          = v0;
     mk          = stiffness;
-    
+
     stall_force = fstall;
     temperature = temp;
 
     max_bind_dist    = rcut;
     max_bind_dist_sq = rcut*rcut;
-    
+
     mld         = mlen;
     dt          = delta_t;
     kon         = ron*dt;
     koff        = roff*dt;
     kend        = rend*dt;
-    
-    state       = mystate;
-    f_index     = myfindex; //filament index for each head
-    l_index     = mylindex; //spring index for each head
+
+    // filament and spring indices for each head
+    f_index = {int(mvec[4]), int(mvec[5])};
+    l_index = {int(mvec[6]), int(mvec[7])};
+
+    state[0] = (f_index[0] == -1 && l_index[0] == -1) ? 0 : 1;
+    state[1] = (f_index[1] == -1 && l_index[1] == -1) ? 0 : 1;
+
     filament_network = network;
     damp        =(6*pi*vis*mld);
     bd_prefactor= sqrt(temperature/(2*damp*dt)); 
@@ -63,14 +64,13 @@ motor::motor( array<double, 4> pos,
     pos_a_end = {{0, 0}}; // pos_a_end = distance from pointy end -- by default 0
                         // i.e., if l_index[hd] = j, then pos_a_end[hd] is the distance to the "j+1"th bead
 
-    
-    array<double, 2> posH0 = boundary_check(0, pos[0], pos[1]); 
-    array<double, 2> posH1 = boundary_check(1, pos[0]+pos[2], pos[1]+pos[3]); 
+    array<double, 2> posH0 = boundary_check(0, mvec[0], mvec[1]);
+    array<double, 2> posH1 = boundary_check(1, mvec[0] + mvec[2], mvec[1] + mvec[3]);
     hx[0] = posH0[0];
     hy[0] = posH0[1];
     hx[1] = posH1[0];
     hy[1] = posH1[1];
-   
+
     //force can be non-zero and angle is determined from disp vector
     this->update_angle();
     this->update_force();
@@ -98,9 +98,6 @@ motor::motor( array<double, 4> pos,
     prv_rnd_y = {{0,0}};
 
 }
-
-
- motor::~motor(){};
 
 //return motor state with a given head number
 

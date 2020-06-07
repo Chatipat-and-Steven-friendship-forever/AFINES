@@ -22,49 +22,31 @@ motor_ensemble::motor_ensemble(vector<vector<double>> motors, double delta_t, do
         double fstall, double rcut,
         double vis, bool use_attach_opt_)
 {
-    use_attach_opt = use_attach_opt_; 
-    mld = mlen;
-    tMove = 0;
+    use_attach_opt = use_attach_opt_;
     f_network=network;
-    v = v0;
 
     ke = 0;
     pe = 0;
-    
-    int nm = motors.size();
-    cout<<"\nDEBUG: Number of motors:"<<nm<<"\n";
 
-    array<double, 4> motor_pos;
-    array<int, 2> f_index, l_index, state;
+    cout << "\nDEBUG: Number of motors:" << motors.size() << "\n";
 
-    for (int i=0; i< nm; i++) {
-        
-        motor_pos = {{motors[i][0], motors[i][1], motors[i][2], motors[i][3]}};
-        
-        f_index = {{int(motors[i][4]), int(motors[i][5])}};
-        l_index = {{int(motors[i][6]), int(motors[i][7])}};
-
-        state = {{f_index[0] == -1 && l_index[0] == -1 ? 0 : 1, f_index[1] == -1 && l_index[1] == -1 ? 0 : 1}};  
-
-        n_motors.push_back(new motor( motor_pos, mld, f_network, state, f_index, l_index, delta_t, temp, 
-				      v0, stiffness, max_ext_ratio, ron, roff, rend, fstall, rcut, vis));
+    for (vector<double> mvec : motors) {
+        n_motors.push_back(new motor(mvec, mlen, f_network, delta_t, temp,
+                    v0, stiffness, max_ext_ratio, ron, roff, rend, fstall, rcut, vis));
     }
 
     this->update_energies();
 }
 
 
-motor_ensemble::~motor_ensemble( ){ 
-    cout<<"DELETING MOTOR ENSEMBLE\n";
-    int s = n_motors.size();
-    for (int i = 0; i < s; i++){
-        delete n_motors[i];
-    }
-    n_motors.clear();
-};
+motor_ensemble::~motor_ensemble()
+{
+    cout << "DELETING MOTOR ENSEMBLE\n";
+    for (motor *m : n_motors) delete m;
+}
 
-
-int motor_ensemble::get_nmotors( ){ 
+int motor_ensemble::get_nmotors()
+{
     return n_motors.size();
 }
 
@@ -128,7 +110,7 @@ void motor_ensemble::motor_walk(double t)
     //    if(i==0) cout<<"\nDEBUG: motor_walk: using "<<omp_get_num_threads()<<" cores";
         array<int, 2> s = n_motors[i]->get_states();
         
-        if (t >= tMove){
+        if (t >= 0.0) {
             
             //Dynamics
             if (s[0] == 0 || s[0] == -2)

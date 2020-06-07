@@ -71,13 +71,9 @@ class motor_ensemble
         void revive_heads();
 
     private:
-
-        double mld, gamma, tMove;
-        double ke, pe, v;
-
-        array<double, 2> fov;
+        double ke, pe;
         filament_ensemble *f_network;
-        vector<motor *> n_motors;  
+        vector<motor *> n_motors;
         bool use_attach_opt;
         array<array<double, 2>, 2> virial;
 };

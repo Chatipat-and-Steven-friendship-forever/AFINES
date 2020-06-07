@@ -22,20 +22,18 @@ class filament_ensemble;
 #include "box.h"
 
 //motor class
-class motor 
+class motor
 {
     public:
 
-        motor(array<double, 4> pos, double mlen, filament_ensemble* network, 
-                array<int, 2> mystate, array<int, 2> myfindex, array<int, 2> myrindex,
+        motor(vector<double> mvec,
+                double mlen, filament_ensemble *network,
                 double delta_t, double v0, double temp, double stiffness, double max_ext_ratio,
-                double ron, double roff, double rend, 
+                double ron, double roff, double rend,
                 double fstall, double rcut,
-	      double vis);
-        
-        motor();
-        
-        ~motor();
+                double vis);
+
+        ~motor() {}
 
         bool allowed_bind( int hd, array<int, 2> fl_idx);
 
