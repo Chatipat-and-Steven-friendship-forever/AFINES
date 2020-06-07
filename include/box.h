@@ -3,11 +3,20 @@
 
 #include "globals.h"
 
+enum class bc_type {
+    clip,
+    infinite,
+    lees_edwards,
+    periodic,
+    reflective,
+    xperiodic
+};
+
 class box {
     public:
         box(string BC_, double xbox_, double ybox_, double delrx_);
 
-        string get_BC();
+        bc_type get_BC();
         array<double, 2> get_fov();
         double get_xbox();
         double get_ybox();
@@ -21,7 +30,9 @@ class box {
         double dot_bc(array<double, 2> disp1, array<double, 2> disp2);
 
     protected:
-        string BC;
+        bc_type string2bc(string);
+
+        bc_type BC;
         double xbox, ybox, delrx;
 };
 

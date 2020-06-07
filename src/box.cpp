@@ -2,13 +2,13 @@
 
 box::box(string BC_, double xbox_, double ybox_, double delrx_)
 {
-    BC = BC_;
+    BC = string2bc(BC_);
     xbox = xbox_;
     ybox = ybox_;
     delrx = delrx_;
 }
 
-string box::get_BC()
+bc_type box::get_BC()
 {
     return BC;
 }
@@ -51,14 +51,14 @@ array<double, 2> box::rij_bc(array<double, 2> disp)
 {
     double dx = disp[0];
     double dy = disp[1];
-    if (BC == "PERIODIC") {
+    if (BC == bc_type::periodic) {
         dx -= xbox * roundhalfup(dx / xbox);
         dy -= ybox * roundhalfup(dy / ybox);
 
-    } else if (BC == "XPERIODIC") {
+    } else if (BC == bc_type::xperiodic) {
         dx -= xbox * roundhalfup(dx / xbox);
 
-    } else if (BC == "LEES-EDWARDS") {
+    } else if (BC == bc_type::lees_edwards) {
         double cory = roundhalfup(dy / ybox);
         dx -= delrx * cory;
         dx -= xbox * roundhalfup(dx / xbox);
@@ -73,17 +73,17 @@ array<double, 2> box::pos_bc(array<double, 2> pos, array<double, 2> vel, double 
     double x = pos[0];
     double y = pos[1];
 
-    if (BC == "PERIODIC") {
+    if (BC == bc_type::periodic) {
         x -= xbox * roundhalfup(x / xbox);
         y -= ybox * roundhalfup(y / ybox);
 
-    } else if (BC == "LEES-EDWARDS") {
+    } else if (BC == bc_type::lees_edwards) {
         double cory = roundhalfup(y / ybox);
         x -= delrx * cory;
         x -= xbox * roundhalfup(x / xbox);
         y -= ybox * cory;
 
-    } else if (BC == "REFLECTIVE") {
+    } else if (BC == bc_type::reflective) {
         double xlo = -0.5 * xbox + 2.0 * delrx * y / ybox;
         double xhi =  0.5 * xbox + 2.0 * delrx * y / ybox;
         double ylo = -0.5 * ybox;
@@ -93,7 +93,7 @@ array<double, 2> box::pos_bc(array<double, 2> pos, array<double, 2> vel, double 
         if (y <= ylo || y >= yhi)
             y -= 2.0 * dt * vel[1];
 
-    } else if (BC == "INFINITE") {
+    } else if (BC == bc_type::infinite) {
         double xlo = -0.5 * xbox + 2.0 * delrx * y / ybox;
         double xhi =  0.5 * xbox + 2.0 * delrx * y / ybox;
         double ylo = -0.5 * ybox;
@@ -107,7 +107,7 @@ array<double, 2> box::pos_bc(array<double, 2> pos, array<double, 2> vel, double 
         else if (y >= yhi)
             y = yhi;
 
-    } else if (BC == "XPERIODIC") {
+    } else if (BC == bc_type::xperiodic) {
         double xlo = -0.5 * xbox;
         double xhi =  0.5 * xbox;
         double ylo = -0.5 * ybox;
@@ -121,7 +121,7 @@ array<double, 2> box::pos_bc(array<double, 2> pos, array<double, 2> vel, double 
         else if (y > yhi)
             y = yhi;
 
-    } else if (BC == "CLIP") {
+    } else if (BC == bc_type::clip) {
         double xlo = -0.5 * xbox;
         double xhi =  0.5 * xbox;
         double ylo = -0.5 * ybox;
@@ -163,4 +163,15 @@ boost::optional<array<double, 2> > seg_seg_intersection_bc(box *bc, array<double
     } else {
         return boost::none;
     }
+}
+
+bc_type box::string2bc(string BC)
+{
+    if (BC == "CLIP") return bc_type::clip;
+    if (BC == "INFINITE") return bc_type::infinite;
+    if (BC == "LEES-EDWARDS") return bc_type::lees_edwards;
+    if (BC == "PERIODIC") return bc_type::periodic;
+    if (BC == "REFLECTIVE") return bc_type::reflective;
+    if (BC == "XPERIODIC") return bc_type::xperiodic;
+    throw "Boundary condition " + BC + " not recognized.";
 }

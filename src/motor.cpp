@@ -488,22 +488,18 @@ string motor::to_string()
     char buffer[1000];
     string out ="";
 
-    string BC = bc->get_BC();
-    array<double, 2> fov = bc->get_fov();
-    double shear = bc->get_delrx();
     sprintf(buffer, "\
             \nhead 0 position = (%f, %f)\t head 1 position=(%f,%f)\
             \nstate = (%d, %d)\t f_index = (%d, %d)\t l_index = (%d, %d)\
             \nviscosity = %f\t max binding distance = %f\t stiffness = %f\t stall force = %f\t length = %f\
             \nkon = %f\t koff = %f\t kend = %f\t dt = %f\t temp = %f\t damp = %f\
-            \nfov = (%f, %f)\t distance from end of spring = (%f, %f)\
-            shear = %f\t tension = (%f, %f)\n",
+            \ndistance from end of spring = (%f, %f)\t tension = (%f, %f)\n",
             hx[0], hy[0], hx[1], hy[1],
             static_cast<int>(state[0]),  static_cast<int>(state[1]),
-            f_index[0],  f_index[1], l_index[0],  l_index[1], 
+            f_index[0],  f_index[1], l_index[0], l_index[1],
             vs, max_bind_dist, mk, stall_force, mld,
-            kon, koff, kend, dt, temperature, damp, 
-            fov[0],  fov[1], pos_a_end[0], pos_a_end[1], shear, force[0], force[1]);
+            kon, koff, kend, dt, temperature, damp,
+            pos_a_end[0], pos_a_end[1], force[0], force[1]);
     return buffer;
 }
 

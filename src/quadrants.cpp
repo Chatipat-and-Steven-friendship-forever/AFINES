@@ -27,7 +27,7 @@ void quadrants::add_spring(spring *s, array<int, 2> fl)
 {
     if (!quad_flag)
         all_springs.push_back(fl);
-    if (bc->get_BC() == "PERIODIC" || bc->get_BC() == "LEES-EDWARDS")
+    if (bc->get_BC() == bc_type::periodic || bc->get_BC() == bc_type::lees_edwards)
         add_spring_periodic(s, fl);
     else
         add_spring_nonperiodic(s, fl);
