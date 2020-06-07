@@ -361,13 +361,13 @@ int main(int argc, char* argv[]){
             bc, actin_pos_vec, {xgrid, ygrid}, dt,
             temperature, viscosity, link_length,
             link_stretching_stiffness, fene_pct, link_bending_stiffness,
-            fracture_force, check_dup_in_quad);
+            fracture_force);
 
     if (link_intersect_flag)
         p_motor_pos_vec = spring_spring_intersections(bc, actin_pos_vec, p_motor_length, p_linkage_prob);
     if (motor_intersect_flag)
         a_motor_pos_vec = spring_spring_intersections(bc, actin_pos_vec, a_motor_length, a_linkage_prob);
-    if (quad_off_flag) net->turn_quads_off();
+    if (quad_off_flag) net->get_quads()->use_quad(false);
 
     cout<<"\nAdding active motors...";
     if (a_motor_pos_vec.size() == 0 && a_motor_in.size() == 0)
@@ -410,6 +410,9 @@ int main(int argc, char* argv[]){
    
     if (circle_flag) {
         net->set_circle_wall(circle_radius, circle_spring_constant);
+    }
+    if (quad_off_flag) {
+        net->get_quads()->use_quad(false);
     }
 
     // Run the simulation
@@ -536,6 +539,7 @@ int main(int argc, char* argv[]){
 
         if ( ! quad_off_flag && count % quad_update_period == 0) {
             net->quad_update_serial();
+            if (check_dup_in_quad) net->get_quads()->check_duplicates();
         }
 
         //update cross linkers

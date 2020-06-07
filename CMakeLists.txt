@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 11)
 
 find_package(Boost 1.53 REQUIRED COMPONENTS filesystem program_options system)
 
-set(sources src/bead.cpp src/spring.cpp src/filament.cpp src/filament_ensemble.cpp src/motor.cpp src/motor_ensemble.cpp src/box.cpp src/generate.cpp src/globals.cpp)
+set(sources src/bead.cpp src/spring.cpp src/filament.cpp src/filament_ensemble.cpp src/motor.cpp src/motor_ensemble.cpp src/box.cpp src/quadrants.cpp src/generate.cpp src/globals.cpp)
 
 add_executable(network prog/network.cpp ${sources})
 target_include_directories(network PRIVATE include)

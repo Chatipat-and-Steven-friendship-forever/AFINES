@@ -38,7 +38,9 @@ class motor
         ~motor();
 
         bool allowed_bind( int hd, array<int, 2> fl_idx);
-        
+
+        void attach_head(int hd, array<double, 2> intpoint, array<int, 2> fl);
+
         bool attach( int hd);
         bool attach_opt(int hd);
 
@@ -132,8 +134,7 @@ class motor
         array<array<double, 2>, 2> ldir_bind, bind_disp;
 
         array<int,2> state, f_index, l_index;
-        
-        map<vector<int>, double> dist;
+
         array<bool, 2> at_barbed_end;
 
         filament_ensemble* filament_network;

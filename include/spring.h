@@ -79,14 +79,10 @@ class spring
         array<double,2> get_force();
 
         void set_aindex1(int i);
-        
-        double get_distance_sq(double xp, double yp);
 
         double get_int_angle(double xp, double yp);
-        
-        array<double,2> get_intpoint();
 
-        void calc_intpoint(double xp, double yp);
+        array<double,2> intpoint(array<double, 2> pos);
 
         array<double, 2> get_direction();
         
@@ -97,16 +93,9 @@ class spring
     protected:
 
         box *bc;
-
-        double xcm, ycm, l0, kl, max_ext, eps_ext, llen, llensq;//, force;
-       
-        array<double,2> hx, hy;
-        array<double, 2> disp, force, intpoint, direc;
-
+        double l0, kl, max_ext, eps_ext, llen, llensq;
+        array<double,2> hx, hy, disp, force, direc;
         array<int, 2> aindex;
-         
         filament *fil;
-        
-        vector< array<int,2> > quad; //vector of two vectors(x and y quadrants) of integers
 };
 #endif

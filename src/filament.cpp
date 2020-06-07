@@ -374,11 +374,9 @@ string filament::to_string(){
     for (unsigned int i = 0; i < beads.size(); i++)
         out += beads[i]->to_string();
 
-    array<int, 2> nq = filament_network->get_nq();
-    array<double, 2> fov = bc->get_fov();
-    sprintf(buffer, "fov = (%f, %f)\tnq = (%d, %d)\tgamma = %f\ttemperature = %f\tdt = %f\tfracture_force=%f\n",
-            fov[0], fov[1], nq[0], nq[1], gamma, temperature, dt, fracture_force);
-   
+    sprintf(buffer, "gamma = %f\ttemperature = %f\tdt = %f\tfracture_force=%f\n",
+            gamma, temperature, dt, fracture_force);
+
     return out + buffer; 
 
 }

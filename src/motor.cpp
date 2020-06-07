@@ -138,6 +138,31 @@ bool motor::allowed_bind(int hd, array<int, 2> fl_idx){
     return (f_index[pr(hd)] != fl_idx[0] || l_index[pr(hd)] != fl_idx[1]);
 }
 
+void motor::attach_head(int hd, array<double, 2> intpoint, array<int, 2> fl)
+{
+    // update state
+    state[hd] = 1;
+    f_index[hd] = fl[0];
+    l_index[hd] = fl[1];
+
+    // record displacement of head and orientation of spring for future unbinding move
+    ldir_bind[hd] = filament_network->get_direction(f_index[hd], l_index[hd]);
+    bind_disp[hd] = bc->rij_bc({intpoint[0] - hx[hd], intpoint[1] - hy[hd]});
+
+    // update head position
+    hx[hd] = intpoint[0];
+    hy[hd] = intpoint[1];
+
+    // update relative head position
+    array<double, 2> ref = filament_network->get_end(f_index[hd], l_index[hd]);
+    pos_a_end[hd] = bc->dist_bc({ref[0] - hx[hd], ref[1] - hy[hd]});
+
+    // even if the head is at the barbed end upon binding,
+    // it could have negative velocity,
+    // so always set this to false until it steps
+    at_barbed_end[hd] = false;
+}
+
 bool motor::attach_opt(int hd)
 {
     double mf_rand = rng_u();
@@ -154,11 +179,11 @@ bool motor::attach_opt(int hd)
         array<int, 2> fl = attach_list->at(i);
         filament *f = filament_network->get_filament(fl[0]);
         spring *s = f->get_spring(fl[1]);
-        s->calc_intpoint(hx[hd], hy[hd]);
-        array<double ,2> intpoint = s->get_intpoint();
+        array<double ,2> intpoint = s->intpoint({hx[hd], hy[hd]});
 
         // don't bind if binding site is further away than the cutoff
-        double dist_sq = s->get_distance_sq(hx[hd], hy[hd]);
+        array<double, 2> dr = bc->rij_bc({intpoint[0] - hx[hd], intpoint[1] - hy[hd]});
+        double dist_sq = dr[0] * dr[0] + dr[1] * dr[1];
         if (dist_sq > max_bind_dist_sq || !allowed_bind(hd, fl)) {
             return false;
         }
@@ -166,88 +191,46 @@ bool motor::attach_opt(int hd)
         double prob = metropolis_prob(hd, fl, intpoint, kon);
 
         if (remprob < prob) {
-            //update state
-            state[hd] = 1;
-            f_index[hd] = fl[0];
-            l_index[hd] = fl[1];
-
-            //record displacement of head and orientation of spring for future unbinding move
-            ldir_bind[hd] = filament_network->get_direction(f_index[hd], l_index[hd]);
-            bind_disp[hd] = bc->rij_bc({intpoint[0]-hx[hd], intpoint[1]-hy[hd]});
-
-            //update head position
-            hx[hd] = intpoint[0];
-            hy[hd] = intpoint[1];
-
-            //update relative head position
-            pos_a_end[hd] = bc->dist_bc({filament_network->get_end(f_index[hd], l_index[hd])[0] - hx[hd],
-                                         filament_network->get_end(f_index[hd], l_index[hd])[1] - hy[hd]});
-
-            //(even if its at the barbed end upon binding, could have negative velocity, so always set this to false, until it steps)
-            at_barbed_end[hd] = false; 
-
+            attach_head(hd, intpoint, fl);
             return true;
         }
     }
     return false;
 }
 
-
 //check for attachment of unbound heads given head index (0 for head 1, and 1 for head 2)
 bool motor::attach(int hd)
 {
-    double not_off_prob = 0;
+    set<tuple<double, array<int, 2>, array<double, 2>>> dist_sq_sorted;
+    for (array<int, 2> fl : *filament_network->get_attach_list(hx[hd], hy[hd])) {
+        filament *f = filament_network->get_filament(fl[0]);
+        spring *s = f->get_spring(fl[1]);
+        array<double, 2> intpoint = s->intpoint({hx[hd], hy[hd]});
+        array<double, 2> dr = bc->rij_bc({intpoint[0] - hx[hd], intpoint[1] - hy[hd]});
+        double dist_sq = dr[0] * dr[0] + dr[1] * dr[1];
+        dist_sq_sorted.insert(tuple<double, array<int, 2>, array<double, 2>>(dist_sq, fl, intpoint));
+    }
+
+    double not_off_prob = 0.0;
     double mf_rand = rng_u();
-    array<double, 2> intPoint;
-    
-//    set<pair<double, array<int, 2> > > dist_sq_sorted = filament_network->get_dist_all(hx[hd], hy[hd]);//if not using neighbor lists
-    set<pair<double, array<int, 2> > > dist_sq_sorted = filament_network->get_dist(hx[hd], hy[hd]);
+    for (auto it : dist_sq_sorted) {
+        double dist_sq; array<int, 2> fl; array<double, 2> intpoint;
+        std::tie(dist_sq, fl, intpoint) = it;
+        if (dist_sq > max_bind_dist_sq) //since it's sorted, all the others will be farther than max_bind_dist too
+            break;
 
-    if(!dist_sq_sorted.empty()){
-        
-        for (set<pair<double, array<int, 2>>>::iterator it=dist_sq_sorted.begin(); it!=dist_sq_sorted.end(); ++it)
-        {
-            if (it->first > max_bind_dist_sq) //since it's sorted, all the others will be farther than max_bind_dist too
-                break;
+        //head can't bind to the same filament spring the other head is bound to
+        else if (allowed_bind(hd, fl)) {
+            not_off_prob += metropolis_prob(hd, fl, intpoint, kon);
 
-            //head can't bind to the same filament spring the other head is bound to
- //           else if(!(f_index[pr(hd)]==(it->second).at(0) && l_index[pr(hd)]==(it->second).at(1))) {
-            else if(allowed_bind(hd, it->second)){
-                //cout<<"\nDEBUG: dist = "<<sqrt(it->first)<<" {f,l} = {"<<(it->second).at(0)<<" , "<<(it->second).at(1)<<"}";
-                
-                intPoint = filament_network->get_filament((it->second).at(0))->get_spring((it->second).at(1))->get_intpoint();
-                not_off_prob += metropolis_prob(hd, it->second, intPoint, kon);
-                 
-                if (mf_rand < not_off_prob) 
-                {
-                    //update state
-                    state[hd] = 1;
-                    f_index[hd] = (it->second).at(0);
-                    l_index[hd] = (it->second).at(1);
-                    
-                    //record displacement of head and orientation of spring for future unbinding move
-                    ldir_bind[hd] = filament_network->get_direction(f_index[hd], l_index[hd]);
-                    bind_disp[hd] = bc->rij_bc({intPoint[0]-hx[hd], intPoint[1]-hy[hd]});
-
-                    //update head position
-                    hx[hd] = intPoint[0];
-                    hy[hd] = intPoint[1];
-
-                    //update relative head position
-                    pos_a_end[hd] = bc->dist_bc({filament_network->get_end(f_index[hd], l_index[hd])[0] - hx[hd],
-                                                 filament_network->get_end(f_index[hd], l_index[hd])[1] - hy[hd]});
-
-                    //(even if its at the barbed end upon binding, could have negative velocity, so always set this to false, until it steps)
-                    at_barbed_end[hd] = false; 
-                 
-                    return true;
-                }
+            if (mf_rand < not_off_prob) {
+                attach_head(hd, intpoint, fl);
+                return true;
             }
         }
-    }	
+    }
     return false;
-} 
-
+}
 
 void motor::update_force()
 { 

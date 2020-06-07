@@ -34,7 +34,6 @@ spring::spring(double len, double stretching_stiffness, double max_ext_ratio, fi
     hy = {{0,0}};
 
     force = {{0,0}};
-    intpoint = {{0,0}};
     llensq = l0*l0;
     llen = l0;
 }
@@ -185,35 +184,22 @@ bool spring::is_similar(const spring& that)
 
 //shortest(perpendicular) distance between an arbitrary point and the spring
 //SO : 849211
-double spring::get_distance_sq(double xp, double yp)
-{
-    array<double, 2> dr = bc->rij_bc({intpoint[0]-xp, intpoint[1]-yp});
-    return dr[0]*dr[0] + dr[1]*dr[1];
-}
-
-array<double,2> spring::get_intpoint()
-{
-    return intpoint;
-}
-
-void spring::calc_intpoint(double xp, double yp)
+array<double, 2> spring::intpoint(array<double, 2> pos)
 {
     double l2 = disp[0]*disp[0]+disp[1]*disp[1];
-    if (l2==0){
-        intpoint = {{hx[0], hy[0]}};
-    }else{
+    if (l2 == 0) {
+        return {hx[0], hy[0]};
+    } else {
         //Consider the line extending the spring, parameterized as h0 + tp ( h1 - h0 )
-        //tp = projection of (xp, yp) onto the line
-        double tp = bc->dot_bc({xp-hx[0], yp-hy[0]}, {hx[1]-hx[0], hy[1]-hy[0]})/l2;
-        if (tp<0){ 
-            intpoint = {{hx[0], hy[0]}};
-        }
-        else if(tp>1.0){
-            intpoint = {{hx[1], hy[1]}};
-        }
-        else{
-            array<double, 2> proj   = {{hx[0] + tp*disp[0], hy[0] + tp*disp[1]}};
-            intpoint                = bc->pos_bc(proj, {0.0, 0.0}, 0.0); //velocity and dt are 0 since not relevant
+        //tp = projection of pos onto the line
+        double tp = bc->dot_bc({pos[0]-hx[0], pos[1]-hy[0]}, {hx[1]-hx[0], hy[1]-hy[0]})/l2;
+        if (tp < 0.0) {
+            return {hx[0], hy[0]};
+        } else if (tp > 1.0 ) {
+            return {hx[1], hy[1]};
+        } else{
+            //velocity and dt are 0 since not relevant
+            return bc->pos_bc({hx[0] + tp*disp[0], hy[0] + tp*disp[1]}, {0.0, 0.0}, 0.0);
         }
     }
 }
