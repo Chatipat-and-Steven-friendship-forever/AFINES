@@ -18,12 +18,13 @@
 
 motor_ensemble::motor_ensemble(vector<vector<double>> motors, double delta_t, double temp,
         double mlen, filament_ensemble *network, double v0, double stiffness, double max_ext_ratio,
-        double ron, double roff, double rend,
-        double fstall, double rcut,
-        double vis, bool use_attach_opt_)
+        double ron, double roff, double rend, double fstall, double rcut, double vis)
 {
-    use_attach_opt = use_attach_opt_;
+    attach_opt_flag = false;
+    shear_flag = false;
+    static_flag = false;
     f_network = network;
+    network->get_box()->add_callback([this](double g) { this->update_d_strain(g); });
 
     cout << "\nDEBUG: Number of motors:" << motors.size() << "\n";
 
@@ -87,14 +88,21 @@ void motor_ensemble::check_broken_filaments()
 }
 
 
-void motor_ensemble::motor_walk(double t)
+void motor_ensemble::motor_update(double t)
 {
     check_broken_filaments();
 
     for (motor *m : n_motors) {
-        array<motor_state, 2> s = m->get_states();
+        if (static_flag) {
+            // Used for static, constantly attached, motors -- ASSUMES both heads are ALWAYS attached
+            m->update_position_attached(0);
+            m->update_position_attached(1);
+            m->update_angle();
+            m->update_force();
+            m->filament_update();
 
-        if (t >= 0.0) {
+        } else if (t >= 0.0) {
+            array<motor_state, 2> s = m->get_states();
 
             // Dynamics
             if (s[0] == motor_state::free || s[0] == motor_state::inactive) {
@@ -110,7 +118,7 @@ void motor_ensemble::motor_walk(double t)
 
             // Attachment or Movement + Detachment
             if (s[0] == motor_state::free) {
-                if (use_attach_opt) {
+                if (attach_opt_flag) {
                     m->attach_opt(0);
                 } else {
                     m->attach(0);
@@ -120,7 +128,7 @@ void motor_ensemble::motor_walk(double t)
             }
 
             if (s[1] == motor_state::free) {
-                if (use_attach_opt) {
+                if (attach_opt_flag) {
                     m->attach_opt(1);
                 } else {
                     m->attach(1);
@@ -130,20 +138,6 @@ void motor_ensemble::motor_walk(double t)
             }
 
         }
-    }
-    update_energies();
-}
-
-// Used for static, constantly attached, motors -- ASSUMES both heads are ALWAYS attached
-void motor_ensemble::motor_update()
-{
-    check_broken_filaments();
-    for (motor *m : n_motors) {
-            m->update_position_attached(0);
-            m->update_position_attached(1);
-            m->update_angle();
-            m->update_force();
-            m->filament_update();
     }
     update_energies();
 }
@@ -215,9 +209,26 @@ void motor_ensemble::revive_heads()
     }
 }
 
+void motor_ensemble::use_attach_opt(bool flag)
+{
+    attach_opt_flag = flag;
+}
+
+void motor_ensemble::use_shear(bool flag)
+{
+    shear_flag = flag;
+}
+
+void motor_ensemble::use_static(bool flag)
+{
+    static_flag = flag;
+}
+
 void motor_ensemble::update_d_strain(double g)
 {
-    for (motor *m : n_motors) {
-        m->update_d_strain(g);
+    if (shear_flag) {
+        for (motor *m : n_motors) {
+            m->update_d_strain(g);
+        }
     }
 }

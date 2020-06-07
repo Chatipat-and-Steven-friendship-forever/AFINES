@@ -22,6 +22,7 @@ class box {
         double get_ybox();
         double get_delrx();
 
+        void add_callback(function<void(double)> callback);
         void update_d_strain(double d_strain);
 
         array<double, 2> rij_bc(array<double, 2> disp);
@@ -34,6 +35,7 @@ class box {
 
         bc_type BC;
         double xbox, ybox, delrx;
+        vector<function<void(double)>> callbacks;
 };
 
 boost::optional<array<double, 2> > seg_seg_intersection_bc(box *bc, array<double, 2> r1, array<double, 2> r2, array<double, 2> r3, array<double, 2> r4);

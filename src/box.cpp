@@ -33,9 +33,17 @@ double box::get_delrx()
     return delrx;
 }
 
+void box::add_callback(function<void(double)> callback)
+{
+    callbacks.push_back(callback);
+}
+
 void box::update_d_strain(double d_strain)
 {
     delrx += d_strain;
+    for (auto callback : callbacks) {
+        callback(d_strain);
+    }
 }
 
 // modified from www.cplusplus.com/forum/articles/3638/-

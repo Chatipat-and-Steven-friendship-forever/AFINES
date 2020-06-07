@@ -167,10 +167,8 @@ void filament_ensemble::set_y_thresh(double y)
 
 void filament_ensemble::update_d_strain(double g)
 {
-    bc->update_d_strain(g);
-    for (unsigned int f = 0; f < network.size(); f++)
-    {
-        network[f]->update_d_strain(g);
+    for (filament *f : network) {
+        f->update_d_strain(g);
     }
 }
 
@@ -377,6 +375,8 @@ filament_ensemble::filament_ensemble(box *bc_, vector<vector<double> > beads, ar
 {
     external_force_flag = external_force_type::none;
     bc = bc_;
+
+    bc->add_callback([this](double g) { this->update_d_strain(g); });
 
     dt = delta_t;
     t = 0;

@@ -375,7 +375,7 @@ int main(int argc, char* argv[]){
     motor_ensemble *myosins = new motor_ensemble(
             a_motor_pos_vec, dt, temperature,
             a_motor_length, net, a_motor_v, a_motor_stiffness, fene_pct, a_m_kon, a_m_koff,
-            a_m_kend, a_m_stall, a_m_cut, viscosity, use_attach_opt);
+            a_m_kend, a_m_stall, a_m_cut, viscosity);
     if (dead_head_flag) myosins->kill_heads(dead_head);
 
     cout<<"Adding passive motors (crosslinkers) ...\n";
@@ -384,7 +384,7 @@ int main(int argc, char* argv[]){
     motor_ensemble *crosslks = new motor_ensemble(
             p_motor_pos_vec, dt, temperature,
             p_motor_length, net, p_motor_v, p_motor_stiffness, fene_pct, p_m_kon, p_m_koff,
-            p_m_kend, p_m_stall, p_m_cut, viscosity, use_attach_opt);
+            p_m_kend, p_m_stall, p_m_cut, viscosity);
     if (p_dead_head_flag) crosslks->kill_heads(p_dead_head);
 
     // Write the full configuration file
@@ -407,12 +407,23 @@ int main(int argc, char* argv[]){
         else if(typeid(string) == val.type())
             o_file << it->first <<"="<< boost::any_cast<string>(val) <<endl;
     }
-   
+
     if (circle_flag) {
         net->set_circle_wall(circle_radius, circle_spring_constant);
     }
     if (quad_off_flag) {
         net->get_quads()->use_quad(false);
+    }
+    if (shear_motor_flag) {
+        myosins->use_shear(true);
+        crosslks->use_shear(true);
+    }
+    if (use_attach_opt) {
+        myosins->use_attach_opt(true);
+        crosslks->use_attach_opt(true);
+    }
+    if (static_cl_flag) {
+        crosslks->use_static(true);
     }
 
     // Run the simulation
@@ -425,7 +436,7 @@ int main(int argc, char* argv[]){
     prev_d_strain = restart_strain;
 
     while (t <= tfinal) {
-        
+
         if (t >= time_of_dstrain && count % n_bw_shear == 0) {
             double d_strain = 0.0;
             if (stress_flag) {
@@ -473,13 +484,9 @@ int main(int argc, char* argv[]){
                 d_strain += restart_strain + d_strain_amp*4*d_strain_freq*((t-time_of_dstrain) - 1/(d_strain_freq*2)*floor(2*(t-time_of_dstrain)*d_strain_freq + 0.5))*pow(-1,floor(2*(t-time_of_dstrain)*d_strain_freq + 0.5));
             }
             if (diff_strain_flag) {
-		 d_strain += restart_strain + d_strain_amp*d_strain_freq*(t - time_of_dstrain);
+                d_strain += restart_strain + d_strain_amp*d_strain_freq*(t - time_of_dstrain);
             }
-            net->update_d_strain(d_strain - prev_d_strain);
-            if (shear_motor_flag) {
-                myosins->update_d_strain(d_strain - prev_d_strain);
-                crosslks->update_d_strain(d_strain - prev_d_strain);
-            }
+            bc->update_d_strain(d_strain - prev_d_strain);
             cout << "\nDEBUG: t = " << t << "; adding d_strain of " << (d_strain - prev_d_strain) << " um here; total strain = " << d_strain;
             prev_d_strain = d_strain;
         }
@@ -543,13 +550,10 @@ int main(int argc, char* argv[]){
         }
 
         //update cross linkers
-        if (static_cl_flag)
-            crosslks->motor_update();
-        else
-            crosslks->motor_walk(t);
-       
+        crosslks->motor_update(t);
+
         //update motors
-        myosins->motor_walk(t);
+        myosins->motor_update(t);
         
         //clear the vector of fractured filaments
         net->clear_broken();
