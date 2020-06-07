@@ -23,7 +23,10 @@
 //=====================================
 //filament network class
 
-int const CIRCLE = 1;
+enum class external_force_type {
+    none,
+    circle
+};
 
 class filament_ensemble
 {
@@ -127,7 +130,7 @@ class filament_ensemble
 
         box *bc;
 
-        int external_force_flag;
+        external_force_type external_force_flag;
         double circle_wall_radius, circle_wall_spring_constant;
 
         double t, dt;

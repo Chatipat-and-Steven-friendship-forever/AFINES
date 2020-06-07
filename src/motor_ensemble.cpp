@@ -134,7 +134,7 @@ void motor_ensemble::motor_walk(double t)
     update_energies();
 }
 
-// Used for static, contstantly attached, motors -- ASSUMES both heads are ALWAYS attached
+// Used for static, constantly attached, motors -- ASSUMES both heads are ALWAYS attached
 void motor_ensemble::motor_update()
 {
     check_broken_filaments();
@@ -143,7 +143,6 @@ void motor_ensemble::motor_update()
             m->update_position_attached(1);
             m->update_angle();
             m->update_force();
-            // m->update_force_fraenkel_fene();
             m->filament_update();
     }
     update_energies();
@@ -172,18 +171,14 @@ void motor_ensemble::add_motor(motor *m)
 
 void motor_ensemble::update_energies()
 {
-    ke = 0;
-    pe = 0;
-    virial[0][0] = virial[0][1] = 0.0;
-    virial[1][0] = virial[1][1] = 0.0;
+    ke = 0.0;
+    pe = 0.0;
+    virial_clear(virial);
 
     for (motor *m : n_motors) {
         ke += m->get_kinetic_energy();
         pe += m->get_stretching_energy();
-        //pe += m->get_stretching_energy_fene();
-        array<array<double, 2>, 2> vir = m->get_virial();
-        virial[0][0] += vir[0][0]; virial[0][1] += vir[0][1];
-        virial[1][0] += vir[1][0]; virial[1][1] += vir[1][1];
+        virial_add(virial, m->get_virial());
     }
 }
 

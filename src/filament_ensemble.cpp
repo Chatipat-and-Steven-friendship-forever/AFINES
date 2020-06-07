@@ -184,26 +184,19 @@ void filament_ensemble::print_filament_thermo(){
 
 }
 
- 
 void filament_ensemble::update_energies()
 {
     pe_stretch = 0.0;
     pe_bend = 0.0;
     ke = 0.0;
-    vir_stretch[0][0] = vir_stretch[0][1] = 0.0;
-    vir_stretch[1][0] = vir_stretch[1][1] = 0.0;
-    vir_bend[0][0] = vir_bend[0][1] = 0.0;
-    vir_bend[1][0] = vir_bend[1][1] = 0.0;
+    virial_clear(vir_stretch);
+    virial_clear(vir_bend);
     for (filament *f : network) {
         ke += f->get_kinetic_energy();
         pe_bend += f->get_bending_energy();
         pe_stretch += f->get_stretching_energy();
-        array<array<double, 2>, 2> vs = f->get_stretching_virial();
-        array<array<double, 2>, 2> vb = f->get_bending_virial();
-        vir_stretch[0][0] += vs[0][0]; vir_stretch[0][1] += vs[0][1];
-        vir_stretch[1][0] += vs[1][0]; vir_stretch[1][1] += vs[1][1];
-        vir_bend[0][0] += vb[0][0]; vir_bend[0][1] += vb[0][1];
-        vir_bend[1][0] += vb[1][0]; vir_bend[1][1] += vb[1][1];
+        virial_add(vir_stretch, f->get_stretching_virial());
+        virial_add(vir_bend, f->get_bending_virial());
     }
 }
 
@@ -342,7 +335,7 @@ void filament_ensemble::update()
     for (int f = 0; f < int(network.size()); f++) {
         update_filament_stretching(f);
         network[f]->update_bending(t);
-        if (external_force_flag) {
+        if (external_force_flag != external_force_type::none) {
             for (int i = 0; i < network[f]->get_nbeads(); i++) {
                 array<double, 2> pos = network[f]->get_bead_position(i);
                 array<double, 2> force = external_force(pos);
@@ -357,7 +350,7 @@ void filament_ensemble::update()
 
 array<double, 2> filament_ensemble::external_force(array<double, 2> pos)
 {
-    if (external_force_flag == CIRCLE) {
+    if (external_force_flag == external_force_type::circle) {
         double x = pos[0];
         double y = pos[1];
         double rsq = x * x + y * y;
@@ -374,19 +367,15 @@ array<double, 2> filament_ensemble::external_force(array<double, 2> pos)
 
 void filament_ensemble::set_circle_wall(double radius, double spring_constant)
 {
-    external_force_flag = CIRCLE;
+    external_force_flag = external_force_type::circle;
     circle_wall_radius = radius;
     circle_wall_spring_constant = spring_constant;
 }
 
-////////////////////////////////////////
-///SPECIFIC FILAMENT IMPLEMENTATIONS////
-////////////////////////////////////////
-
 filament_ensemble::filament_ensemble(box *bc_, vector<vector<double> > beads, array<int,2> mynq, double delta_t, double temp,
         double vis, double spring_len, double stretching, double ext, double bending, double frac_force)
 {
-    external_force_flag = 0;
+    external_force_flag = external_force_type::none;
     bc = bc_;
 
     dt = delta_t;
