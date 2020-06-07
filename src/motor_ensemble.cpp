@@ -106,40 +106,39 @@ void motor_ensemble::motor_walk(double t)
     //#pragma omp parallel for
 
     for (int i=0; i<nmotors_sz; i++) {
-       
-    //    if(i==0) cout<<"\nDEBUG: motor_walk: using "<<omp_get_num_threads()<<" cores";
-        array<int, 2> s = n_motors[i]->get_states();
-        
+
+        array<motor_state, 2> s = n_motors[i]->get_states();
+
         if (t >= 0.0) {
-            
+
             //Dynamics
-            if (s[0] == 0 || s[0] == -2)
+            if (s[0] == motor_state::free || s[0] == motor_state::inactive)
                 n_motors[i]->brownian_relax(0);
-            if (s[1] == 0 || s[1] == -2)
+            if (s[1] == motor_state::free || s[1] == motor_state::inactive)
                 n_motors[i]->brownian_relax(1);
-            
+
             n_motors[i]->update_angle();
             n_motors[i]->update_force();
             n_motors[i]->filament_update();
-            
+
             //Attachment or Movement + Detachment
-            if (s[0] == 0) {
+            if (s[0] == motor_state::free) {
                 if (use_attach_opt) {
                     n_motors[i]->attach_opt(0);
                 } else {
                     n_motors[i]->attach(0);
                 }
-            } else if (s[0] != -2) {
+            } else if (s[0] != motor_state::inactive) {
                 n_motors[i]->step_onehead(0);
             }
 
-            if (s[1] == 0) {
+            if (s[1] == motor_state::free) {
                 if (use_attach_opt) {
                     n_motors[i]->attach_opt(1);
                 } else {
                     n_motors[i]->attach(1);
                 }
-            } else  if (s[1] != -2) {
+            } else  if (s[1] != motor_state::inactive) {
                 n_motors[i]->step_onehead(1);
             }
 

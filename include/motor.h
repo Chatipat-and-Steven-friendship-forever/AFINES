@@ -21,7 +21,13 @@ class filament_ensemble;
 #include "globals.h"
 #include "box.h"
 
-//motor class
+enum class motor_state {
+    free = 0,
+    bound = 1,
+    dead = -1,
+    inactive = -2
+};
+
 class motor
 {
     public:
@@ -80,7 +86,7 @@ class motor
         
         array<double,2> get_force();
         
-        array<int, 2> get_states();
+        array<motor_state, 2> get_states();
         
         array<double, 2> get_hx();
 
@@ -131,7 +137,8 @@ class motor
 
         array<array<double, 2>, 2> ldir_bind, bind_disp;
 
-        array<int,2> state, f_index, l_index;
+        array<motor_state, 2> state;
+        array<int,2> f_index, l_index;
 
         array<bool, 2> at_barbed_end;
 

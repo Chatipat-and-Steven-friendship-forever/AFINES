@@ -46,8 +46,8 @@ motor::motor(vector<double> mvec,
     f_index = {int(mvec[4]), int(mvec[5])};
     l_index = {int(mvec[6]), int(mvec[7])};
 
-    state[0] = (f_index[0] == -1 && l_index[0] == -1) ? 0 : 1;
-    state[1] = (f_index[1] == -1 && l_index[1] == -1) ? 0 : 1;
+    state[0] = (f_index[0] == -1 && l_index[0] == -1) ? motor_state::free : motor_state::bound;
+    state[1] = (f_index[1] == -1 && l_index[1] == -1) ? motor_state::free : motor_state::bound;
 
     filament_network = network;
     damp        =(6*pi*vis*mld);
@@ -82,13 +82,13 @@ motor::motor(vector<double> mvec,
 
     at_barbed_end = {{false, false}};
 
-    if (state[0] == 1){
+    if (state[0] == motor_state::bound){
         pos_a_end[0] = bc->dist_bc({filament_network->get_end(f_index[0], l_index[0])[0] - hx[0],
                                     filament_network->get_end(f_index[0], l_index[0])[1] - hy[0]});
         ldir_bind[0] = filament_network->get_direction(f_index[0], l_index[0]);
 
     }
-    if (state[1] == 1){
+    if (state[1] == motor_state::bound){
         pos_a_end[1] = bc->dist_bc({filament_network->get_end(f_index[1], l_index[1])[0] - hx[1],
                                     filament_network->get_end(f_index[1], l_index[1])[1] - hy[1]});
         ldir_bind[1] = filament_network->get_direction(f_index[1], l_index[1]);
@@ -101,7 +101,7 @@ motor::motor(vector<double> mvec,
 
 //return motor state with a given head number
 
-array<int, 2> motor::get_states() 
+array<motor_state, 2> motor::get_states() 
 {
     return state;
 }
@@ -138,7 +138,7 @@ bool motor::allowed_bind(int hd, array<int, 2> fl_idx){
 void motor::attach_head(int hd, array<double, 2> intpoint, array<int, 2> fl)
 {
     // update state
-    state[hd] = 1;
+    state[hd] = motor_state::bound;
     f_index[hd] = fl[0];
     l_index[hd] = fl[1];
 
@@ -275,12 +275,12 @@ void motor::brownian_relax(int hd)
 
 void motor::kill_head(int hd)
 {
-    state[hd] = -1;
+    state[hd] = motor_state::dead;
 }
 
 void motor::deactivate_head(int hd)
 {
-    state[hd] = -2;
+    state[hd] = motor_state::inactive;
 }
 
 void motor::relax_head(int hd)
@@ -336,15 +336,15 @@ void motor::step_onehead(int hd)
         //calculate motor velocity
         if (vs != 0 && !(at_barbed_end[hd])){ 
             double vm = vs;
-            if (state[pr(hd)] != 0){ 
-                vm = my_velocity(vs, 
+            if (state[pr(hd)] != motor_state::free) {
+                vm = my_velocity(vs,
                         pow(-1, hd)*dot(force, filament_network->get_direction(f_index[hd], l_index[hd])), 
                         stall_force);
             }
             this->update_pos_a_end(hd, pos_a_end[hd]+dt*vm); // update relative position
         }
-        if (state[hd] == 1) this->update_position_attached(hd);  // update absolute position
-        
+        if (state[hd] == motor_state::bound) this->update_position_attached(hd);  // update absolute position
+
     }
 }
 
@@ -407,8 +407,8 @@ void motor::filament_update_hd(int hd, array<double, 2> f)
 
 void motor::filament_update()
 {
-    if (state[0]==1) this->filament_update_hd(0, force);
-    if (state[1]==1) this->filament_update_hd(1, {{-force[0], -force[1]}});
+    if (state[0] == motor_state::bound) this->filament_update_hd(0, force);
+    if (state[1] == motor_state::bound) this->filament_update_hd(1, {{-force[0], -force[1]}});
 }
 
 void motor::detach_head(int hd)
@@ -419,12 +419,7 @@ void motor::detach_head(int hd)
 
 void motor::detach_head(int hd, array<double, 2> newpos)
 {
-   
-    state[hd]=0;
-    f_index[hd]=-1;
-    l_index[hd]=-1;
-    pos_a_end[hd]=0;
-    
+    detach_head_without_moving(hd);
     hx[hd] = newpos[0];
     hy[hd] = newpos[1];
 
@@ -432,12 +427,10 @@ void motor::detach_head(int hd, array<double, 2> newpos)
 
 void motor::detach_head_without_moving(int hd)
 {
-   
-    state[hd]=0;
-    f_index[hd]=-1;
-    l_index[hd]=-1;
-    pos_a_end[hd]=0;
-    
+    state[hd] = motor_state::free;
+    f_index[hd] = -1;
+    l_index[hd] = -1;
+    pos_a_end[hd] = 0;
 }
 
 
@@ -506,7 +499,8 @@ string motor::to_string()
             \nfov = (%f, %f)\t distance from end of spring = (%f, %f)\
             shear = %f\t tension = (%f, %f)\n",
             hx[0], hy[0], hx[1], hy[1],
-            state[0],  state[1], f_index[0],  f_index[1], l_index[0],  l_index[1], 
+            static_cast<int>(state[0]),  static_cast<int>(state[1]),
+            f_index[0],  f_index[1], l_index[0],  l_index[1], 
             vs, max_bind_dist, mk, stall_force, mld,
             kon, koff, kend, dt, temperature, damp, 
             fov[0],  fov[1], pos_a_end[0], pos_a_end[1], shear, force[0], force[1]);
@@ -530,7 +524,7 @@ string motor::write()
 
 void motor::revive_head(int hd)
 {
-    state[hd] = 0;
+    state[hd] = motor_state::free;
 }
 
 void motor::update_d_strain(double g)
