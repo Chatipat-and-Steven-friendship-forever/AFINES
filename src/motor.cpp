@@ -165,12 +165,12 @@ bool motor::attach_opt(int hd)
     double mf_rand = rng_u();
     vector<array<int, 2>> *attach_list = filament_network->get_attach_list(hx[hd], hy[hd]);
     int count = attach_list->size();
-    assert(kon * count < 1.0);
+    if (kon * count > 1.0) throw std::runtime_error("kon * count > 1");
     int i = floor(mf_rand / kon);
-    assert(i >= 0);
+    if (i < 0) throw std::logic_error("attach list index < 0");
     if (i < count) {
         double remprob = mf_rand - kon * i;
-        assert(remprob >= 0 && remprob < kon);
+        if (remprob < 0 || remprob > kon) throw std::logic_error("invalid remaining probability");
 
         // compute and get attachment point
         array<int, 2> fl = attach_list->at(i);

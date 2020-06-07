@@ -54,8 +54,9 @@ vector<array<int, 2>> *quadrants::get_attach_list(array<double, 2> pos)
         int ix = round(nq[0] * (x / fov[0] + 0.5));
         while (ix < 0) ix += nq[0];
         while (ix >= nq[0]) ix -= nq[0];
-        assert(0 <= ix && ix < nq[0]);
-        assert(0 <= iy && iy < nq[1]);
+        if (!(0 <= ix && ix < nq[0] && 0 <= iy && iy < nq[1])) {
+            throw std::logic_error("Invalid quadrant index.");
+        }
         return &quads[ix][iy];
     }
 }
@@ -114,7 +115,7 @@ void quadrants::add_spring_nonperiodic(spring *s, array<int, 2> fl)
         cout << "Warning: x-index of quadrant > nq[0]." << endl;
         xupper = nq[0];
     }
-    assert(xlower <= xupper);
+    if (xlower > xupper) throw std::logic_error("xlower > xupper");
 
     int ylower = floor(nq[1] * (ylo / fov[1] + 0.5));
     int yupper = ceil(nq[1] * (yhi / fov[1] + 0.5));
@@ -126,7 +127,7 @@ void quadrants::add_spring_nonperiodic(spring *s, array<int, 2> fl)
         cout << "Warning: y-index of quadrant > nq[1]." << endl;
         yupper = nq[1];
     }
-    assert(ylower <= yupper);
+    if (ylower > yupper) throw std::logic_error("ylower > yupper");
 
     for (int i = xlower; i <= xupper; i++)
         for (int j = ylower; j <= yupper; j++)
@@ -164,12 +165,12 @@ void quadrants::add_spring_periodic(spring *s, array<int, 2> fl)
             xhi = hx[1] - disp[0];
         }
     }
-    assert(xlo <= xhi);
-    assert(ylo <= yhi);
+    if (xlo > xhi) throw std::logic_error("xlo > xhi");
+    if (ylo > yhi) throw std::logic_error("ylo > yhi");
 
     int ylower = floor(nq[1] * (ylo / fov[1] + 0.5));
     int yupper =  ceil(nq[1] * (yhi / fov[1] + 0.5));
-    assert(ylower <= yupper);
+    if (ylower > yupper) throw std::logic_error("ylower > yupper");
 
     for (int jj = ylower; jj <= yupper; jj++) {
         int j = jj;
@@ -186,18 +187,18 @@ void quadrants::add_spring_periodic(spring *s, array<int, 2> fl)
             xlo_new -= delrx;
             xhi_new -= delrx;
         }
-        assert(0 <= j && j < nq[1]);
+        if (!(0 <= j && j < nq[1])) throw std::logic_error("y quadrant index out of bounds");
 
         int xlower = floor(nq[0] * (xlo_new / fov[0] + 0.5));
         int xupper =  ceil(nq[0] * (xhi_new / fov[0] + 0.5));
-        assert(xlower <= xupper);
+        if (xlower > xupper) throw std::logic_error("xlower > xupper");
 
         for (int ii = xlower; ii <= xupper; ii++) {
             int i = ii;
 
             while (i < 0) i += nq[0];
             while (i >= nq[0]) i -= nq[0];
-            assert(0 <= i && i < nq[0]);
+            if (!(0 <= i && i < nq[0])) throw std::logic_error("x quadrant index out of bounds");
 
             quads[i][j].push_back(fl);
         }

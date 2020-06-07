@@ -179,19 +179,12 @@ vector<filament *> filament::update_stretching(double t)
     return newfilaments;
 }
 
-bead * filament::get_bead(int i)
+bead *filament::get_bead(int i)
 {
-    try
-    {
-        return beads[i];
-    }
-    catch (int e)
-    {
-        throw std::runtime_error("An exception occurred while returning bead " + std::to_string(i) + ".");
-    }
+    return beads[i];
 }
 
-spring * filament::get_spring(int i)
+spring *filament::get_spring(int i)
 {
     return springs[i];
 }

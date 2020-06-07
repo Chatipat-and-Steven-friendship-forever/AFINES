@@ -181,5 +181,5 @@ bc_type box::string2bc(string BC)
     if (BC == "PERIODIC") return bc_type::periodic;
     if (BC == "REFLECTIVE") return bc_type::reflective;
     if (BC == "XPERIODIC") return bc_type::xperiodic;
-    throw "Boundary condition " + BC + " not recognized.";
+    throw std::runtime_error("Boundary condition " + BC + " not recognized.");
 }
