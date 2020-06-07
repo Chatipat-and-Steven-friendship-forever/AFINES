@@ -53,10 +53,6 @@ class filament_ensemble
         
         double get_int_direction(int fil, int spring, double xp, double yp);
 
-        double get_xcm(int fil, int spring);
-       
-        double get_ycm(int fil, int spring);
-
         double get_llength(int fil, int spring);
        
         double get_bead_friction();
@@ -77,12 +73,8 @@ class filament_ensemble
         
         int get_nfilaments();
 
-        void update_shear();
-        
         void update_d_strain(double);
-        
-        void update_delrx(double);
-        
+
         void update_stretching();
         
         void update_filament_stretching(int);
@@ -106,22 +98,12 @@ class filament_ensemble
         void write_springs(ofstream& fout);
         
         void write_thermo(ofstream& fout);
-        
-        void set_straight_filaments(bool is_straight);
 
         void set_y_thresh(double);
         
         void set_fene_dist_pct(double);
-        
-        void set_shear_rate(double);
-        
-        void set_shear_stop(double);
 
-        void set_shear_dt(double);
-        
         bool is_polymer_start(int f, int a);
-
-        void set_visc(double v);
 
         vector<int> get_broken();
 
@@ -148,13 +130,11 @@ class filament_ensemble
         int external_force_flag;
         double circle_wall_radius, circle_wall_spring_constant;
 
-        double t, dt, temperature, visc;
-        double gamma, shear_stop, shear_dt, shear_speed;
-        double pe_stretch, pe_bend, ke;
+        double t, dt;
 
+        double pe_stretch, pe_bend, ke;
         array<array<double, 2>, 2> vir_stretch, vir_bend;
 
-        array<int, 2> nq;
         vector<int> broken_filaments;
 
         quadrants *quads;

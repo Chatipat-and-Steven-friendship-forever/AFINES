@@ -160,20 +160,6 @@ box *filament_ensemble::get_box()
     return bc;
 }
 
-void filament_ensemble::set_shear_rate(double g)
-{
-    array<double, 2> fov = bc->get_fov();
-    if (network.size() > 0)
-        if (network[0]->get_nbeads() > 0)
-            shear_speed = g*fov[1] / (2*network[0]->get_bead(0)->get_friction());
-
-    for (unsigned int f = 0; f < network.size(); f++)
-    {
-        network[f]->set_shear(g);
-    }
-}
-
- 
 void filament_ensemble::set_y_thresh(double y)
 {
     for (unsigned int f = 0; f < network.size(); f++) network[f]->set_y_thresh(y);
@@ -188,17 +174,6 @@ void filament_ensemble::update_d_strain(double g)
     }
 }
 
- 
-void filament_ensemble::update_shear()
-{
-    //cout<<"\nDEBUG: SHEARING"; 
-    for (unsigned int f = 0; f < network.size(); f++)
-    {
-        network[f]->update_shear(t);
-    }
-}
-
- 
 void filament_ensemble::print_filament_thermo(){
     
     for (unsigned int f = 0; f < network.size(); f++)
@@ -270,11 +245,6 @@ bool filament_ensemble::is_polymer_start(int fil, int bead){
 
 }
 
-void filament_ensemble::set_visc(double nu){
-    visc = nu;
-}
-
- 
 void filament_ensemble::update_forces(int f_index, int a_index, double f1, double f2){
     network[f_index]->update_forces(a_index, f1,f2);
 }
@@ -359,17 +329,6 @@ void filament_ensemble::update_filament_stretching(int f){
     }
 }
 
-
-void filament_ensemble::set_shear_stop(double stopT){
-    shear_stop = stopT; 
-}
-
-
-void filament_ensemble::set_shear_dt(double delT){
-    shear_dt = delT; 
-}
-
-
 void filament_ensemble::update_int_forces()
 {
     this->update_stretching();
@@ -430,7 +389,6 @@ filament_ensemble::filament_ensemble(box *bc_, vector<vector<double> > beads, ar
     external_force_flag = 0;
     bc = bc_;
 
-    visc=vis;
     dt = delta_t;
     t = 0;
 
@@ -441,7 +399,7 @@ filament_ensemble::filament_ensemble(box *bc_, vector<vector<double> > beads, ar
 
         if (beads[i][3] != fil_idx && avec.size() > 0){
 
-            network.push_back( new filament(this, avec, spring_len, stretching, ext, bending, delta_t, temp, frac_force, 0) );
+            network.push_back(new filament(this, avec, spring_len, stretching, ext, bending, delta_t, temp, frac_force));
             for (bead *b : avec) delete b;
             avec.clear();
             fil_idx = beads[i][3];
@@ -450,7 +408,7 @@ filament_ensemble::filament_ensemble(box *bc_, vector<vector<double> > beads, ar
     }
 
     if (avec.size() > 0)
-      network.push_back( new filament(this, avec, spring_len, stretching, ext, bending, delta_t, temp, frac_force, 0) );
+      network.push_back(new filament(this, avec, spring_len, stretching, ext, bending, delta_t, temp, frac_force));
 
     for (bead *b : avec) delete b;
     avec.clear();

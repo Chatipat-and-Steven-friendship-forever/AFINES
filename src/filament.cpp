@@ -18,7 +18,7 @@
 
 filament::filament(filament_ensemble *net, vector<bead *> beadvec, double spring_length,
         double stretching_stiffness, double max_ext_ratio, double bending_stiffness,
-        double deltat, double temp, double frac_force, double g)
+        double deltat, double temp, double frac_force)
 {
     filament_network = net;
     
@@ -26,7 +26,6 @@ filament::filament(filament_ensemble *net, vector<bead *> beadvec, double spring
     dt = deltat;
     temperature = temp;
     fracture_force = frac_force;
-    gamma = g; 
     kb = bending_stiffness;
     y_thresh = 1;
     kinetic_energy = 0;
@@ -197,11 +196,6 @@ spring * filament::get_spring(int i)
     return springs[i];
 }
 
-void filament::update_shear(double t)
-{
-    update_d_strain(bc->get_delrx());
-}
-
 void filament::update_d_strain(double g)
 {
     for (size_t i = 0; i < beads.size(); i++) {
@@ -245,11 +239,6 @@ void filament::affine_pull(double f)
         frac = (double(i)/double(last)-0.5);
         beads[i]->update_force(frac*fcos, frac*fsin);
     }
-}
-
-void filament::set_shear(double g){
-    gamma = g;
-    max_shear = gamma*bc->get_ybox()*0.5;
 }
 
 vector<vector<double>> filament::output_beads(int fil)
@@ -331,11 +320,11 @@ vector<filament *> filament::fracture(int node){
     if (lower_half.size() > 0)
         newfilaments.push_back(
                 new filament(filament_network, lower_half, springs[0]->get_l0(), springs[0]->get_kl(), springs[0]->get_fene_ext(), kb,
-                    dt, temperature, fracture_force, gamma));
+                    dt, temperature, fracture_force));
     if (upper_half.size() > 0)
         newfilaments.push_back(
                 new filament(filament_network, upper_half, springs[0]->get_l0(), springs[0]->get_kl(), springs[0]->get_fene_ext(), kb,
-                    dt, temperature, fracture_force, gamma));
+                    dt, temperature, fracture_force));
 
     for (int i = 0; i < (int)(lower_half.size()); i++) delete lower_half[i];
     for (int i = 0; i < (int)(upper_half.size()); i++) delete upper_half[i];
@@ -360,7 +349,7 @@ bool filament::operator==(const filament& that){
         if (!(springs[i]->is_similar(*(that.springs[i]))))
             return false;
 
-    return (this->gamma == that.gamma && this->temperature == that.temperature &&
+    return (this->temperature == that.temperature &&
             this->dt == that.dt && this->fracture_force == that.fracture_force);
 
 }
@@ -374,8 +363,8 @@ string filament::to_string(){
     for (unsigned int i = 0; i < beads.size(); i++)
         out += beads[i]->to_string();
 
-    sprintf(buffer, "gamma = %f\ttemperature = %f\tdt = %f\tfracture_force=%f\n",
-            gamma, temperature, dt, fracture_force);
+    sprintf(buffer, "temperature = %f\tdt = %f\tfracture_force=%f\n",
+            temperature, dt, fracture_force);
 
     return out + buffer; 
 

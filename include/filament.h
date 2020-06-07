@@ -29,17 +29,13 @@ class filament
 
         filament(filament_ensemble *net, vector<bead *> beadvec, double spring_length,
                 double stretching_stiffnes, double ext, double bending_stiffness,
-                double deltat, double temp, double fracture, double gamma);
+                double deltat, double temp, double fracture);
 
         ~filament();
     
         void set_y_thresh(double y);
-        
-        void set_shear(double g);
 
         void update_d_strain(double);
-
-        void update_shear(double t); 
 
         box *get_box();
 
@@ -54,14 +50,10 @@ class filament
         void update_positions();
         
         void update_positions_range(int lo, int hi);
-        
-        array<double, 2> boundary_check(int i, double x, double y);
-        
-        void update(double t);
-        
-        bead * get_bead(int i);
-        
-        spring * get_spring(int i);
+
+        bead *get_bead(int i);
+
+        spring *get_spring(int i);
 
         int get_nsprings();
 
@@ -122,8 +114,8 @@ class filament
         box *bc;
         filament_ensemble *filament_network;
 
-        double kb, temperature, dt, fracture_force, fracture_force_sq, kinetic_energy, damp, kToverLp, bd_prefactor, ubend;
-        double gamma, max_shear, y_thresh;
+        double kb, temperature, dt, fracture_force, fracture_force_sq, kinetic_energy, damp, bd_prefactor, ubend;
+        double y_thresh;
 
         array<array<double, 2>, 2> bending_virial;
         vector<array<double, 2> > prv_rnds;
