@@ -137,7 +137,7 @@ vector<vector<double>> spring_spring_intersections(box *bc, vector<vector<double
             array<double, 2> r2 = filaments[f1][l1 + 1];
             for (size_t f2 = f1 + 1; f2 < filaments.size(); f2++) {
                 for (size_t l2 = 0; l2 < filaments[f2].size() - 1; l2++) {
-                    if (f1 == f2 && abs(l1 - l2) < 2) continue;
+                    if (f1 == f2 && abs(int(l1) - int(l2)) < 2) continue;
                     array<double, 2> s1 = filaments[f2][l2];
                     array<double, 2> s2 = filaments[f2][l2 + 1];
                     boost::optional<array<double, 2>> inter = seg_seg_intersection_bc(bc, r1, r2, s1, s2);
