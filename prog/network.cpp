@@ -367,7 +367,6 @@ int main(int argc, char* argv[]){
         p_motor_pos_vec = spring_spring_intersections(bc, actin_pos_vec, p_motor_length, p_linkage_prob);
     if (motor_intersect_flag)
         a_motor_pos_vec = spring_spring_intersections(bc, actin_pos_vec, a_motor_length, a_linkage_prob);
-    if (quad_off_flag) net->get_quads()->use_quad(false);
 
     cout<<"\nAdding active motors...";
     if (a_motor_pos_vec.size() == 0 && a_motor_in.size() == 0)
@@ -413,6 +412,7 @@ int main(int argc, char* argv[]){
     }
     if (quad_off_flag) {
         net->get_quads()->use_quad(false);
+        net->quad_update_serial();  // build neighbor list with all springs
     }
     if (shear_motor_flag) {
         myosins->use_shear(true);
