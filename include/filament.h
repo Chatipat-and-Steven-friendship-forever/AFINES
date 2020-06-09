@@ -91,7 +91,9 @@ class filament
 
         double get_stretching_energy();
 
-        double get_kinetic_energy();
+        double get_kinetic_energy_vel();
+
+        double get_kinetic_energy_vir();
 
         array<array<double, 2>, 2> get_stretching_virial();
         
@@ -103,15 +105,32 @@ class filament
     
         void print_thermo();
         
+        void set_l0_max(double);
+        
+        void set_nsprings_max(int);
+        
+        void set_l0_min(double);
+        
+        void set_kgrow(double);
+        
+        void set_lgrow(double);
+        
         array<double,2> get_bead_position(int bead);
 
-    protected:
+        void update_length();
 
+        void grow(double);
+
+        void shrink(double);
+
+    protected:
         box *bc;
         filament_ensemble *filament_network;
 
-        double kb, temperature, dt, fracture_force, fracture_force_sq, kinetic_energy, damp, bd_prefactor, ubend;
+        double kb, temperature, dt, fracture_force, fracture_force_sq, ke_vir, ke_vel, damp, bd_prefactor, ubend;
         double y_thresh;
+        double spring_l0, l0_max, l0_min, kgrow, lgrow;
+        int nsprings_max;
 
         array<array<double, 2>, 2> bending_virial;
         vector<array<double, 2> > prv_rnds;

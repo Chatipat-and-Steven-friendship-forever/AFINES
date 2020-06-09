@@ -11,12 +11,14 @@
  (at your option) any later version. See ../LICENSE for details.
 -------------------------------------------------------------------*/
 
-#include "globals.h"
-#include "motor.h"
-#include "motor_ensemble.h"
 #include "filament_ensemble.h"
+#include "globals.h"
+#include "motor_ensemble.h"
+#include "motor.h"
+#include "spacer.h"
 
-motor_ensemble::motor_ensemble(vector<vector<double>> motors, double delta_t, double temp,
+template <class motor_type>
+motor_ensemble<motor_type>::motor_ensemble(vector<vector<double>> motors, double delta_t, double temp,
         double mlen, filament_ensemble *network, double v0, double stiffness, double max_ext_ratio,
         double ron, double roff, double rend, double fstall, double rcut, double vis)
 {
@@ -25,50 +27,55 @@ motor_ensemble::motor_ensemble(vector<vector<double>> motors, double delta_t, do
     static_flag = false;
     f_network = network;
     network->get_box()->add_callback([this](double g) { this->update_d_strain(g); });
+    mld = mlen;
 
     cout << "\nDEBUG: Number of motors:" << motors.size() << "\n";
 
     for (vector<double> mvec : motors) {
-        n_motors.push_back(new motor(mvec, mlen, f_network, delta_t, temp,
+        n_motors.push_back(new motor_type(mvec, mlen, f_network, delta_t, temp,
                     v0, stiffness, max_ext_ratio, ron, roff, rend, fstall, rcut, vis));
     }
 
     this->update_energies();
 }
 
-
-motor_ensemble::~motor_ensemble()
+template <class motor_type>
+motor_ensemble<motor_type>::~motor_ensemble()
 {
     cout << "DELETING MOTOR ENSEMBLE\n";
     for (motor *m : n_motors) delete m;
 }
 
-int motor_ensemble::get_nmotors()
+template <class motor_type>
+int motor_ensemble<motor_type>::get_nmotors()
 {
     return n_motors.size();
 }
 
-motor *motor_ensemble::get_motor(int i)
+template <class motor_type>
+motor *motor_ensemble<motor_type>::get_motor(int i)
 {
     return n_motors[i];
 }
 
-void motor_ensemble::kill_heads(int hd)
+template <class motor_type>
+void motor_ensemble<motor_type>::kill_heads(int hd)
 {
     for (motor *m : n_motors) {
         m->kill_head(hd);
     }
 }
 
-//check if any motors attached to filaments that no longer exist; 
+//check if any motors attached to filaments that no longer exist;
 // if they do, detach them
 // Worst case scenario, this is a O(m*n*p) function,
 // where m is the number of filaments
 //       n is the number of rods per filament
 //       p is the number of motors
-// However: we don't expect to fracture often, 
+// However: we don't expect to fracture often,
 // so this loop should rarely if ever be accessed.
-void motor_ensemble::check_broken_filaments()
+template <class motor_type>
+void motor_ensemble<motor_type>::check_broken_filaments()
 {
     for (int i : f_network->get_broken()) {
         for (motor *m : n_motors) {
@@ -87,10 +94,10 @@ void motor_ensemble::check_broken_filaments()
     }
 }
 
-
-void motor_ensemble::motor_update(double t)
+template <class motor_type>
+void motor_ensemble<motor_type>::motor_update(double t)
 {
-    check_broken_filaments();
+    this->check_broken_filaments();
 
     for (motor *m : n_motors) {
         if (static_flag) {
@@ -137,12 +144,33 @@ void motor_ensemble::motor_update(double t)
                 m->step_onehead(1);
             }
 
+            /*
+            if (s[0] == motor_state::bound) {
+                m->step_onehead(0);
+            } else if (s[0] == motor_state::free) {
+                bool attached = m->attach(0);
+                if (!attached) m->brownian_relax(0);
+            }
+
+            if (s[1] == motor_state::bound) {
+                m->step_onehead(1);
+            } else if (s[1] == motor_state::free) {
+                bool attached = m->attach(1);
+                if (!attached) m->brownian_relax(1);
+            }
+
+            m->update_angle();
+            m->update_force();
+            m->filament_update();
+            */
+
         }
     }
-    update_energies();
+    this->update_energies();
 }
 
-vector<vector<double>> motor_ensemble::output()
+template <class motor_type>
+vector<vector<double>> motor_ensemble<motor_type>::output()
 {
     vector<vector<double>> out;
     for (motor *m : n_motors) {
@@ -151,47 +179,56 @@ vector<vector<double>> motor_ensemble::output()
     return out;
 }
 
-void motor_ensemble::motor_write(ostream& fout)
+template <class motor_type>
+void motor_ensemble<motor_type>::motor_write(ostream& fout)
 {
     for (motor *m : n_motors) {
         fout << m->write();
     }
 }
 
-void motor_ensemble::add_motor(motor *m)
+template <class motor_type>
+void motor_ensemble<motor_type>::add_motor(motor_type *m)
 {
     n_motors.push_back(m);
 }
 
-void motor_ensemble::update_energies()
+template <class motor_type>
+void motor_ensemble<motor_type>::update_energies()
 {
-    ke = 0.0;
+    ke_vel = 0.0;
+    ke_vir = 0.0;
     pe = 0.0;
     virial_clear(virial);
 
     for (motor *m : n_motors) {
-        ke += m->get_kinetic_energy();
+        ke_vel += m->get_kinetic_energy_vel();
+        ke_vir += m->get_kinetic_energy_vir();
         pe += m->get_stretching_energy();
         virial_add(virial, m->get_virial());
     }
 }
 
-double motor_ensemble::get_potential_energy()
+template <class motor_type>
+double motor_ensemble<motor_type>::get_potential_energy()
 {
     return pe;
 }
 
-array<array<double, 2>, 2> motor_ensemble::get_virial()
+template <class motor_type>
+array<array<double, 2>, 2> motor_ensemble<motor_type>::get_virial()
 {
     return virial;
 }
 
-void motor_ensemble::print_ensemble_thermo()
+template <class motor_type>
+void motor_ensemble<motor_type>::print_ensemble_thermo()
 {
-    cout << "\nAll Motors\t:\tKE = " << ke << "\tPEs = " << pe << "\tPEb = " << 0 << "\tTE = " << (ke + pe);
+    cout << "\nAll Motors\t:\tKE = " << ke_vel << "\tKEvir" << ke_vir << "\tPEs = " << pe << "\tPEb = " << 0 << "\tTE = " << (ke_vel + pe);
 }
 
-void motor_ensemble::unbind_all_heads()
+template <class motor_type>
+void motor_ensemble<motor_type>::unbind_all_heads()
 {
     for (motor *m : n_motors) {
         m->detach_head(0);
@@ -201,7 +238,8 @@ void motor_ensemble::unbind_all_heads()
     }
 }
 
-void motor_ensemble::revive_heads()
+template <class motor_type>
+void motor_ensemble<motor_type>::revive_heads()
 {
     for (motor *m : n_motors) {
         m->revive_head(0);
@@ -209,22 +247,51 @@ void motor_ensemble::revive_heads()
     }
 }
 
-void motor_ensemble::use_attach_opt(bool flag)
+template <class motor_type>
+void motor_ensemble<motor_type>::motor_write_doubly_bound(ostream& fout)
+{
+    array<motor_state, 2> doubly_bound = {motor_state::bound, motor_state::bound};
+
+    for (unsigned int i=0; i<n_motors.size(); i++) {
+        if (n_motors[i]->get_states() == doubly_bound){
+            fout<<n_motors[i]->write();
+            fout<<"\t"<<i;
+        }
+    }
+}
+
+template <class motor_type>
+void motor_ensemble<motor_type>::set_binding_two(double kon2, double koff2, double kend2){
+    for(unsigned int i = 0; i < n_motors.size(); i++)
+        n_motors[i]->set_binding_two(kon2, koff2, kend2);
+}
+
+void spacer_ensemble::set_bending(double modulus, double ang){
+    double kb  = modulus/mld;
+    for(unsigned int i = 0; i < n_motors.size(); i++)
+        n_motors[i]->set_bending(kb, ang);
+}
+
+template <class motor_type>
+void motor_ensemble<motor_type>::use_attach_opt(bool flag)
 {
     attach_opt_flag = flag;
 }
 
-void motor_ensemble::use_shear(bool flag)
+template <class motor_type>
+void motor_ensemble<motor_type>::use_shear(bool flag)
 {
     shear_flag = flag;
 }
 
-void motor_ensemble::use_static(bool flag)
+template <class motor_type>
+void motor_ensemble<motor_type>::use_static(bool flag)
 {
     static_flag = flag;
 }
 
-void motor_ensemble::update_d_strain(double g)
+template <class motor_type>
+void motor_ensemble<motor_type>::update_d_strain(double g)
 {
     if (shear_flag) {
         for (motor *m : n_motors) {
@@ -232,3 +299,6 @@ void motor_ensemble::update_d_strain(double g)
         }
     }
 }
+
+template class motor_ensemble<motor>;
+template class motor_ensemble<spacer>;

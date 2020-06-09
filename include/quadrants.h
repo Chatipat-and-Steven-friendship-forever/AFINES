@@ -15,6 +15,9 @@ class quadrants {
         vector<array<int, 2>> *get_attach_list(array<double, 2> pos);
         void clear();
 
+        array<int, 2> get_nq() { return nq; }
+        vector<array<int, 2>> *get_quad(array<int, 2> q) { return &quads[q[0]][q[1]]; }
+
         void check_duplicates();
 
     protected:

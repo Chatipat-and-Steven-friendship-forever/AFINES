@@ -37,8 +37,8 @@ bead::bead(const bead& other){
     force = other.force;
 }
 
-bead::~bead(){ 
-};
+bead::~bead(){
+}
 
 
 array<double,2> bead::get_force()

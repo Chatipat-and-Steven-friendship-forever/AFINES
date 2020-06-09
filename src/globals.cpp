@@ -1,14 +1,14 @@
 /*------------------------------------------------------------------
  globals.cpp : functions and constants that are used throughout AFiNeS
- 
- Copyright (C) 2016 
+
+ Copyright (C) 2016
  Created by: Simon Freedman, Shiladitya Banerjee, Glen Hocky, Aaron Dinner
  Contact: dinner@uchicago.edu
 
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
  the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version. See ../LICENSE for details. 
+ (at your option) any later version. See ../LICENSE for details.
 -------------------------------------------------------------------*/
 
 #include "globals.h"
@@ -22,22 +22,22 @@ normal_distribution<double> distribution(0,1);
 
 double rng(double start, double end)
 {
-	return start+(end-start)*((double)rand()/(RAND_MAX));
+    return start+(end-start)*((double)rand()/(RAND_MAX));
 }
 
 double rng_u()
 {
-	return (double)rand()/(RAND_MAX);
+    return (double)rand()/(RAND_MAX);
 }
 
 int pr(int num)
 {
-	if (num==0) {
-		return 1;	
-	}
-	else {
-		return 0;
-	}
+    if (num==0) {
+        return 1;
+    }
+    else {
+        return 0;
+    }
 }
 
 double rng_exp(double mean)
@@ -110,7 +110,7 @@ double mean_periodic(const vector<double>& nums, double bnd)
         xitot += cos(theta);
         zetatot += sin(theta);
     }
-    double thetabar = atan2(zetatot/((double) nums.size()), xitot/((double) nums.size())) + pi; 
+    double thetabar = atan2(zetatot/((double) nums.size()), xitot/((double) nums.size())) + pi;
     return bnd*thetabar/(2*pi);
 }
 
@@ -185,10 +185,10 @@ bool close(double actual, double expected, double err)
     }
 }
 
-/* Takes a vector formatted 
+/* Takes a vector formatted
  * [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
  * And converts it to a vector formatted
- * [{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}] if dim = 4 
+ * [{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}] if dim = 4
  * Or
  * [{1, 2, 3}, {4, 5, 6}, {7, 8, 9}, {10, 11, 12}] if dim = 3
  */
@@ -212,22 +212,22 @@ vector<double *> vec2ptrvec(const vector<double>& v, int dim)
 /* Takes a string formatted
  * 1,2,3;4,5,6;7,8,9;10,11,12
  * and converts it into a vector of pointers:
- * [{1, 2, 3}, {4, 5, 6}, {7, 8, 9}, {10, 11, 12}] 
+ * [{1, 2, 3}, {4, 5, 6}, {7, 8, 9}, {10, 11, 12}]
  */
 
 vector<double *> str2ptrvec(string pos_str, string pos_dlm, string coord_dlm)
 {
-    vector<string> posn, posns, coords;           
+    vector<string> posn, posns, coords;
     vector<double *> out;
     double * pos;
 
     boost::split(posns, pos_str, boost::is_any_of(pos_dlm));
 
     for(unsigned int i=0; i < posns.size(); i++){
-        
+
         boost::split(coords, posns[i], boost::is_any_of(coord_dlm));
         pos = new double[coords.size()];
-        
+
         for(unsigned int j=0; j < coords.size(); j++){
             pos[j] = (double) atof(coords[j].data());
         }
@@ -239,18 +239,18 @@ vector<double *> str2ptrvec(string pos_str, string pos_dlm, string coord_dlm)
 
 vector<array<double,3> > str2arrvec(string pos_str, string pos_dlm, string coord_dlm)
 {
-    vector<string> posn, posns, coords;           
+    vector<string> posn, posns, coords;
     vector<array<double,3> > out;
     array<double,3> pos;
 
     boost::split(posns, pos_str, boost::is_any_of(pos_dlm));
 
     for(unsigned int i=0; i < posns.size(); i++){
-        
+
         boost::split(coords, posns[i], boost::is_any_of(coord_dlm));
-        
+
         for(unsigned int j=0; j < 3; j++) pos[j] = (double) atof(coords[j].data());
-        
+
         out.push_back(pos);
     }
 
@@ -263,25 +263,25 @@ vector<vector<double> > file2vecvec(string path, string delim)
     string pos_str = "";
     vector<string> coords;
     vector<double> pos;
-    
+
     ifstream pos_file;
     pos_file.open(path);
-    
+
     while(getline(pos_file, pos_str))
     {
         boost::trim_right(pos_str);
         boost::split(coords, pos_str, boost::is_any_of(delim));
-        
-        for(unsigned int j=0; j < coords.size(); j++) 
+
+        for(unsigned int j=0; j < coords.size(); j++)
             pos.push_back( (double) atof(coords[j].data()) );
-        
+
         out.push_back(pos);
 
         pos.clear();
     }
 
     pos_file.close();
-    
+
     return out;
 }
 
@@ -292,6 +292,10 @@ void intarray_printer(array<int, 2> a)
 
 template <typename T> int sgn(T val){
     return (T(0) < val) - (val < T(0));
+}
+
+int mysgn(double d){
+    return d < 0 ? -1 : 1;
 }
 
 vector<int> int_range(int lo, int hi)
@@ -322,7 +326,7 @@ vector<int> range_bc(string bc, double delrx, int botq, int topq, int lo, int hi
         out.insert(out.end(), A.begin(), A.end());
         out.insert(out.end(), B.begin(), B.end());
     }
-    else 
+    else
         out = vector<int>();
 
     return out;
@@ -337,11 +341,11 @@ vector<int> range_bc(string bc, double delrx, int botq, int topq, int lo, int hi
     if ((lo <= hi && di > 0) || (lo > hi && di < 0))
         out = int_range(lo, hi, di);
     else if (bc == "PERIODIC" || bc == "LEES-EDWARDS"){
-        vector<int> A, B;   
+        vector<int> A, B;
         if ( di > 0 ){
             A = int_range(lo, topq, di);
             B = int_range(botq, hi, di);
-        }else{ 
+        }else{
             A = int_range(lo, botq, di);
             B = int_range(topq - 1, hi, di);
         }
@@ -350,7 +354,7 @@ vector<int> range_bc(string bc, double delrx, int botq, int topq, int lo, int hi
         out.insert(out.end(), A.begin(), A.end());
         out.insert(out.end(), B.begin(), B.end());
     }
-    else 
+    else
         out = vector<int>();
 
     return out;
@@ -366,7 +370,7 @@ pair<double, array<int, 2> > flip_pair(const pair<array<int, 2>, double> &p)
 multimap<double, array<int, 2> > flip_map(const unordered_map<array<int, 2>, double, boost::hash<array<int,2>>> &src)
 {
     multimap<double,array<int,2> > dst;
-    std::transform(src.begin(), src.end(), std::inserter(dst, dst.begin()), 
+    std::transform(src.begin(), src.end(), std::inserter(dst, dst.begin()),
             flip_pair);
     return dst;
 }
@@ -380,7 +384,7 @@ boost::optional<array<double, 2> > seg_seg_intersection(const array<double, 2>& 
     a1 = r2[1] - r1[1]; //hy1[1] - hy1[0];
     b1 = r1[0] - r2[0]; //hx1[0] - hx1[1];
     c1 = a1*r1[0] + b1*r1[1]; //a1*hx1[0] + b1*hy1[0];
-    
+
     mmx1 = minmax(r1[0], r2[0]);
     mmy1 = minmax(r1[1], r2[1]);
 
@@ -391,7 +395,7 @@ boost::optional<array<double, 2> > seg_seg_intersection(const array<double, 2>& 
     det = a1*b2 - a2*b1;
     mmx2 = minmax(s1[0], s2[0]);
     mmy2 = minmax(s1[1], s2[1]);
-                    
+
     if (det!=0){
         x = (b2*c1 - b1*c2)/det;
         y = (a1*c2 - a2*c1)/det;
@@ -403,8 +407,8 @@ boost::optional<array<double, 2> > seg_seg_intersection(const array<double, 2>& 
     }
     return boost::none;
     /*else{
-    //parallel; determine intersection by endpoint. 
-    //This is a pain. I'm going to leave it out for now because it's an extremly unlikely scenario 
+    //parallel; determine intersection by endpoint.
+    //This is a pain. I'm going to leave it out for now because it's an extremly unlikely scenario
     //and the logic will look really gross
 
     }*/
@@ -418,18 +422,18 @@ string print_pair(string name, const array<double, 2>& p)
 int coord2quad_floor(double fov, int nq, double coord)
 {
     int q = floor(nq*(coord/fov+0.5));
-    if (q == nq) 
+    if (q == nq)
         return 0;
-    else 
+    else
         return q;
 }
 
 int coord2quad_ceil(double fov, int nq, double coord)
 {
     int q = ceil(nq*(coord/fov + 0.5));
-    if (q == nq) 
+    if (q == nq)
         return 0;
-    else 
+    else
         return q;
 }
 
@@ -447,13 +451,18 @@ double angBC(double ang)
     return ang - 2*pi*floor(ang / (2*pi) + 0.5);
 }
 
+double angBC(double ang, double max)
+{
+    return ang - max*floor(ang / max + 0.5);
+}
+
 std::string quads_error_message(std::string title, vector<array<int, 2> > equads, vector< array<int, 2> > aquads)
 {
 
     cout<<"\nTEST "<< title<< ": Expected Quadrants : don't equal spring Quadrants : \n";
-    cout<<"\nActual Quadrants:"; 
+    cout<<"\nActual Quadrants:";
     for_each(aquads.begin(), aquads.end(), intarray_printer);
-    cout<<"\nExpected Quadrants:"; 
+    cout<<"\nExpected Quadrants:";
     for_each(equads.begin(), equads.end(), intarray_printer);
     return "";
 }
@@ -464,10 +473,10 @@ vector<vector<double> > traj2vecvec(string path, string delim, double tf)
     string pos_str = "";
     vector<string> coords;
     vector<double> pos;
-    
+
     ifstream pos_file;
     pos_file.open(path);
-    
+
     double t = 0;
 
     while(getline(pos_file, pos_str))
@@ -483,7 +492,7 @@ vector<vector<double> > traj2vecvec(string path, string delim, double tf)
             boost::trim_right(pos_str);
             boost::split(coords, pos_str, boost::is_any_of(delim));
 
-            for(unsigned int j=0; j < coords.size(); j++) 
+            for(unsigned int j=0; j < coords.size(); j++)
                 pos.push_back( (double) atof(coords[j].data()) );
 
             out.push_back(pos);
@@ -493,7 +502,7 @@ vector<vector<double> > traj2vecvec(string path, string delim, double tf)
     }
 
     pos_file.close();
-    
+
     return out;
 }
 
@@ -512,12 +521,11 @@ double get_restart_strain(string path, int tf)
 
   boost::trim_right(str);
   boost::split(coords, str, boost::is_any_of("\t "));
-    
+
   restart_strain = (double) atof(coords[4].data());
- 
+
   pe_file.close();
-    
- 
+
   return restart_strain;
 }
 
@@ -525,10 +533,10 @@ double last_full_timestep(string path)
 {
     string pos_str = "";
     vector<string> coords;
-    
+
     ifstream pos_file;
     pos_file.open(path);
-    
+
     int n = 0, pcount = 0;
     double t = 0, tprev = 0;
 
@@ -538,21 +546,21 @@ double last_full_timestep(string path)
             boost::trim_right(pos_str);
             boost::split(coords, pos_str, boost::is_any_of("\t "));
             tprev = t;
-            
+
             t = (double) atof(coords[2].data());
             n = (int) atoi(coords[coords.size()-1].data());
-            
+
             pcount = 0;
         }
         else pcount++;
     }
 
     pos_file.close();
-    if (pcount == n) 
+    if (pcount == n)
         return t;
-    else 
+    else
         return tprev;
-    
+
 }
 
 void write_first_nlines(string src, int nlines)
@@ -560,12 +568,12 @@ void write_first_nlines(string src, int nlines)
 
     string tmp = src + ".tmp";
     fs::path src_path(src), tmp_path(tmp);
-    
+
     fs::copy_file(src_path, tmp_path, fs::copy_option::overwrite_if_exists);
 
     ifstream read_file;
     read_file.open(tmp);
-   
+
     ofstream write_file;
     write_file.open(src);
 
@@ -598,14 +606,13 @@ void write_first_ntsteps(string src, int ntsteps)
     ofstream write_file;
     write_file.open(src);
 
-
     string pos_str;
     int nt = 0;
     while(getline(read_file, pos_str))
     {
         if (pos_str[0]=='t'){
             nt++;
-            if (nt > ntsteps) 
+            if (nt > ntsteps)
                 goto closefiles;
         }
         write_file << pos_str << endl;
@@ -624,7 +631,7 @@ void write_first_tsteps(string src, double tstop)
     fs::path src_path(src), tmp_path(tmp);
 
     fs::copy_file(src_path, tmp_path, fs::copy_option::overwrite_if_exists);
-    
+
     vector<string> coords;
 
     ifstream read_file;
@@ -633,12 +640,11 @@ void write_first_tsteps(string src, double tstop)
     ofstream write_file;
     write_file.open(src);
 
-
     string pos_str;
     while(getline(read_file, pos_str))
     {
         if (pos_str[0]=='t'){
-            
+
             boost::split(coords, pos_str, boost::is_any_of("\t "));
             if ( atof(coords[2].data()) >= tstop )
                 goto closefiles;
