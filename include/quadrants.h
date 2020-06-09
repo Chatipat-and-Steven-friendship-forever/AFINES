@@ -1,5 +1,5 @@
-#ifndef __QUADRANTS_H_INCLUDED__
-#define __QUADRANTS_H_INCLUDED__
+#ifndef AFINES_QUADRANTS_H
+#define AFINES_QUADRANTS_H
 
 #include "globals.h"
 #include "box.h"

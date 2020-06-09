@@ -10,8 +10,8 @@
 
 //=====================================
 //include guard
-#ifndef __GLOBALS_H_INCLUDED__
-#define __GLOBALS_H_INCLUDED__
+#ifndef AFINES_GLOBALS_H
+#define AFINES_GLOBALS_H
 
 //=====================================
 // forward declared dependencies

@@ -9,8 +9,8 @@
 
 //=====================================
 //include guard
-#ifndef __MOTOR_ENSEMBLE_H_INCLUDED__
-#define __MOTOR_ENSEMBLE_H_INCLUDED__
+#ifndef AFINES_MOTOR_ENSEMBLE_H
+#define AFINES_MOTOR_ENSEMBLE_H
 
 //=====================================
 // forward declared dependencies

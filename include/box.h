@@ -1,5 +1,5 @@
-#ifndef __BOX_H_INCLUDED__
-#define __BOX_H_INCLUDED__
+#ifndef AFINES_BOX_H
+#define AFINES_BOX_H
 
 #include "globals.h"
 

@@ -9,8 +9,8 @@
 
 //=====================================
 //include guard
-#ifndef __ACTIN_H_INCLUDED__
-#define __ACTIN_H_INCLUDED__
+#ifndef AFINES_BEAD_H
+#define AFINES_BEAD_H
 
 //=====================================
 // forward declared dependencies

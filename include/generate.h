@@ -1,5 +1,5 @@
-#ifndef __GENERATE_H_INCLUDED__
-#define __GENERATE_H_INCLUDED__
+#ifndef AFINES_GENERATE_H
+#define AFINES_GENERATE_H
 
 #include "filament_ensemble.h"
 #include "motor_ensemble.h"

@@ -9,8 +9,8 @@
 
 //=====================================
 //include guard
-#ifndef __SPACER_H_INCLUDED__
-#define __SPACER_H_INCLUDED__
+#ifndef AFINES_SPACER_H
+#define AFINES_SPACER_H
 
 //=====================================
 // forward declared dependencies

@@ -9,8 +9,8 @@
 
 //=====================================
 //include guard
-#ifndef __FILAMENT_ENSEMBLE_H_INCLUDED__
-#define __FILAMENT_ENSEMBLE_H_INCLUDED__
+#ifndef AFINES_FILAMENT_ENSEMBLE_H
+#define AFINES_FILAMENT_ENSEMBLE_H
 
 //=====================================
 // forward declared dependencies

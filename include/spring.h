@@ -8,8 +8,8 @@
 
 //=====================================
 //include guard
-#ifndef __LINK_H_INCLUDED__
-#define __LINK_H_INCLUDED__
+#ifndef AFINES_SPRING_H
+#define AFINES_SPRING_H
 
 
 //=====================================
