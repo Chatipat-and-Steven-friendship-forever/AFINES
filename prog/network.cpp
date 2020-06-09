@@ -431,7 +431,6 @@ int main(int argc, char* argv[]){
     }
     if (quad_off_flag) {
         net->get_quads()->use_quad(false);
-        net->quad_update_serial();  // build neighbor list with all springs
     }
     if (shear_motor_flag) {
         myosins->use_shear(true);
@@ -608,9 +607,19 @@ int main(int argc, char* argv[]){
         //update network
         net->update();//updates all forces, velocities and positions of filaments
 
-        if ( ! quad_off_flag && count % quad_update_period == 0) {
+        if (quad_off_flag) {
+            // we want results that are correct regardless of other settings when quadrants are off
+            // this just builds a list of all springs, which are then handed to attachment/etc
             net->quad_update_serial();
-            if (check_dup_in_quad) net->get_quads()->check_duplicates();
+
+        } else if (count % quad_update_period == 0) {
+            // when quadrants are on, this actually builds quadrants
+            net->quad_update_serial();
+
+            if (check_dup_in_quad) {
+                net->get_quads()->check_duplicates();
+            }
+
         }
 
         //update cross linkers
