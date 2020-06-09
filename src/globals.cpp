@@ -613,15 +613,10 @@ void write_first_ntsteps(string src, int ntsteps)
         if (pos_str[0]=='t'){
             nt++;
             if (nt > ntsteps)
-                goto closefiles;
+                return;
         }
         write_file << pos_str << endl;
     }
-
-closefiles:
-    read_file.close();
-    write_file.close();
-
 }
 
 void write_first_tsteps(string src, double tstop)
@@ -647,16 +642,11 @@ void write_first_tsteps(string src, double tstop)
 
             boost::split(coords, pos_str, boost::is_any_of("\t "));
             if ( atof(coords[2].data()) >= tstop )
-                goto closefiles;
+                return;
 
         }
         write_file << pos_str << endl;
     }
-
-closefiles:
-    read_file.close();
-    write_file.close();
-
 }
 
 template int sgn<int>(int);
