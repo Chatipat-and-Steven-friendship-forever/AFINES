@@ -130,7 +130,7 @@ class spring
     protected:
 
         box *bc;
-        double l0, kl, max_ext, eps_ext, llen, llensq, r_c;
+        double l0, kl, max_ext, eps_ext, llen, llensq;
         array<double,2> hx, hy, disp, force, direc, point;
         array<int, 2> aindex;
         filament *fil;
