@@ -96,8 +96,6 @@ class filament_ensemble
 
         void update_positions();
 
-        void update_positions_range(int lo, int hi);
-        
         void update_forces(int fil, int bead, double f2, double f3);
 
         vector<vector<double>> output_beads();

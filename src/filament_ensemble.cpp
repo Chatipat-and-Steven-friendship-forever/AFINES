@@ -93,16 +93,6 @@ void filament_ensemble::update_positions()
 
 }
 
-
-void filament_ensemble::update_positions_range(int lo, int hi)
-{
-    for (unsigned int f = 0; f < network.size(); f++)
-    {
-        network[f]->update_positions_range(lo, hi);
-    }
-
-}
-
 vector<vector<double>> filament_ensemble::output_beads()
 {
     vector<vector<double>> out;

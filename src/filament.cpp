@@ -133,46 +133,6 @@ void filament::update_positions()
 
 }
 
-void filament::update_positions_range(int lo, int hi)
-{
-    double vx, vy, fx, fy, fx_brn, fy_brn, x, y;
-    array<double, 2> new_rnds;
-    array<double, 2> newpos;
-    ke_vel = 0.0;
-    ke_vir = 0.0;
-    double top_y = y_thresh*bc->get_ybox()/2.;
-
-    int low = max(0, lo);
-    int high = min(hi, (int)beads.size());
-
-    for (int i = low; i < high; i++){
-
-        if (fabs(beads[i]->get_ycm()) > top_y) continue;
-
-        new_rnds = {{rng_n(), rng_n()}};
-        fx = beads[i]->get_force()[0];
-        fy = beads[i]->get_force()[1];
-        fx_brn = bd_prefactor*damp*(new_rnds[0] + prv_rnds[i][0]);
-        fy_brn = bd_prefactor*damp*(new_rnds[1] + prv_rnds[i][1]);
-        vx  = fx/damp  + fx_brn/damp;
-        vy  = fy/damp  + fy_brn/damp;
-//        cout<<"\nDEBUG: Fx("<<i<<") = "<<beads[i]->get_force()[0]<<"; v = ("<<vx<<" , "<<vy<<")";
-        x = beads[i]->get_xcm();
-        y = beads[i]->get_ycm();
-        prv_rnds[i] = new_rnds;
-        ke_vel += vx*vx + vy*vy;
-        ke_vir += -(0.5)*((fx*x + fy*y) + (fx_brn*x + fy_brn*y));
-        newpos = bc->pos_bc({beads[i]->get_xcm() + vx*dt, beads[i]->get_ycm() + vy*dt});
-        beads[i]->set_xcm(newpos[0]);
-        beads[i]->set_ycm(newpos[1]);
-        beads[i]->reset_force();
-    }
-
-    for (unsigned int i = 0; i < springs.size(); i++)
-        springs[i]->step();
-
-}
-
 vector<filament *> filament::update_stretching(double t)
 {
     vector<filament *> newfilaments;

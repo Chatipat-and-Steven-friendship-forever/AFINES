@@ -48,8 +48,6 @@ class filament
         void update_bending(double);
         
         void update_positions();
-        
-        void update_positions_range(int lo, int hi);
 
         bead *get_bead(int i);
 
