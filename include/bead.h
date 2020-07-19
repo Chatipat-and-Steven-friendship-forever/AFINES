@@ -32,8 +32,6 @@ class bead
         bead(const bead& other);
         
         ~bead();
-    
-        void update();
 
         double get_length();
 

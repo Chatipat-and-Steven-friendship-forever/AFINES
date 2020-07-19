@@ -69,15 +69,9 @@ class motor
 
         void step_onehead( int hd);
 
-        void step_twoheads();
-
         void filament_update_hd(int hd, array<double, 2> f);
 
         void filament_update();
-
-        void update_shape();
-
-        void set_shear(double g);
 
         void update_d_strain(double g);
 
@@ -117,10 +111,6 @@ class motor
 
         void update_pos_a_end(int hd, double pos);
 
-        inline void reflect(double t, double gamma, double x1, double x2, double y1, double y2);
-
-        inline void periodic(double t, double gamma, double x1, double x2, double y1, double y2);
-
         double get_stretching_energy();
 
         array<array<double, 2>, 2> get_virial();
@@ -130,8 +120,6 @@ class motor
         double get_kinetic_energy_vel();
 
         double get_kinetic_energy_vir();
-
-        double get_angle();
 
         virtual double metropolis_prob(int hd, array<int, 2> fl_idx, array<double, 2> newpos, double maxprob);
 

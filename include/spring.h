@@ -49,11 +49,7 @@ class spring
         double get_stretching_energy();
 
         array<array<double, 2>, 2> get_virial();
-        
-        double get_xcm();
-        
-        double get_ycm();
-        
+
         string to_string();
 
         vector<double> output();
@@ -82,11 +78,7 @@ class spring
 
         void set_l0(double myl0);
 
-        double get_int_angle(double xp, double yp);
-
         array<double,2> intpoint(array<double, 2> pos);
-
-        //void calc_r_c(double x, double y); 
 
         bool get_line_intersect(spring *l2); 
 
@@ -104,14 +96,8 @@ class spring
         
         void inc_aindex();
 
-        void set_mots(map<int, int>* mymots);
-
-        void set_xlinks(map<int, int>* myxlinks);
-        
-        map<int, int> * get_xlinks();
-    
         void update_length();
-        
+
         // stuff for growing
         void add_mot(motor * mot, int hd);
 
