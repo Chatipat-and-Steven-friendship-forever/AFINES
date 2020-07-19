@@ -205,7 +205,7 @@ array<double, 2> spring::intpoint(array<double, 2> pos)
             return {hx[1], hy[1]};
         } else{
             //velocity and dt are 0 since not relevant
-            return bc->pos_bc({hx[0] + tp*disp[0], hy[0] + tp*disp[1]}, {0.0, 0.0}, 0.0);
+            return bc->pos_bc({hx[0] + tp*disp[0], hy[0] + tp*disp[1]});
         }
     }
 }
@@ -213,53 +213,22 @@ array<double, 2> spring::intpoint(array<double, 2> pos)
 double spring::get_r_c(double x, double y)
 {
     double l2 = disp[0]*disp[0] + disp[1]*disp[1];
-    double r_c;
-    double dx, dy;
-    array <double, 2> pos;
-    array <double, 2> proj;
-
-    if(l2 == 0)
-    {
-        point = {{hx[0], hy[0]}};
-        pos = {{x,y}};
-        dx = pos[0] - point[0];
-        dy = pos[1] - point[1];
-        r_c = bc->dist_bc({dx, dy});
-    }
-    else
-    {
+    if (l2 == 0.0) {
+        point = {hx[0], hy[0]};
+    } else {
         double tp = bc->dot_bc({x - hx[0], y - hy[0]}, {hx[1] - hx[0], hy[1] - hy[0]}) / l2;
-
-        if(tp < 0)
-        {
-            point = {{hx[0], hy[0]}};
-            pos = {{x,y}};
-            dx = pos[0] - point[0];
-            dy = pos[1] - point[1];
-            r_c = bc->dist_bc({dx, dy});
+        if (tp < 0.0) {
+            point = {hx[0], hy[0]};
+        } else if (tp > 1.0) {
+            point = {hx[1], hy[1]};
+        } else {
+            point = bc->pos_bc({hx[0] + tp*disp[0], hy[0] + tp*disp[1]});
         }
-        else if(tp > 1.0)
-        {
-            point = {{hx[1], hy[1]}};
-            pos = {{x,y}};
-            dx = pos[0] - point[0];
-            dy = pos[1] - point[1];
-            r_c = bc->dist_bc({dx, dy});
-        }
-        else
-        {
-            proj = {{hx[0] + tp*disp[0], hy[0] + tp*disp[1]}};
-            point = bc->pos_bc(proj, {0, 0}, 0);
-            pos = {{x,y}};
-            dx = pos[0] - point[0];
-            dy = pos[1] - point[1];
-            r_c = bc->dist_bc({dx, dy});
-        }
-
-        //cout << "r_c: " << r_c << endl;
-        //cout << "tp: " << tp << endl;
-        //return r_c;
     }
+    array<double, 2> pos = {x, y};
+    double dx = pos[0] - point[0];
+    double dy = pos[1] - point[1];
+    double r_c = bc->dist_bc({dx, dy});
     return r_c;
 }
 

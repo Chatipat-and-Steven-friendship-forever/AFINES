@@ -4,12 +4,10 @@
 #include "globals.h"
 
 enum class bc_type {
-    clip,
-    infinite,
     lees_edwards,
     periodic,
-    reflective,
-    xperiodic
+    xperiodic,
+    nonperiodic
 };
 
 class box {
@@ -26,7 +24,7 @@ class box {
         void update_d_strain(double d_strain);
 
         array<double, 2> rij_bc(array<double, 2> disp);
-        array<double, 2> pos_bc(array<double, 2> pos, array<double, 2> vel, double dt);
+        array<double, 2> pos_bc(array<double, 2> pos);
         double dist_bc(array<double, 2> disp);
         double dot_bc(array<double, 2> disp1, array<double, 2> disp2);
 

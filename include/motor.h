@@ -67,8 +67,6 @@ class motor
 
         virtual void brownian_relax(int hd);
 
-        array<double, 2> boundary_check(int i,  double vx, double vy);
-
         void step_onehead( int hd);
 
         void step_twoheads();

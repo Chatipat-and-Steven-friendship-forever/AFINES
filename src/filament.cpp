@@ -121,7 +121,7 @@ void filament::update_positions()
         //cout<<"\nDEBUG: bead force = ("<<beads[i]->get_force()[0]<<" , "<<beads[i]->get_force()[1]<<")";
         ke_vel += vx*vx + vy*vy;
         ke_vir += -(0.5)*((fx*x + fy*y) + (fx_brn*x + fy_brn*y));
-        newpos = bc->pos_bc({x + vx*dt, y + vy*dt}, {vx, vy}, dt);
+        newpos = bc->pos_bc({x + vx*dt, y + vy*dt});
         beads[i]->set_xcm(newpos[0]);
         beads[i]->set_ycm(newpos[1]);
         beads[i]->reset_force();
@@ -161,7 +161,7 @@ void filament::update_positions_range(int lo, int hi)
         prv_rnds[i] = new_rnds;
         ke_vel += vx*vx + vy*vy;
         ke_vir += -(0.5)*((fx*x + fy*y) + (fx_brn*x + fy_brn*y));
-        newpos = bc->pos_bc({beads[i]->get_xcm() + vx*dt, beads[i]->get_ycm() + vy*dt}, {vx, vy}, dt);
+        newpos = bc->pos_bc({beads[i]->get_xcm() + vx*dt, beads[i]->get_ycm() + vy*dt});
         beads[i]->set_xcm(newpos[0]);
         beads[i]->set_ycm(newpos[1]);
         beads[i]->reset_force();
@@ -602,7 +602,7 @@ void filament::grow(double dL)
         x2 = beads[1]->get_xcm();
         y2 = beads[1]->get_ycm();
         //add a bead
-        array<double, 2> newpos = bc->pos_bc({x2-spring_l0*dir[0], y2-spring_l0*dir[1]}, {0, 0}, dt);
+        array<double, 2> newpos = bc->pos_bc({x2-spring_l0*dir[0], y2-spring_l0*dir[1]});
         beads.insert(beads.begin()+1, new bead(newpos[0], newpos[1], beads[0]->get_length(), beads[0]->get_viscosity()));
         prv_rnds.insert(prv_rnds.begin()+1, {{0, 0}});
         //shift all springs from "1" onward forward

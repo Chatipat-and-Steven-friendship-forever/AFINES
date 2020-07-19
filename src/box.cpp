@@ -76,7 +76,7 @@ array<double, 2> box::rij_bc(array<double, 2> disp)
     return {dx, dy};
 }
 
-array<double, 2> box::pos_bc(array<double, 2> pos, array<double, 2> vel, double dt)
+array<double, 2> box::pos_bc(array<double, 2> pos)
 {
     double x = pos[0];
     double y = pos[1];
@@ -91,30 +91,6 @@ array<double, 2> box::pos_bc(array<double, 2> pos, array<double, 2> vel, double 
         x -= xbox * roundhalfup(x / xbox);
         y -= ybox * cory;
 
-    } else if (BC == bc_type::reflective) {
-        double xlo = -0.5 * xbox + 2.0 * delrx * y / ybox;
-        double xhi =  0.5 * xbox + 2.0 * delrx * y / ybox;
-        double ylo = -0.5 * ybox;
-        double yhi =  0.5 * ybox;
-        if (x <= xlo || x >= xhi)
-            x -= 2.0 * dt * vel[0];
-        if (y <= ylo || y >= yhi)
-            y -= 2.0 * dt * vel[1];
-
-    } else if (BC == bc_type::infinite) {
-        double xlo = -0.5 * xbox + 2.0 * delrx * y / ybox;
-        double xhi =  0.5 * xbox + 2.0 * delrx * y / ybox;
-        double ylo = -0.5 * ybox;
-        double yhi =  0.5 * ybox;
-        if (x <= xlo)
-            x = xlo;
-        else if (x >= xhi)
-            x = xhi;
-        if (y <= ylo)
-            y = ylo;
-        else if (y >= yhi)
-            y = yhi;
-
     } else if (BC == bc_type::xperiodic) {
         double xlo = -0.5 * xbox;
         double xhi =  0.5 * xbox;
@@ -124,12 +100,10 @@ array<double, 2> box::pos_bc(array<double, 2> pos, array<double, 2> vel, double 
             x += xbox;
         else if (x > xhi)
             x -= xbox;
-        if (y < ylo)
-            y = ylo;
-        else if (y > yhi)
-            y = yhi;
+        if (y < ylo || y > yhi)
+            throw runtime_error("Coordinate outside of box.");
 
-    } else if (BC == bc_type::clip) {
+    } else if (BC == bc_type::nonperiodic) {
         double xlo = -0.5 * xbox;
         double xhi =  0.5 * xbox;
         double ylo = -0.5 * ybox;
@@ -167,7 +141,7 @@ boost::optional<array<double, 2> > seg_seg_intersection_bc(box *bc, array<double
 
     boost::optional<array<double, 2>> inter = seg_seg_intersection({0.0, 0.0}, rij12, rij13, rij14);
     if (inter) {
-        return bc->pos_bc({inter->at(0) + r1[0], inter->at(1) + r1[1]}, {0.0, 0.0}, 0.0);
+        return bc->pos_bc({inter->at(0) + r1[0], inter->at(1) + r1[1]});
     } else {
         return boost::none;
     }
@@ -175,11 +149,9 @@ boost::optional<array<double, 2> > seg_seg_intersection_bc(box *bc, array<double
 
 bc_type box::string2bc(string BC)
 {
-    if (BC == "CLIP") return bc_type::clip;
-    if (BC == "INFINITE") return bc_type::infinite;
     if (BC == "LEES-EDWARDS") return bc_type::lees_edwards;
     if (BC == "PERIODIC") return bc_type::periodic;
-    if (BC == "REFLECTIVE") return bc_type::reflective;
     if (BC == "XPERIODIC") return bc_type::xperiodic;
+    if (BC == "NONPERIODIC") return bc_type::nonperiodic;
     throw std::runtime_error("Boundary condition " + BC + " not recognized.");
 }

@@ -33,9 +33,7 @@ vector<vector<double>> generate_filament_ensemble(
         beads.push_back({x, y, radius, double(i)});
         int nbeads = nbeads_min + distribution(generator);
         for (int j = 1; j < nbeads; j++) {
-            array<double, 2> pos = bc->pos_bc(
-                    {x + l0 * cos(phi), y + l0 * sin(phi)},
-                    {l0 * cos(phi) / dt, l0 * sin(phi) / dt}, dt);
+            array<double, 2> pos = bc->pos_bc({x + l0 * cos(phi), y + l0 * sin(phi)});
             x = pos[0];
             y = pos[1];
             beads.push_back({x, y, radius, double(i)});
@@ -75,9 +73,7 @@ vector<vector<double>> generate_filament_ensemble(
         }
         beads.push_back({x, y, radius, double(i)});
         for (int j = 1; j < nbeads; j++) {
-            array<double, 2> pos = bc->pos_bc(
-                    {x + l0 * cos(phi), y + l0 * sin(phi)},
-                    {l0 * cos(phi) / dt, l0 * sin(phi) / dt}, dt);
+            array<double, 2> pos = bc->pos_bc({x + l0 * cos(phi), y + l0 * sin(phi)});
             x = pos[0];
             y = pos[1];
             beads.push_back({x, y, radius, double(i)});

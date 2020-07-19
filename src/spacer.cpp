@@ -71,8 +71,8 @@ spacer::spacer(vector<double> mvec,
     pos_a_end = {{0, 0}}; // pos_a_end = distance from pointy end -- by default 0
                           // i.e., if l_index[hd] = j, then pos_a_end[hd] is the distance to the "j+1"th bead
 
-    array<double, 2> posH0 = boundary_check(0, mvec[0], mvec[1]);
-    array<double, 2> posH1 = boundary_check(1, mvec[0] + mvec[2], mvec[1] + mvec[3]);
+    array<double, 2> posH0 = bc->pos_bc({mvec[0], mvec[1]});
+    array<double, 2> posH1 = bc->pos_bc({mvec[0] + mvec[2], mvec[1] + mvec[3]});
     hx[0] = posH0[0];
     hy[0] = posH0[1];
     hx[1] = posH1[0];
@@ -222,7 +222,7 @@ void spacer::brownian_relax(int hd)
     double vy =  (pow(-1,hd)*force[1] + b_force[hd][1]) / damp + bd_prefactor*(new_rnd_y + prv_rnd_y[hd]);
     ke_vel = vx*vx + vy*vy;
     ke_vir = -(0.5)*(pow(-1,hd))*(force[0]*hx[hd] + force[1]*hy[hd]);
-    array<double, 2> pos = boundary_check(hd, hx[hd] + vx*dt, hy[hd] + vy*dt);
+    array<double, 2> pos = bc->pos_bc({hx[hd] + vx*dt, hy[hd] + vy*dt});
     hx[hd] = pos[0];
     hy[hd] = pos[1];
 

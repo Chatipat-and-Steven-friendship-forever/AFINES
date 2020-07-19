@@ -71,8 +71,8 @@ motor::motor(vector<double> mvec,
     pos_a_end = {{0, 0}}; // pos_a_end = distance from pointy end -- by default 0
                         // i.e., if l_index[hd] = j, then pos_a_end[hd] is the distance to the "j+1"th bead
 
-    array<double, 2> posH0 = boundary_check(0, mvec[0], mvec[1]);
-    array<double, 2> posH1 = boundary_check(1, mvec[0] + mvec[2], mvec[1] + mvec[3]);
+    array<double, 2> posH0 = bc->pos_bc({mvec[0], mvec[1]});
+    array<double, 2> posH1 = bc->pos_bc({mvec[0] + mvec[2], mvec[1] + mvec[3]});
     hx[0] = posH0[0];
     hy[0] = posH0[1];
     hx[1] = posH1[0];
@@ -271,7 +271,7 @@ void motor::brownian_relax(int hd)
     double vy =  pow(-1,hd)*force[1] / damp + bd_prefactor*(new_rnd_y + prv_rnd_y[hd]);
     ke_vel = vx*vx + vy*vy;
     ke_vir = -(0.5)*(pow(-1,hd))*(force[0]*hx[hd] + force[1]*hy[hd]);
-    array<double, 2> pos = boundary_check(hd, hx[hd] + vx*dt, hy[hd] + vy*dt);
+    array<double, 2> pos = bc->pos_bc({hx[hd] + vx*dt, hy[hd] + vy*dt});
     hx[hd] = pos[0];
     hy[hd] = pos[1];
 
@@ -292,7 +292,7 @@ void motor::deactivate_head(int hd)
 
 void motor::relax_head(int hd)
 {
-    array<double, 2> newpos = boundary_check(hd, hx[pr(hd)] - pow(-1, hd)*mld*direc[0], hy[pr(hd)] - pow(-1, hd)*mld*direc[1]);
+    array<double, 2> newpos = bc->pos_bc({hx[pr(hd)] - pow(-1, hd)*mld*direc[0], hy[pr(hd)] - pow(-1, hd)*mld*direc[1]});
     hx[hd] = newpos[0];
     hy[hd] = newpos[1];
 }
@@ -308,10 +308,6 @@ void motor::update_angle()
         direc = {{0, 0}};
 }
 
-array<double, 2> motor::boundary_check(int hd, double x, double y)
-{
-    return bc->pos_bc({x, y}, {(x - hx[hd])/dt, (y - hy[hd])/dt}, dt);
-}
 
 array<double, 2> motor::generate_off_pos(int hd){
     array<double, 2> ldir = filament_network->get_direction(f_index[hd], l_index[hd]);
@@ -320,9 +316,7 @@ array<double, 2> motor::generate_off_pos(int hd){
 
     array<double, 2> bind_disp_rot = {{bind_disp[hd][0]*c - bind_disp[hd][1]*s, bind_disp[hd][0]*s + bind_disp[hd][1]*c}};
 
-    return bc->pos_bc(
-            {hx[hd] - bind_disp_rot[0], hy[hd] - bind_disp_rot[1]},
-            {-bind_disp_rot[0]/dt, -bind_disp_rot[1]/dt}, dt);
+    return bc->pos_bc({hx[hd] - bind_disp_rot[0], hy[hd] - bind_disp_rot[1]});
 }
 
 
@@ -396,7 +390,7 @@ void motor::update_position_attached(int hd){
     double posx = filament_network->get_end(f_index[hd],l_index[hd])[0]-pos_a_end[hd]*filament_network->get_direction(f_index[hd],l_index[hd])[0];
     double posy = filament_network->get_end(f_index[hd],l_index[hd])[1]-pos_a_end[hd]*filament_network->get_direction(f_index[hd],l_index[hd])[1];
 
-    array<double, 2> newpos = boundary_check(hd, posx, posy);
+    array<double, 2> newpos = bc->pos_bc({posx, posy});
 
     hx[hd] = newpos[0];
     hy[hd] = newpos[1];
@@ -592,8 +586,8 @@ void motor::revive_head(int hd)
 void motor::update_d_strain(double g)
 {
     array<double, 2> fov = bc->get_fov();
-    array<double, 2> pos0 = boundary_check(0, hx[0] + g * hy[0] / fov[1], hy[0]);
-    array<double, 2> pos1 = boundary_check(1, hx[1] + g * hy[1] / fov[1], hy[1]);
+    array<double, 2> pos0 = bc->pos_bc({hx[0] + g * hy[0] / fov[1], hy[0]});
+    array<double, 2> pos1 = bc->pos_bc({hx[1] + g * hy[1] / fov[1], hy[1]});
     hx[0] = pos0[0];
     hx[1] = pos1[0];
     hy[0] = pos0[1];
