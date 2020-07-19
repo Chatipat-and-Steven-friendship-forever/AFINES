@@ -15,6 +15,7 @@
 #include "filament_ensemble.h"
 #include "bead.h"
 #include "globals.h"
+#include "potentials.h"
 
 filament::filament(filament_ensemble *net, vector<bead *> beadvec, double spring_length,
         double stretching_stiffness, double max_ext_ratio, double bending_stiffness,
@@ -401,75 +402,36 @@ inline double filament::angle_between_springs(int i, int j){
     return acos(c);
 }
 
-/* --------------------------------------------------------------------------------- */
-/* copied and pasted and edited the following code from LAMMPS src/angle_harmonic.cpp*/
-/* --------------------------------------------------------------------------------- */
+
 void filament::update_bending(double t)
 {
-    if (springs.size() > 1 && kb > 0) {
-        array<double, 2> delr1, delr2;
-        double f1[2], f3[2];
-        double rsq1,rsq2,r1,r2,c,s,a,a11,a12,a22;
+    if (springs.size() <= 1 || kb == 0) return;
 
-        virial_clear(bending_virial);
+    virial_clear(bending_virial);
+    ubend = 0.0;
+    for (int n = 0; n < int(springs.size())-1; n++) {
 
-        // 1st bond
-        delr1 = springs[0]->get_neg_disp();
-        rsq1  = springs[0]->get_length_sq();
-        r1    = springs[0]->get_length();
+        array<double, 2> delr1 = springs[n]->get_disp();
+        array<double, 2> delr2 = springs[n+1]->get_disp();
 
-        double theta = 0, totThetaSq = 0;
+        bend_result_type result = bend_harmonic(kb, 0.0, delr1, delr2);
 
-        for (int n = 0; n < int(springs.size())-1; n++) {
+        ubend += result.energy;
 
-            // 2nd bond
-            delr2 = springs[n+1]->get_disp();
-            rsq2  = springs[n+1]->get_length_sq();
-            r2    = springs[n+1]->get_length();
+        // apply force to each of 3 atoms
+        beads[n  ]->update_force(-result.force1[0], -result.force1[1]);
+        beads[n+1]->update_force(result.force1[0], result.force1[1]);
 
-            // angle (cos and sin)
-            c = (delr1[0]*delr2[0] + delr1[1]*delr2[1]) / (r1*r2);
+        beads[n+1]->update_force(-result.force2[0], -result.force2[1]);
+        beads[n+2]->update_force(result.force2[0], result.force2[1]);
 
-            if (c > 1.0) c = 1.0;
-            if (c < -1.0) c = -1.0;
-
-            s = sqrt(1.0 - c*c);
-            if (s < maxSmallAngle) s = maxSmallAngle;
-
-            theta = acos(c) - pi;
-            totThetaSq += theta*theta;
-
-            // force
-            a   = -kb * theta / s; //Note, in this implementation, Lp = kb/kT
-            a11 = a*c / rsq1;
-            a12 = -a / (r1*r2);
-            a22 = a*c / rsq2;
-
-            f1[0] = a11*delr1[0] + a12*delr2[0];
-            f1[1] = a11*delr1[1] + a12*delr2[1];
-            f3[0] = a22*delr2[0] + a12*delr1[0];
-            f3[1] = a22*delr2[1] + a12*delr1[1];
-            //cout<<"\nDEBUG: f1x, f1y, f3x f3y = "<<f1[0]<<" , "<<f1[1]<<" , "<<f3[0]<<" , "<<f3[1];
-
-            // apply force to each of 3 atoms
-            beads[n  ]->update_force(f1[0], f1[1]);
-            beads[n+1]->update_force(-f1[0] - f3[0], -f1[1] - f3[1]);
-            beads[n+2]->update_force(f3[0], f3[1]);
-
-            // 1st bond, next iteration
-            delr1 = {{-delr2[0], -delr2[1]}};
-            rsq1  = rsq2;
-            r1    = r2;
-
-            bending_virial[0][0] += a11 * delr1[0] * delr1[0] + 2.0 * a12 * delr1[0] * delr2[0] + a22 * delr2[0] * delr2[0];
-            bending_virial[0][1] += a11 * delr1[0] * delr1[1] + a12 * (delr1[0] * delr2[1] + delr1[1] * delr2[0]) + a22 * delr2[0] * delr2[1];
-            bending_virial[1][0] += a11 * delr1[0] * delr1[1] + a12 * (delr1[0] * delr2[1] + delr1[1] * delr2[0]) + a22 * delr2[0] * delr2[1];
-            bending_virial[1][1] += a11 * delr1[1] * delr1[1] + 2.0 * a12 * delr1[1] * delr2[1] + a22 * delr2[1] * delr2[1];
-        }
-
-        ubend = kb*totThetaSq/2;
+        bending_virial[0][0] += result.force1[0] * delr1[0] + result.force2[0] * delr2[0];
+        bending_virial[0][1] += result.force1[0] * delr1[1] + result.force2[0] * delr2[1];
+        bending_virial[1][0] += result.force1[1] * delr1[0] + result.force2[1] * delr2[0];
+        bending_virial[1][1] += result.force1[1] * delr1[1] + result.force2[1] * delr2[1];
     }
 }
+
 
 int filament::get_nbeads(){
     return beads.size();
@@ -490,34 +452,22 @@ array<array<double, 2>, 2> filament::get_bending_virial()
     return bending_virial;
 }
 
-void filament::init_ubend(){
-
-
-    if (springs.size() < 2)
-        ubend = 0;
-    else{
-        double sum = 0, theta;
-
-        for (unsigned int i = 0; i < springs.size() - 1; i++)
-        {
-            theta = angle_between_springs(i+1, i);
-            sum += theta*theta;
-        }
-
-        ubend = kb*sum/2;
+void filament::init_ubend()
+{
+    ubend = 0.0;
+    for (int i = 0; i < int(springs.size()) - 1; i++) {
+        double theta = angle_between_springs(i + 1, i);
+        ubend += 0.5 * kb * theta * theta;
     }
 }
 
 double filament::get_stretching_energy()
 {
-
-    double u = 0;
-    for (unsigned int i = 0; i < springs.size(); i++)
-        //u += springs[i]->get_stretching_energy_fene();
-        u += springs[i]->get_stretching_energy();
-
+    double u = 0.0;
+    for (spring *s : springs) {
+        u += s ->get_stretching_energy();
+    }
     return u;
-
 }
 
 double filament::get_kinetic_energy_vel()

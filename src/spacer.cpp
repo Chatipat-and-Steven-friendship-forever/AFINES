@@ -9,6 +9,7 @@
 
 #include "spacer.h"
 #include "filament_ensemble.h"
+#include "potentials.h"
 //spacer class
 
 spacer::spacer(vector<double> mvec,
@@ -150,56 +151,28 @@ array<double, 2> spacer::disp_from_bead(int hd, int findex, int aindex)
 
 void spacer::update_bending(int hd)
 {
-  array<double, 2> delr1, delr2;
-  double f1[2], f3[2];
-  double rsq1,rsq2,r1,r2,c,s,dth,a,a11,a12,a22;
-  
-  int bead_further_end = get_further_end(hd, f_index[hd], l_index[hd]);
+    int bead_further_end = get_further_end(hd, f_index[hd], l_index[hd]);
 
-  // 1st bond
-  delr1 = disp_from_bead(hd, f_index[hd], l_index[hd] + bead_further_end); 
-  rsq1  = delr1[0]*delr1[0] + delr1[1]*delr1[1];
-  r1    = sqrt(rsq1);
+    array<double, 2> delr1 = disp_from_bead(hd, f_index[hd], l_index[hd] + bead_further_end);
+    array<double, 2> delr2 = {pow(-1, hd)*disp[0], pow(-1, hd)*disp[1]};
 
-  // 2nd bond
-  delr2 = {{pow(-1, hd)*disp[0], pow(-1, hd)*disp[1]}};
-  rsq2  = delr2[0]*delr2[0] + delr2[1]*delr2[1];
-  r2    = sqrt(rsq2);
+    bend_result_type result = bend_harmonic(kb, th0, delr1, delr2);
 
-  // angle (cos and sin)
-  c = (delr1[0]*delr2[0] + delr1[1]*delr2[1]) / (r1*r2);
-    
-  if (c > 1.0) c = 1.0;
-  if (c < -1.0) c = -1.0;
+    // apply force to each of 3 atoms
+    filament_network->update_forces(
+            f_index[hd], l_index[hd] + bead_further_end,
+            result.force1[0], result.force1[1]);
+    b_force[hd][0] -= result.force1[0];
+    b_force[hd][1] -= result.force1[1];
 
-  s = sqrt(1.0 - c*c);
-  if (s < maxSmallAngle) s = maxSmallAngle;
+    b_force[pr(hd)][0] += result.force2[0];
+    b_force[pr(hd)][1] += result.force2[1];
+    b_force[hd][0] -= result.force2[0];
+    b_force[hd][1] -= result.force2[1];
 
-  dth = acos(c) - th0;
-
-  // force
-  a   = -kb * dth / s; 
-  a11 = a*c / rsq1;
-  a12 = -a / (r1*r2);
-  a22 = a*c / rsq2;
-
-  f1[0] = a11*delr1[0] + a12*delr2[0];
-  f1[1] = a11*delr1[1] + a12*delr2[1];
-  f3[0] = a22*delr2[0] + a12*delr1[0];
-  f3[1] = a22*delr2[1] + a12*delr1[1];
-
-  // apply force to each of 3 atoms
-  
-  filament_network->update_forces(f_index[hd], l_index[hd] + bead_further_end, f1[0], f1[1]);
-  b_force[hd][0] += (-f1[0] - f3[0]);
-  b_force[hd][1] += (-f1[1] - f3[1]);
-  b_force[pr(hd)][0] += f3[0];
-  b_force[pr(hd)][1] += f3[1];
-  
-  //b_eng[hd] = kb*dth*dth/(r1+r2);
-  b_eng[hd] = kb*dth*dth/2;
-
+    b_eng[hd] = result.energy;
 }
+
 double spacer::get_kb(){
     return kb;
 }
@@ -250,39 +223,22 @@ array<array<double, 2>,2> spacer::get_b_force()
 //metropolis algorithm with rate constant
 double spacer::metropolis_prob(int hd, array<int, 2> fl_idx, array<double, 2> newpos, double maxprob)
 {
-//    cout<<"\nDEBUG: using spacer metropolis_prob";
     double prob = maxprob;
-    double stretch  = bc->dist_bc({newpos[0] - hx[pr(hd)], newpos[1] - hy[pr(hd)]}) - mld; 
-    
-    array<double, 2> delr1, delr2;
-    double r1, r2, c, dth, bend_eng = 0;
-    
+
+    double stretch  = bc->dist_bc({newpos[0] - hx[pr(hd)], newpos[1] - hy[pr(hd)]}) - mld;
+    double delEs = 0.5 * mk * stretch * stretch - get_stretching_energy();
+
+    double bend_eng = 0.0;
     if (state[hd] == motor_state::free && state[pr(hd)] == motor_state::bound) { //it's trying to attach
-        
-//        delr1 = disp_from_bead(hd, it->second.at(0), it->second.at(1) + get_further_end(hd, it->second.at(0), it->second.at(1))); 
-        delr1 = disp_from_bead(hd, fl_idx[0], fl_idx[1] + get_further_end(hd, fl_idx[0], fl_idx[1])); 
-        r1  = sqrt(delr1[0]*delr1[0] + delr1[1]*delr1[1]);
-
-        // 2nd bond
-        delr2 = {{pow(-1, hd)*disp[0], pow(-1, hd)*disp[1]}};
-        r2  = sqrt(delr2[0]*delr2[0] + delr2[1]*delr2[1]);
-
-        // cos
-        c = (delr1[0]*delr2[0] + delr1[1]*delr2[1]) / (r1*r2);
-
-        if (c > 1.0) c = 1.0;
-        if (c < -1.0) c = -1.0;
-
-        dth = acos(c) - th0;
-        //bend_eng = kb*dth*dth/(r1+r2);
-        bend_eng = kb*dth*dth/2;
-        
+        array<double, 2> delr1 = disp_from_bead(hd, fl_idx[0], fl_idx[1] + get_further_end(hd, fl_idx[0], fl_idx[1]));
+        array<double, 2> delr2 = {pow(-1, hd)*disp[0], pow(-1, hd)*disp[1]};
+        bend_eng = bend_harmonic_energy(kb, th0, delr1, delr2);
     }
-    
-    double delE = 0.5*mk*stretch*stretch + bend_eng - this->get_stretching_energy() - b_eng[hd];
-    if( delE > 0 )
-        prob *= exp(-delE/temperature);
-    
+    double delEb = bend_eng - b_eng[hd];
+
+    double delE = delEs + delEb;
+    if (delE > 0.0) prob *= exp(-delE/temperature);
+
     return prob;
 }
 
