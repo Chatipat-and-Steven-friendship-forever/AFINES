@@ -118,8 +118,6 @@ class filament_ensemble
         
         void write_thermo(ofstream& fout);
 
-        void set_y_thresh(double);
-        
         void set_fene_dist_pct(double);
 
         bool is_polymer_start(int f, int a);

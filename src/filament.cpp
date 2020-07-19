@@ -29,7 +29,6 @@ filament::filament(filament_ensemble *net, vector<bead *> beadvec, double spring
     fracture_force = frac_force;
     kb = bending_stiffness;
 
-    y_thresh = 1;
     ke_vel = 0.0;
     ke_vir = 0.0;
     spring_l0 = spring_length;
@@ -90,10 +89,6 @@ void filament::add_bead(bead * a, double spring_length, double stretching_stiffn
         damp = a->get_friction();
 }
 
-void filament::set_y_thresh(double y){
-    y_thresh = y;
-}
-
 void filament::update_positions()
 {
     double vx, vy, fx, fy, fx_brn, fy_brn, x, y;
@@ -101,13 +96,9 @@ void filament::update_positions()
     array<double, 2> newpos;
     ke_vel = 0.0;
     ke_vir = 0.0;
-    double top_y = y_thresh*bc->get_ybox()/2.;
     int sa = int(beads.size());
     int la = int(springs.size());
     for (int i = 0; i < sa; i++){
-
-        if (fabs(beads[i]->get_ycm()) > top_y) continue;
-
         new_rnds = {{rng_n(), rng_n()}};
         fx = beads[i]->get_force()[0];
         fy = beads[i]->get_force()[1];

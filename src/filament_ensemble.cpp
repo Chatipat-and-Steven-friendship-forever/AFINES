@@ -149,11 +149,6 @@ box *filament_ensemble::get_box()
     return bc;
 }
 
-void filament_ensemble::set_y_thresh(double y)
-{
-    for (unsigned int f = 0; f < network.size(); f++) network[f]->set_y_thresh(y);
-}
-
 void filament_ensemble::update_d_strain(double g)
 {
     for (filament *f : network) {

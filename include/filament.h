@@ -33,8 +33,6 @@ class filament
 
         ~filament();
     
-        void set_y_thresh(double y);
-
         void update_d_strain(double);
 
         box *get_box();
@@ -126,7 +124,6 @@ class filament
         filament_ensemble *filament_network;
 
         double kb, temperature, dt, fracture_force, fracture_force_sq, ke_vir, ke_vel, damp, bd_prefactor, ubend;
-        double y_thresh;
         double spring_l0, l0_max, l0_min, kgrow, lgrow;
         int nsprings_max;
 
