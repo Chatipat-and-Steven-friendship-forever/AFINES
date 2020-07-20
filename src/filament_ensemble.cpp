@@ -252,12 +252,8 @@ int filament_ensemble::get_nfilaments(){
 
 void filament_ensemble::update_bending()
 {
-    int net_sz = int(network.size());
-
-    for (int f = 0; f < net_sz; f++)
-    {
-        //if (f==0) cout<<"\nDEBUG: update_bending: using "<<omp_get_num_threads()<<" cores";
-        network[f]->update_bending(t);
+    for (filament *f : network) {
+        f->update_bending();
     }
 }
 
@@ -275,7 +271,7 @@ void filament_ensemble::update_stretching(){
 
 
 void filament_ensemble::update_filament_stretching(int f){
-    vector<filament *> newfilaments = network[f]->update_stretching(t);
+    vector<filament *> newfilaments = network[f]->update_stretching();
 
     if (newfilaments.size() > 0){ //fracture event occured
 
@@ -307,7 +303,7 @@ void filament_ensemble::update()
     for (int f = 0; f < int(network.size()); f++) {
         network[f]->update_length();
         update_filament_stretching(f);
-        network[f]->update_bending(t);
+        network[f]->update_bending();
         if (external_force_flag != external_force_type::none) {
             for (int i = 0; i < network[f]->get_nbeads(); i++) {
                 vec_type pos = network[f]->get_bead_position(i);
@@ -318,7 +314,6 @@ void filament_ensemble::update()
         network[f]->update_positions();
     }
     this->update_energies();
-    t += dt;
 }
 
 vec_type filament_ensemble::external_force(vec_type pos)
@@ -582,7 +577,6 @@ filament_ensemble::filament_ensemble(box *bc_, vector<vector<double> > beads, ar
     rmax = RMAX;
     kexv = A;
     dt = delta_t;
-    t = 0;
 
     int fil_idx = 0;
     vector<vector<double>> avec;

@@ -145,7 +145,7 @@ class filament_ensemble
         external_force_type external_force_flag;
         double circle_wall_radius, circle_wall_spring_constant;
 
-        double t, dt;
+        double dt;
         double temperature, spring_rest_len, visc, min_time;
         double rmax; 
         double kexv;  

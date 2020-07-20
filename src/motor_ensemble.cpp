@@ -95,7 +95,7 @@ void motor_ensemble<motor_type>::check_broken_filaments()
 }
 
 template <class motor_type>
-void motor_ensemble<motor_type>::motor_update(double t)
+void motor_ensemble<motor_type>::motor_update()
 {
     this->check_broken_filaments();
 
@@ -108,7 +108,7 @@ void motor_ensemble<motor_type>::motor_update(double t)
             m->update_force();
             m->filament_update();
 
-        } else if (t >= 0.0) {
+        } else {
             array<motor_state, 2> s = m->get_states();
 
             // Dynamics

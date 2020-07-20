@@ -44,7 +44,7 @@ class motor_ensemble
 
         void check_broken_filaments();
 
-        void motor_update(double t);
+        void motor_update();
 
         void update_d_strain(double g);
 

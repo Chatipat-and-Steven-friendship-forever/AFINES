@@ -102,7 +102,7 @@ void filament::update_positions()
     for (spring *s : springs) s->step();
 }
 
-vector<filament *> filament::update_stretching(double t)
+vector<filament *> filament::update_stretching()
 {
     vector<filament *> newfilaments;
     vec_type spring_force;
@@ -318,7 +318,7 @@ inline double filament::angle_between_springs(int i, int j){
 }
 
 
-void filament::update_bending(double t)
+void filament::update_bending()
 {
     if (springs.size() <= 1 || kb == 0) return;
 

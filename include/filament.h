@@ -40,9 +40,9 @@ class filament
         
         void affine_pull(double f);
         
-        vector<filament *> update_stretching(double t);
+        vector<filament *> update_stretching();
         
-        void update_bending(double);
+        void update_bending();
         
         void update_positions();
 

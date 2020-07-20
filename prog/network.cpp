@@ -675,10 +675,10 @@ int main(int argc, char **argv)
         }
 
         //update cross linkers
-        crosslks->motor_update(t);
+        crosslks->motor_update();
 
         //update motors
-        myosins->motor_update(t);
+        myosins->motor_update();
 
         //clear the vector of fractured filaments
         net->clear_broken();
