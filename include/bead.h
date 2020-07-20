@@ -7,75 +7,57 @@
  *
  */
 
-//=====================================
-//include guard
 #ifndef AFINES_BEAD_H
 #define AFINES_BEAD_H
 
-//=====================================
-// forward declared dependencies
-
-//=====================================
-//included dependences
 #include "globals.h"
 
-//=====================================
-//filament bead class
-class bead
-{
+class bead {
     public:
-
         bead();
-        
         bead(double xcm, double ycm, double len, double vis); 
-        
         bead(const bead& other);
-        
         ~bead();
 
-        double get_length();
+        // state
 
         double get_xcm();
-        
         double get_ycm();
-        
-        void update_force(double f1, double f2);
-        
-        void reset_force();
+        void set_xcm(double xcm);
+        void set_ycm(double ycm);
 
         double get_fx();
-
         double get_fy();
-
         void set_fx(double);
-
         void set_fy(double);
 
         array<double,2> get_force();
+        void update_force(double f1, double f2);
+        void reset_force();
 
+        // parameters
+
+        double get_length();
         double get_friction();
-        
         double get_viscosity();
 
-        void set_xcm(double xcm);
-
-        void set_ycm(double ycm);
+        // output
 
         vector<double> output();
-
         string write();
-        
         string to_string();
-        
-        bool operator==(const bead& that);    
-        
+
+        // misc
+
+        bool operator==(const bead& that);
 
     private:
-        
-        double x, y, rad, visc, friction;
-
+        // state
+        double x, y;
         array<double, 2> force;
-        
+
+        // parameters
+        double rad, visc, friction;
 };
 
 #endif
