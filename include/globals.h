@@ -46,10 +46,10 @@
 #include <unordered_set>
 #include <vector>
 
+#include "vec.h"
+
 using namespace std;
 namespace fs = boost::filesystem;
-
-using virial_type = array<array<double, 2>, 2>;
 
 /* distances in microns, time in seconds, forces in pN * 
  * --> Temp in pN-um                                   */
@@ -123,10 +123,7 @@ map<array<int, 2>, double> transpose(map<array<int, 2>, double> mat);
 map<array<int, 2>, double> invert_block_diagonal(map<array<int, 2>, double> mat);
 void intarray_printer(array<int,2> a);
 
-boost::optional<array<double, 2> > seg_seg_intersection(const array<double, 2>&, const array<double, 2>&, const array<double, 2>&, const array<double, 2>&);
+boost::optional<vec_type> seg_seg_intersection(vec_type, vec_type, vec_type, vec_type);
 std::string quads_error_message(std::string, vector<array<int, 2> >, vector<array<int, 2> > );
-
-void virial_add(virial_type &, virial_type const &);
-void virial_clear(virial_type &);
 
 #endif

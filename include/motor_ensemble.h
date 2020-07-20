@@ -54,7 +54,7 @@ class motor_ensemble
 
         double get_kinetic_energy(); 
 
-        array<array<double, 2>, 2> get_virial();
+        virial_type get_virial();
 
         vector<vector<double>> output();
 
@@ -84,7 +84,7 @@ class motor_ensemble
         filament_ensemble *f_network;
         vector<motor_type *> n_motors;
         bool attach_opt_flag, shear_flag, static_flag;
-        array<array<double, 2>, 2> virial;
+        virial_type virial;
 };
 
 class spacer_ensemble : public motor_ensemble<spacer>

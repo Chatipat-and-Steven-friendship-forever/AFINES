@@ -107,8 +107,8 @@ class filament
         void set_kgrow(double);
         
         void set_lgrow(double);
-        
-        array<double,2> get_bead_position(int bead);
+
+        vec_type get_bead_position(int bead);
 
         void update_length();
 

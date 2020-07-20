@@ -11,30 +11,20 @@
 #define AFINES_BEAD_H
 
 #include "globals.h"
+#include "vec.h"
 
 class bead {
     public:
-        bead();
         bead(double xcm, double ycm, double len, double vis); 
         bead(const bead& other);
-        ~bead();
 
         // state
 
-        array<double, 2> get_pos();
-        void set_pos(array<double, 2> pos);
-        double get_xcm();
-        double get_ycm();
-        void set_xcm(double xcm);
-        void set_ycm(double ycm);
+        vec_type get_pos();
+        void set_pos(vec_type pos);
 
-        double get_fx();
-        double get_fy();
-        void set_fx(double);
-        void set_fy(double);
-
-        array<double, 2> get_force();
-        void update_force(array<double, 2> f);
+        vec_type get_force();
+        void update_force(vec_type f);
         void reset_force();
 
         // parameters
@@ -55,8 +45,7 @@ class bead {
 
     private:
         // state
-        double x, y;
-        array<double, 2> force;
+        vec_type pos, force;
 
         // parameters
         double rad, visc, friction;

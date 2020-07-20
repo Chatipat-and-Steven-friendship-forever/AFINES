@@ -14,34 +14,25 @@
 #include "bead.h"
 #include "globals.h"
 
-bead::bead(){}
-
 bead::bead(double xcm, double ycm, double len, double vis)
 {
-    x=xcm;
-    y=ycm;
+    pos = {xcm, ycm};
     rad=len; //radius
     visc=vis;
     friction = 6*pi*visc*rad;
-   
-    force = {{0,0}};
+    force = {0.0, 0.0};
 }
 
-bead::bead(const bead& other){
-    
-    x = other.x;
-    y = other.y;
+bead::bead(const bead& other)
+{
+    pos = other.pos;
     rad = other.rad;
     visc = other.visc;
     friction = other.friction;
     force = other.force;
 }
 
-bead::~bead(){
-}
-
-
-array<double,2> bead::get_force()
+vec_type bead::get_force()
 {
     return force;
 }
@@ -51,100 +42,53 @@ double bead::get_length()
     return rad;
 }
 
-void bead::update_force(array<double, 2> f)
+void bead::update_force(vec_type f)
 {
-    double f1 = f[0];
-    double f2 = f[1];
-    if(f1 == f1 && f2 == f2 && std::isfinite(f1) && std::isfinite(f2)){
-        force[0]+=f1;
-        force[1]+=f2;
-    }else{
-        throw std::runtime_error("Encountered infinite force.");
-    }
+    force += f;
 }
 
 void bead::reset_force()
 {
-    force[0] = 0;
-    force[1] = 0;
+    force.x = force.y = 0.0;
 }
 
-double bead::get_fx()
+vec_type bead::get_pos()
 {
-    return force[0];
+    return pos;
 }
 
-double bead::get_fy()
+void bead::set_pos(vec_type p)
 {
-    return force[1];
-}
-
-void bead::set_fx(double fx)
-{
-    force[0] = fx;
-}
-
-void bead::set_fy(double fy)
-{
-    force[1] = fy;
-}
-
-array<double, 2> bead::get_pos()
-{
-    return {x, y};
-}
-
-void bead::set_pos(array<double, 2> pos)
-{
-    x = pos[0];
-    y = pos[1];
-}
-
-double bead::get_xcm()
-{
-    return x;
-}
-
-double bead::get_ycm()
-{
-    return y;
-}
-
-void bead::set_xcm(double xcm)
-{
-    x = xcm;
-}
-
-void bead::set_ycm(double ycm)
-{
-    y = ycm;
+    pos = p;
 }
 
 bool bead::operator==(const bead& that) 
 {
-    double err = eps; 
-    return (close( this->x , that.x , err) && close( this->y , that.y , err) &&
-            close( this->rad , that.rad , err) &&
-            close( this->visc , that.visc , err) && close( this->force[0] , that.force[0] , err) &&
-            close( this->force[1] , that.force[1] , err)
-           );
+    double err = eps;
+    return close(pos.x , that.pos.x , err)
+        && close(pos.y , that.pos.y , err)
+        && close(rad , that.rad , err)
+        && close(visc , that.visc , err)
+        && close(force.x , that.force.x , err)
+        && close(force.y , that.force.y , err)
+        ;
 }
 
 vector<double> bead::output()
 {
-    return {x, y, rad};
+    return {pos.x, pos.y, rad};
 }
 
 string bead::write()
 {
-    return "\n" + std::to_string(x) + "\t" + std::to_string(y) + "\t" + std::to_string(rad);
+    return "\n" + std::to_string(pos.x) + "\t" + std::to_string(pos.y) + "\t" + std::to_string(rad);
 }
 
 string bead::to_string()
 {
-    return "x : " + std::to_string(x) + "\ty : " + std::to_string(y) +
+    return "x : " + std::to_string(pos.x) + "\ty : " + std::to_string(pos.y) +
            "\trad : " + std::to_string(rad) + "\tvisc : "+ std::to_string(visc) + 
-           "\tforce[0] : " + std::to_string(force[0]) + "\tforce[1] : "+ std::to_string(force[1]) + "\n";
+           "\tforce[0] : " + std::to_string(force.x) + "\tforce[1] : "+ std::to_string(force.y) + "\n";
  
 }
 

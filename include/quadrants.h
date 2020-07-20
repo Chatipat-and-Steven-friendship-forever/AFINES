@@ -12,7 +12,7 @@ class quadrants {
         void use_quad(bool flag);
 
         void add_spring(spring *s, array<int, 2> fl);
-        vector<array<int, 2>> *get_attach_list(array<double, 2> pos);
+        vector<array<int, 2>> *get_attach_list(vec_type pos);
         void clear();
 
         array<int, 2> get_nq() { return nq; }

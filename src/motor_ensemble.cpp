@@ -199,13 +199,13 @@ void motor_ensemble<motor_type>::update_energies()
     ke_vel = 0.0;
     ke_vir = 0.0;
     pe = 0.0;
-    virial_clear(virial);
+    virial.zero();
 
     for (motor *m : n_motors) {
         ke_vel += m->get_kinetic_energy_vel();
         ke_vir += m->get_kinetic_energy_vir();
         pe += m->get_stretching_energy();
-        virial_add(virial, m->get_virial());
+        virial += m->get_virial();
     }
 }
 
@@ -216,7 +216,7 @@ double motor_ensemble<motor_type>::get_potential_energy()
 }
 
 template <class motor_type>
-array<array<double, 2>, 2> motor_ensemble<motor_type>::get_virial()
+virial_type motor_ensemble<motor_type>::get_virial()
 {
     return virial;
 }

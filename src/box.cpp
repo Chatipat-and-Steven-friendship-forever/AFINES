@@ -55,10 +55,10 @@ double roundhalfup(double value)
 // using the minimum image convention
 // Allen and Tildesley, page 30 (periodic)
 // Allen and Tildesley, page 247 (Lees-Edwards)
-array<double, 2> box::rij_bc(array<double, 2> disp)
+vec_type box::rij_bc(vec_type disp)
 {
-    double dx = disp[0];
-    double dy = disp[1];
+    double dx = disp.x;
+    double dy = disp.y;
     if (BC == bc_type::periodic) {
         dx -= xbox * roundhalfup(dx / xbox);
         dy -= ybox * roundhalfup(dy / ybox);
@@ -76,10 +76,10 @@ array<double, 2> box::rij_bc(array<double, 2> disp)
     return {dx, dy};
 }
 
-array<double, 2> box::pos_bc(array<double, 2> pos)
+vec_type box::pos_bc(vec_type pos)
 {
-    double x = pos[0];
-    double y = pos[1];
+    double x = pos.x;
+    double y = pos.y;
 
     if (BC == bc_type::periodic) {
         x -= xbox * roundhalfup(x / xbox);
@@ -119,29 +119,26 @@ array<double, 2> box::pos_bc(array<double, 2> pos)
     return {x, y};
 }
 
-double box::dist_bc(array<double, 2> disp)
+double box::dist_bc(vec_type disp)
 {
-    array<double, 2> rij = rij_bc(disp);
-    return hypot(rij[0], rij[1]);
+    return abs(rij_bc(disp));
 }
 
-double box::dot_bc(array<double, 2> disp1, array<double, 2> disp2)
+double box::dot_bc(vec_type disp1, vec_type disp2)
 {
-    array<double, 2> rij1 = rij_bc(disp1);
-    array<double, 2> rij2 = rij_bc(disp2);
-    return rij1[0] * rij2[0] + rij1[1] * rij2[1];
+    return dot(rij_bc(disp1), rij_bc(disp2));
 }
 
-boost::optional<array<double, 2> > seg_seg_intersection_bc(box *bc, array<double, 2> r1, array<double, 2> r2, array<double, 2> r3, array<double, 2> r4)
+boost::optional<vec_type> seg_seg_intersection_bc(box *bc, vec_type r1, vec_type r2, vec_type r3, vec_type r4)
 {
-    array<double, 2> rij12 = bc->rij_bc({r2[0] - r1[0], r2[1] - r1[1]});
-    array<double, 2> rij13 = bc->rij_bc({r3[0] - r1[0], r3[1] - r1[1]});
-    array<double, 2> rij34 = bc->rij_bc({r4[0] - r3[0], r4[1] - r3[1]});
-    array<double, 2> rij14 = {rij13[0] + rij34[0], rij13[1] + rij34[1]};
+    vec_type rij12 = bc->rij_bc(r2 - r1);
+    vec_type rij13 = bc->rij_bc(r3 - r1);
+    vec_type rij34 = bc->rij_bc(r4 - r3);
+    vec_type rij14 = rij13 + rij34;
 
-    boost::optional<array<double, 2>> inter = seg_seg_intersection({0.0, 0.0}, rij12, rij13, rij14);
+    boost::optional<vec_type> inter = seg_seg_intersection({}, rij12, rij13, rij14);
     if (inter) {
-        return bc->pos_bc({inter->at(0) + r1[0], inter->at(1) + r1[1]});
+        return bc->pos_bc(*inter + r1);
     } else {
         return boost::none;
     }

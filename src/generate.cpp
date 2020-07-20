@@ -33,9 +33,9 @@ vector<vector<double>> generate_filament_ensemble(
         beads.push_back({x, y, radius, double(i)});
         int nbeads = nbeads_min + distribution(generator);
         for (int j = 1; j < nbeads; j++) {
-            array<double, 2> pos = bc->pos_bc({x + l0 * cos(phi), y + l0 * sin(phi)});
-            x = pos[0];
-            y = pos[1];
+            vec_type pos = bc->pos_bc({x + l0 * cos(phi), y + l0 * sin(phi)});
+            x = pos.x;
+            y = pos.y;
             beads.push_back({x, y, radius, double(i)});
             if (!is_straight) phi += sqrt(var) * rng_n();
         }
@@ -73,9 +73,9 @@ vector<vector<double>> generate_filament_ensemble(
         }
         beads.push_back({x, y, radius, double(i)});
         for (int j = 1; j < nbeads; j++) {
-            array<double, 2> pos = bc->pos_bc({x + l0 * cos(phi), y + l0 * sin(phi)});
-            x = pos[0];
-            y = pos[1];
+            vec_type pos = bc->pos_bc({x + l0 * cos(phi), y + l0 * sin(phi)});
+            x = pos.x;
+            y = pos.y;
             beads.push_back({x, y, radius, double(i)});
             if (!is_straight) phi += sqrt(var) * rng_n();
         }
@@ -103,15 +103,15 @@ vector<vector<double>> generate_motor_ensemble(box *bc, double density, double l
         }
         double dx = l0 * cos(a);
         double dy = l0 * sin(a);
-        motors.push_back(vector<double>{x - 0.5 * dx, y - 0.5 * dy, dx, dy, -1, -1, -1, -1});
+        motors.push_back({{x - 0.5 * dx, y - 0.5 * dy, dx, dy, -1, -1, -1, -1}});
     }
     return motors;
 }
 
 vector<vector<double>> spring_spring_intersections(box *bc, vector<vector<double>> beads, double len, double prob)
 {
-    vector<vector<array<double, 2>>> filaments;
-    vector<array<double, 2>> current_filament;
+    vector<vector<vec_type>> filaments;
+    vector<vec_type> current_filament;
     int last_f_id = 0;
     for (size_t i = 0; i < beads.size(); i++) {
         if (beads[i][3] != last_f_id && current_filament.size() > 0) {
@@ -129,19 +129,19 @@ vector<vector<double>> spring_spring_intersections(box *bc, vector<vector<double
     vector<vector<double>> motors;
     for (size_t f1 = 0; f1 < filaments.size(); f1++) {
         for (size_t l1 = 0; l1 < filaments[f1].size() - 1; l1++) {
-            array<double, 2> r1 = filaments[f1][l1];
-            array<double, 2> r2 = filaments[f1][l1 + 1];
+            vec_type r1 = filaments[f1][l1];
+            vec_type r2 = filaments[f1][l1 + 1];
             for (size_t f2 = f1 + 1; f2 < filaments.size(); f2++) {
                 for (size_t l2 = 0; l2 < filaments[f2].size() - 1; l2++) {
                     if (f1 == f2 && abs(int(l1) - int(l2)) < 2) continue;
-                    array<double, 2> s1 = filaments[f2][l2];
-                    array<double, 2> s2 = filaments[f2][l2 + 1];
-                    boost::optional<array<double, 2>> inter = seg_seg_intersection_bc(bc, r1, r2, s1, s2);
+                    vec_type s1 = filaments[f2][l2];
+                    vec_type s2 = filaments[f2][l2 + 1];
+                    boost::optional<vec_type> inter = seg_seg_intersection_bc(bc, r1, r2, s1, s2);
                     if (inter && rng(0, 1) <= prob) {
-                        array<double, 2> disp = bc->rij_bc({s2[0] - s1[0], s2[1] - s1[1]});
-                        double llen = sqrt(disp[0] * disp[0] + disp[1] * disp[1]);
-                        array<double, 2> direc = {disp[0] / llen, disp[1] / llen};
-                        motors.push_back({inter->at(0), inter->at(1), len * direc[0], len * direc[1],
+                        vec_type disp = bc->rij_bc(s2 - s1);
+                        double llen = abs(disp);
+                        vec_type direc = disp / llen;
+                        motors.push_back({inter->x, inter->y, len * direc.x, len * direc.y,
                                 double(f1), double(f2), double(l1), double(l2)});
                     }
                 }

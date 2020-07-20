@@ -375,34 +375,32 @@ multimap<double, array<int, 2> > flip_map(const unordered_map<array<int, 2>, dou
     return dst;
 }
 
-boost::optional<array<double, 2> > seg_seg_intersection(const array<double, 2>& r1, const array<double, 2>& r2, const array<double, 2>& s1, const array<double, 2>& s2)
+boost::optional<vec_type> seg_seg_intersection(vec_type r1, vec_type r2, vec_type s1, vec_type s2)
 {
     double a1, a2, b1, b2, c1, c2, det, x, y;
     pair<double, double> mmx1, mmy1, mmx2, mmy2;
-    array<double, 2> ans;
 
-    a1 = r2[1] - r1[1]; //hy1[1] - hy1[0];
-    b1 = r1[0] - r2[0]; //hx1[0] - hx1[1];
-    c1 = a1*r1[0] + b1*r1[1]; //a1*hx1[0] + b1*hy1[0];
+    a1 = r2.y - r1.y; //hy1[1] - hy1[0];
+    b1 = r1.x - r2.x; //hx1[0] - hx1[1];
+    c1 = a1*r1.x + b1*r1.y; //a1*hx1[0] + b1*hy1[0];
 
-    mmx1 = minmax(r1[0], r2[0]);
-    mmy1 = minmax(r1[1], r2[1]);
+    mmx1 = minmax(r1.x, r2.x);
+    mmy1 = minmax(r1.y, r2.y);
 
-    a2 = s2[1] - s1[1];//hy2[1] - hy2[0];
-    b2 = s1[0] - s2[0];//hx2[0] - hx2[1];
-    c2 = a2*s1[0] + b2*s1[1];
+    a2 = s2.y - s1.y;//hy2[1] - hy2[0];
+    b2 = s1.x - s2.x;//hx2[0] - hx2[1];
+    c2 = a2*s1.x + b2*s1.y;
 
     det = a1*b2 - a2*b1;
-    mmx2 = minmax(s1[0], s2[0]);
-    mmy2 = minmax(s1[1], s2[1]);
+    mmx2 = minmax(s1.x, s2.x);
+    mmy2 = minmax(s1.y, s2.y);
 
     if (det!=0){
         x = (b2*c1 - b1*c2)/det;
         y = (a1*c2 - a2*c1)/det;
         if (x >= mmx1.first && x >= mmx2.first && x <= mmx1.second && x <= mmx2.second &&
             y >= mmy1.first && y >= mmy2.first && y <= mmy1.second && y <= mmy2.second){
-            ans = {{x,y}};
-            return ans;
+            return {{x, y}};
         }
     }
     return boost::none;
@@ -652,19 +650,3 @@ void write_first_tsteps(string src, double tstop)
 template int sgn<int>(int);
 template int sgn<double>(double);
 template int sgn<float>(float);
-
-void virial_add(virial_type &a, virial_type const &b)
-{
-    a[0][0] += b[0][0];
-    a[0][1] += b[0][1];
-    a[1][0] += b[1][0];
-    a[1][1] += b[1][1];
-}
-
-void virial_clear(virial_type &a)
-{
-    a[0][0] = 0.0;
-    a[0][1] = 0.0;
-    a[1][0] = 0.0;
-    a[1][1] = 0.0;
-}

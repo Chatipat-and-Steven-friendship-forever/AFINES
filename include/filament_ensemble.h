@@ -48,11 +48,11 @@ class filament_ensemble
 
         filament * get_filament(int index);
 
-        array<double,2> get_direction(int fil, int spring);
+        vec_type get_direction(int fil, int spring);
 
-        array<double,2> get_start(int fil, int spring);
-        
-        array<double,2> get_end(int fil, int spring);
+        vec_type get_start(int fil, int spring);
+
+        vec_type get_end(int fil, int spring);
 
         double get_int_direction(int fil, int spring, double xp, double yp);
 
@@ -62,11 +62,11 @@ class filament_ensemble
 
         double get_stretching_energy();
 
-        array<array<double, 2>, 2> get_stretching_virial();
-        
+        virial_type get_stretching_virial();
+
         double get_bending_energy();
 
-        array<array<double, 2>, 2> get_bending_virial();
+        virial_type get_bending_virial();
 
         double get_exv_energy();
 
@@ -134,7 +134,7 @@ class filament_ensemble
         
         void set_circle_wall(double radius, double spring_constant);
 
-        array<double, 2> external_force(array<double, 2> pos);
+        vec_type external_force(vec_type pos);
 
         void set_growing(double, double, double, double, int);
 
@@ -152,7 +152,7 @@ class filament_ensemble
         int nsprings_per_fil_max;
 
         double pe_stretch, pe_bend, pe_exv, ke_vel, ke_vir;
-        array<array<double, 2>, 2> vir_stretch, vir_bend;
+        virial_type vir_stretch, vir_bend;
 
         vector<int> broken_filaments;
 

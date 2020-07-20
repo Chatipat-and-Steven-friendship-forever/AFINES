@@ -45,7 +45,7 @@ class motor
 
         virtual bool allowed_bind( int hd, array<int, 2> fl_idx);
 
-        void attach_head(int hd, array<double, 2> intpoint, array<int, 2> fl);
+        void attach_head(int hd, vec_type intpoint, array<int, 2> fl);
 
         bool attach( int hd);
 
@@ -69,7 +69,7 @@ class motor
 
         void step_onehead( int hd);
 
-        void filament_update_hd(int hd, array<double, 2> f);
+        void filament_update_hd(int hd, vec_type f);
 
         void filament_update();
 
@@ -91,17 +91,17 @@ class motor
 
         double get_pos_a_end(int hd);
 
-        array<double,2> get_force();
+        vec_type get_force();
 
         array<motor_state, 2> get_states();
 
-        array<double, 2> get_h0();
+        vec_type get_h0();
 
-        array<double, 2> get_h1();
+        vec_type get_h1();
 
         void detach_head(int hd);
 
-        void detach_head(int hd, array<double, 2> pos);
+        void detach_head(int hd, vec_type pos);
 
         void detach_head_without_moving(int hd);
 
@@ -113,7 +113,7 @@ class motor
 
         double get_stretching_energy();
 
-        array<array<double, 2>, 2> get_virial();
+        virial_type get_virial();
 
         double get_stretching_energy_fene();
 
@@ -121,9 +121,9 @@ class motor
 
         double get_kinetic_energy_vir();
 
-        virtual double metropolis_prob(int hd, array<int, 2> fl_idx, array<double, 2> newpos, double maxprob);
+        virtual double metropolis_prob(int hd, array<int, 2> fl_idx, vec_type newpos, double maxprob);
 
-        array<double, 2> generate_off_pos(int hd);
+        vec_type generate_off_pos(int hd);
 
         string to_string();
 
@@ -142,22 +142,20 @@ class motor
     protected:
 
         box *bc;
+        filament_ensemble* filament_network;
 
         double mld, vs, stall_force, max_bind_dist, max_bind_dist_sq, mk, kon, koff, kend, dt, temperature, 
                damp, max_ext, eps_ext, ke_vel, ke_vir, bd_prefactor, tension, len, kon2, koff2, kend2;
 
-        array<double,2> pos_a_end, prv_rnd_x, prv_rnd_y, force, disp, direc;
-        array<vec_type, 2> h;
+        vec_type force, disp, direc;
 
-        array<array<double, 2>, 2> ldir_bind, bind_disp;
-
+        // head state
         array<motor_state, 2> state;
-
         array<int,2> f_index, l_index, spring_mot_idx;
-
+        array<double, 2> pos_a_end;
         array<bool, 2> at_barbed_end;
-
-        filament_ensemble* filament_network;
+        array<vec_type, 2> h, prv_rnd;
+        array<vec_type, 2> ldir_bind, bind_disp;
 };
 
 #endif

@@ -59,7 +59,7 @@ void spring::step()
     vec_type h1 = fil->get_bead_position(aindex[1]);
 
     disp   = bc->rij_bc(h1 - h0);
-    llensq = disp[0]*disp[0] + disp[1]*disp[1];
+    llensq = abs2(disp);
     llen   = sqrt(llensq);
 
     if (llen != 0)
@@ -93,12 +93,12 @@ void spring::update_force_fraenkel_fene()
 
 }
 
-array<double,2> spring::get_force()
+vec_type spring::get_force()
 {
     return force;
 }
 
-array<double,2> spring::get_disp()
+vec_type spring::get_disp()
 {
     return disp;
 }
@@ -135,13 +135,13 @@ double spring::get_length_sq(){
 
 vector<double> spring::output()
 {
-    return {h0[0], h0[1], disp[0], disp[1]};
+    return {h0.x, h0.y, disp.x, disp.y};
 }
 
 std::string spring::write()
 {
-    return "\n" + std::to_string(h0[0]) + "\t" + std::to_string(h0[1]) + "\t" + std::to_string(disp[0]) + "\t"
-        + std::to_string(disp[1]);
+    return "\n" + std::to_string(h0.x) + "\t" + std::to_string(h0.y) + "\t" + std::to_string(disp.x) + "\t"
+        + std::to_string(disp.y);
 }
 
 std::string spring::to_string(){
@@ -175,9 +175,9 @@ bool spring::is_similar(const spring& that)
 
 //shortest(perpendicular) distance between an arbitrary point and the spring
 //SO : 849211
-array<double, 2> spring::intpoint(array<double, 2> pos)
+vec_type spring::intpoint(vec_type pos)
 {
-    double l2 = disp[0]*disp[0]+disp[1]*disp[1];
+    double l2 = abs2(disp);
     if (l2 == 0) {
         return h0;
     } else {
@@ -205,12 +205,12 @@ bool spring::get_line_intersect(spring *l2)
 
     vec_type disp12 = bc->rij_bc(h0 - l2->get_h0());
 
-    double denom = disp1[0]*disp2[1] - disp1[1]*disp2[0];
+    double denom = disp1.x*disp2.y - disp1.y*disp2.x;
     if (denom == 0) return false;
     bool denomPos = denom > 0;
 
-    double s_num = disp1[0]*disp12[1] - disp1[1]*disp12[0];
-    double t_num = disp2[0]*disp12[1] - disp2[1]*disp12[0];
+    double s_num = disp1.x*disp12.y - disp1.y*disp12.x;
+    double t_num = disp2.x*disp12.y - disp2.y*disp12.x;
 
     if ((s_num < 0) == denomPos) return false;
     if ((t_num < 0) == denomPos) return false;
@@ -221,16 +221,16 @@ bool spring::get_line_intersect(spring *l2)
     return true;
 }
 
-array<double, 2> spring::get_direction()
+vec_type spring::get_direction()
 {
     return direc;
 }
 
 double spring::get_stretching_energy(){
-    return (force[0]*force[0]+force[1]*force[1])/(2*kl);
+    return abs2(force) / (2.0 * kl);
 }
 
-array<array<double, 2>, 2> spring::get_virial() {
+virial_type spring::get_virial() {
     double k = kl*(llen-l0)/llen;
     return outer(disp, k * disp);
 }

@@ -33,13 +33,13 @@ void quadrants::add_spring(spring *s, array<int, 2> fl)
         add_spring_nonperiodic(s, fl);
 }
 
-vector<array<int, 2>> *quadrants::get_attach_list(array<double, 2> pos)
+vector<array<int, 2>> *quadrants::get_attach_list(vec_type pos)
 {
     if (!quad_flag) {
         return &all_springs;
     } else {
-        double x = pos[0];
-        double y = pos[1];
+        double x = pos.x;
+        double y = pos.y;
         array<double, 2> fov = bc->get_fov();
         double delrx = bc->get_delrx();
         int iy = round(nq[1] * (y / fov[1] + 0.5));
@@ -97,15 +97,13 @@ void quadrants::add_spring_nonperiodic(spring *s, array<int, 2> fl)
     array<double, 2> fov = bc->get_fov();
     vec_type h0 = s->get_h0();
     vec_type h1 = s->get_h1();
-    array<double, 2> hx = {h0[0], h1[0]};
-    array<double, 2> hy = {h0[1], h1[1]};
-    array<double, 2> disp = s->get_disp();
+    vec_type disp = s->get_disp();
 
-    double xlo = hx[0], xhi = hx[1];
-    if (disp[0] < 0) std::swap(xlo, xhi);
+    double xlo = h0.x, xhi = h1.x;
+    if (disp.x < 0) std::swap(xlo, xhi);
 
-    double ylo = hy[0], yhi = hy[1];
-    if (disp[1] < 0) std::swap(ylo, yhi);
+    double ylo = h0.y, yhi = h1.y;
+    if (disp.y < 0) std::swap(ylo, yhi);
 
     int xlower = floor(nq[0] * (xlo / fov[0] + 0.5));
     int xupper = ceil(nq[0] * (xhi / fov[0] + 0.5));
@@ -142,31 +140,31 @@ void quadrants::add_spring_periodic(spring *s, array<int, 2> fl)
     double delrx = bc->get_delrx();
     vec_type h0 = s->get_h0();
     vec_type h1 = s->get_h1();
-    array<double, 2> hx = {h0[0], h1[0]};
-    array<double, 2> hy = {h0[1], h1[1]};
-    array<double, 2> disp = s->get_disp();
+    array<double, 2> hx = {h0.x, h1.x};
+    array<double, 2> hy = {h0.y, h1.y};
+    vec_type disp = s->get_disp();
 
     double xlo, xhi;
     double ylo, yhi;
-    if (disp[1] >= 0) {
+    if (disp.y >= 0) {
         ylo = hy[0];
-        yhi = hy[0] + disp[1];
-        if (disp[0] >= 0) {
+        yhi = hy[0] + disp.y;
+        if (disp.x >= 0) {
             xlo = hx[0];
-            xhi = hx[0] + disp[0];
+            xhi = hx[0] + disp.x;
         } else {
-            xlo = hx[0] + disp[0];
+            xlo = hx[0] + disp.x;
             xhi = hx[0];
         }
     } else {
         ylo = hy[1];
-        yhi = hy[1] - disp[1];
-        if (disp[0] >= 0) {
-            xlo = hx[1] - disp[0];
+        yhi = hy[1] - disp.y;
+        if (disp.x >= 0) {
+            xlo = hx[1] - disp.x;
             xhi = hx[1];
         } else {
             xlo = hx[1];
-            xhi = hx[1] - disp[0];
+            xhi = hx[1] - disp.x;
         }
     }
     if (xlo > xhi) throw std::logic_error("xlo > xhi");

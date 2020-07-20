@@ -59,18 +59,18 @@ double filament_ensemble::get_llength(int fil, int spring)
 }
 
 
-array<double,2> filament_ensemble::get_start(int fil, int spring)
+vec_type filament_ensemble::get_start(int fil, int spring)
 {
     return network[fil]->get_spring(spring)->get_h0();
 }
 
 
-array<double,2> filament_ensemble::get_end(int fil, int spring)
+vec_type filament_ensemble::get_end(int fil, int spring)
 {
     return network[fil]->get_spring(spring)->get_h1();
 }
 
-array<double,2> filament_ensemble::get_direction(int fil, int spring)
+vec_type filament_ensemble::get_direction(int fil, int spring)
 {
     return network[fil]->get_spring(spring)->get_direction();
 }
@@ -165,15 +165,15 @@ void filament_ensemble::update_energies()
     pe_bend = 0.0;
     ke_vel = 0.0;
     ke_vir = 0.0;
-    virial_clear(vir_stretch);
-    virial_clear(vir_bend);
+    vir_stretch.zero();
+    vir_bend.zero();
     for (filament *f : network) {
         ke_vel += f->get_kinetic_energy_vel();
         ke_vir += f->get_kinetic_energy_vir();
         pe_bend += f->get_bending_energy();
         pe_stretch += f->get_stretching_energy();
-        virial_add(vir_stretch, f->get_stretching_virial());
-        virial_add(vir_bend, f->get_bending_virial());
+        vir_stretch += f->get_stretching_virial();
+        vir_bend += f->get_bending_virial();
     }
 }
 
@@ -186,11 +186,11 @@ double filament_ensemble::get_bending_energy(){
     return pe_bend;
 }
 
-array<array<double, 2>, 2> filament_ensemble::get_stretching_virial() {
+virial_type filament_ensemble::get_stretching_virial() {
     return vir_stretch;
 }
 
-array<array<double, 2>, 2> filament_ensemble::get_bending_virial() {
+virial_type filament_ensemble::get_bending_virial() {
     return vir_bend;
 }
 
@@ -310,8 +310,8 @@ void filament_ensemble::update()
         network[f]->update_bending(t);
         if (external_force_flag != external_force_type::none) {
             for (int i = 0; i < network[f]->get_nbeads(); i++) {
-                array<double, 2> pos = network[f]->get_bead_position(i);
-                array<double, 2> force = external_force(pos);
+                vec_type pos = network[f]->get_bead_position(i);
+                vec_type force = external_force(pos);
                 update_forces(f, i, force);
             }
         }
@@ -321,18 +321,16 @@ void filament_ensemble::update()
     t += dt;
 }
 
-array<double, 2> filament_ensemble::external_force(array<double, 2> pos)
+vec_type filament_ensemble::external_force(vec_type pos)
 {
     if (external_force_flag == external_force_type::circle) {
-        double x = pos[0];
-        double y = pos[1];
-        double rsq = x * x + y * y;
+        double rsq = abs2(pos);
         if (rsq < circle_wall_radius * circle_wall_radius) {
             return {0, 0};
         }
         double r = sqrt(rsq);
         double k = -circle_wall_spring_constant * (1.0 - circle_wall_radius / r);
-        return {k * x, k * y};
+        return k * pos;
     } else {
         throw std::logic_error("External force flag not recognized.");
     }
@@ -551,29 +549,20 @@ void filament_ensemble::update_excluded_volume(int f)
     // for every bead in filament f
     int act_sz = network[f]->get_nbeads();
     for (int i = 0; i < act_sz; i++) {
-        array<double, 2> h1 = network[f]->get_bead_position(i);
-        double x1 = h1[0];
-        double y1 = h1[1];
+        vec_type h1 = network[f]->get_bead_position(i);
 
         // for every bead in filament g > f
         for (int g = f+1; g < net_sz; g++) {
             int act_sz_other = network[g]->get_nbeads();
             for (int j = 0; j < act_sz_other; j++) {
-                array<double, 2> h2 = network[g]->get_bead_position(j);
-                double x2 = h2[0];
-                double y2 = h2[1];
+                vec_type h2 = network[g]->get_bead_position(j);
 
                 // compute forces for the potential
                 // U(r) = a (b r - 1)^2 if r < 1 / b
-                double dx = x1 - x2;
-                double dy = y1 - y2;
-
-                double r = bc->dist_bc({dx, dy});
+                vec_type del = h1 - h2;
+                double r = bc->dist_bc(del);
                 if (r > 0.0 && r <= rmax) {
-                    double Fx = 2*dx*a*b*((1/r)-b);
-                    double Fy = 2*dy*a*b*((1/r)-b);
-                    vec_type F = {Fx, Fy};
-
+                    vec_type F = 2*del*a*b*((1/r)-b);
                     network[f]->update_forces(i,F);
                     network[g]->update_forces(j,-F);
                 }

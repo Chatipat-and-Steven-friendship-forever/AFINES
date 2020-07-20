@@ -32,15 +32,15 @@ class spring {
 
         // state
 
-        array<double, 2> get_h0();
-        array<double, 2> get_h1();
+        vec_type get_h0();
+        vec_type get_h1();
 
         double get_length();
         double get_length_sq();
-        array<double, 2> get_disp();
-        array<double, 2> get_direction();
+        vec_type get_disp();
+        vec_type get_direction();
 
-        array<double,2> get_force();
+        vec_type get_force();
 
         array<int,2> get_aindex();
         void set_aindex(array<int,2> idx);
@@ -65,7 +65,7 @@ class spring {
         double get_stretching_energy();
         double get_stretching_energy_fene();
 
-        array<array<double, 2>, 2> get_virial();
+        virial_type get_virial();
 
         // output
 
@@ -78,20 +78,20 @@ class spring {
         bool operator==(const spring& that);
         bool is_similar(const spring& that);
 
-        array<double,2> intpoint(array<double, 2> pos);
+        vec_type intpoint(vec_type pos);
         bool get_line_intersect(spring *l2); 
 
     protected:
 
         // state
-        array<double, 2> h0, h1;
+        vec_type h0, h1;
         map<motor *, int> mots;
         array<int, 2> aindex;  // bead indices
 
         // derived
         double llen, llensq;
-        array<double, 2> disp, direc;
-        array<double, 2> force;
+        vec_type disp, direc;
+        vec_type force;
 
         // parameters
         double kl, l0;

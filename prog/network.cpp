@@ -20,9 +20,9 @@ ostream& operator<<(ostream& os, const vector<T>& v)
     return os;
 }
 
-ostream &operator<<(ostream &os, const array<array<double, 2>, 2> &a)
+ostream &operator<<(ostream &os, const virial_type &a)
 {
-    os << a[0][0] << "\t" << a[0][1] << "\t" << a[1][0] << "\t" << a[1][1];
+    os << a.xx << "\t" << a.xy << "\t" << a.yx << "\t" << a.yy;
     return os;
 }
 
@@ -567,33 +567,33 @@ int main(int argc, char **argv)
                 }
 
                 virial_type total_virial, virial;
-                virial_clear(total_virial);
+                total_virial.zero();
 
                 cout << "\nDEBUG: t = " << t;
 
                 virial = net->get_stretching_virial();
                 cout << "\nfilament stretch virial:\t" << virial;
-                virial_add(total_virial, virial);
+                total_virial += virial;
 
                 virial = net->get_bending_virial();
                 cout << "\nfilament bend virial:\t" << virial;
-                virial_add(total_virial, virial);
+                total_virial += virial;
 
                 virial = myosins->get_virial();
                 cout << "\nmotor stretch virial:\t" << virial;
-                virial_add(total_virial, virial);
+                total_virial += virial;
 
                 virial = crosslks->get_virial();
                 cout << "\ncrosslinker stretch virial:\t" << virial;
-                virial_add(total_virial, virial);
+                total_virial += virial;
 
                 array<double, 2> fov = net->get_box()->get_fov();
                 double area = fov[0] * fov[1];
                 array<array<double, 2>, 2> stress_tensor;
-                stress_tensor[0][0] = total_virial[0][0] / area;
-                stress_tensor[0][1] = total_virial[0][1] / area;
-                stress_tensor[1][0] = total_virial[1][0] / area;
-                stress_tensor[1][1] = total_virial[1][1] / area;
+                stress_tensor[0][0] = total_virial.xx / area;
+                stress_tensor[0][1] = total_virial.xy / area;
+                stress_tensor[1][0] = total_virial.yx / area;
+                stress_tensor[1][1] = total_virial.yy / area;
                 d_strain += prev_d_strain + stress_rate * (stress - stress_tensor[1][0]) * fov[1] * dt;
             }
             if (osc_strain_flag) {

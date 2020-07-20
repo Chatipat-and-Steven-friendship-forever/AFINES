@@ -38,7 +38,7 @@ filament::filament(filament_ensemble *net, vector<vector<double>> beadvec, doubl
         vector<double> &entry = beadvec[0];
         if (entry.size() != 4) throw runtime_error("Wrong number of arguments in beadvec.");
         beads.push_back(new bead(entry[0], entry[1], entry[2], entry[3]));
-        prv_rnds.push_back({{0,0}});
+        prv_rnds.push_back({});
         damp = beads[0]->get_friction();
     }
 
@@ -52,7 +52,7 @@ filament::filament(filament_ensemble *net, vector<vector<double>> beadvec, doubl
             springs.push_back(new spring(spring_length, stretching_stiffness, max_ext_ratio, this, {(int)j-1, (int)j}));
             springs[j-1]->step();
             springs[j-1]->update_force();
-            prv_rnds.push_back({{0,0}});
+            prv_rnds.push_back({});
 
         }
     }
@@ -72,7 +72,7 @@ filament::~filament()
 void filament::add_bead(vector<double> a, double spring_length, double stretching_stiffness, double max_ext_ratio){
     if (a.size() != 4) throw runtime_error("Wrong number of arguments in bead.");
     beads.push_back(new bead({a[0], a[1], a[2], a[3]}));
-    prv_rnds.push_back({{0,0}});
+    prv_rnds.push_back({});
     if (beads.size() > 1){
         int j = (int) beads.size() - 1;
         springs.push_back(new spring(spring_length, stretching_stiffness, max_ext_ratio, this, {j-1,  j}));
@@ -89,13 +89,12 @@ void filament::update_positions()
     size_t sa = beads.size();
     for (size_t i = 0; i < sa; i++) {
         vec_type new_rnds = {rng_n(), rng_n()};
-        vec_type f = beads[i]->get_force();
-        vec_type f_brn = bd_prefactor*damp*(new_rnds + prv_rnds[i]);
-        vec_type v = f / damp + f_brn / damp;
+        vec_type f = beads[i]->get_force() + bd_prefactor*damp*(new_rnds + prv_rnds[i]);
+        vec_type v = f / damp;
         vec_type pos = beads[i]->get_pos();
         prv_rnds[i] = new_rnds;
-        ke_vel += v[0]*v[0] + v[1]*v[1];
-        ke_vir += -0.5*(f[0]*pos[0] + f[1]*pos[1] + f_brn[0]*pos[0] + f_brn[1]*pos[1]);
+        ke_vel += abs2(v);
+        ke_vir += -0.5 * dot(f, pos);
         vec_type new_pos = bc->pos_bc(pos + v*dt);
         beads[i]->set_pos(new_pos);
         beads[i]->reset_force();
@@ -106,14 +105,14 @@ void filament::update_positions()
 vector<filament *> filament::update_stretching(double t)
 {
     vector<filament *> newfilaments;
-    array<double, 2> spring_force;
+    vec_type spring_force;
     if(springs.size() == 0)
         return newfilaments;
 
     for (unsigned int i=0; i < springs.size(); i++) {
         springs[i]->update_force();
         spring_force = springs[i]->get_force();
-        if (spring_force[0]*spring_force[0]+spring_force[1]*spring_force[1] > fracture_force_sq){
+        if (abs2(spring_force) > fracture_force_sq) {
             newfilaments = this->fracture(i);
             break;
         }
@@ -131,8 +130,9 @@ spring *filament::get_spring(int i)
 
 void filament::update_d_strain(double g)
 {
-    for (size_t i = 0; i < beads.size(); i++) {
-        beads[i]->set_xcm(beads[i]->get_xcm() + g * beads[i]->get_ycm() / bc->get_ybox());
+    for (bead *b : beads) {
+        vec_type pos = b->get_pos();
+        b->set_pos({pos.x + g * pos.y / bc->get_ybox(), pos.y});
     }
 }
 
@@ -150,8 +150,8 @@ void filament::pull_on_ends(double f)
 {
     if (beads.size() < 2) return;
     int last = beads.size() - 1;
-    array<double, 2> dr = bc->rij_bc(beads[last]->get_pos() - beads[0]->get_pos());
-    double len = hypot(dr[0], dr[1]);
+    vec_type dr = bc->rij_bc(beads[last]->get_pos() - beads[0]->get_pos());
+    double len = abs(dr);
 
     beads[ 0  ]->update_force(-0.5*f*dr/len);
     beads[last]->update_force( 0.5*f*dr/len);
@@ -161,8 +161,8 @@ void filament::affine_pull(double f)
 {
     if (beads.size() < 2) return;
     int last = beads.size() - 1;
-    array<double, 2> dr = bc->rij_bc(beads[last]->get_pos() - beads[0]->get_pos());
-    double len = hypot(dr[0], dr[1]);
+    vec_type dr = bc->rij_bc(beads[last]->get_pos() - beads[0]->get_pos());
+    double len = abs(dr);
     vec_type fcs = f * dr / len;
 
     for (int i = 0; i <= last; i++){
@@ -234,9 +234,8 @@ vector<vector<double>> filament::get_beads(unsigned int first, unsigned int last
             break;
         } else {
             bead *b = beads[i];
-            newbeads.push_back({
-                    b->get_xcm(), b->get_ycm(),
-                    b->get_length(), b->get_viscosity()});
+            vec_type pos = b->get_pos();
+            newbeads.push_back({pos.x, pos.y, b->get_length(), b->get_viscosity()});
         }
     }
     return newbeads;
@@ -302,19 +301,16 @@ string filament::to_string(){
 
 inline double filament::angle_between_springs(int i, int j){
 
-    array<double, 2> delr1, delr2;
-    double r1,r2, c;
-
     // 1st bond
-    delr1 = springs[i]->get_disp();
-    r1    = springs[i]->get_length();
+    vec_type delr1 = springs[i]->get_disp();
+    double r1 = springs[i]->get_length();
 
     // 2nd bond
-    delr2 = springs[j]->get_disp();
-    r2    = springs[j]->get_length();
+    vec_type delr2 = springs[j]->get_disp();
+    double r2 = springs[j]->get_length();
 
     // cos angle
-    c = (delr1[0]*delr2[0] + delr1[1]*delr2[1]) / (r1*r2);
+    double c = dot(delr1, delr2) / (r1 * r2);
     if (c > 1.0) c = 1.0;
     if (c < -1.0) c = -1.0;
 
@@ -326,12 +322,12 @@ void filament::update_bending(double t)
 {
     if (springs.size() <= 1 || kb == 0) return;
 
-    virial_clear(bending_virial);
+    bending_virial.zero();
     ubend = 0.0;
     for (int n = 0; n < int(springs.size())-1; n++) {
 
-        array<double, 2> delr1 = springs[n]->get_disp();
-        array<double, 2> delr2 = springs[n+1]->get_disp();
+        vec_type delr1 = springs[n]->get_disp();
+        vec_type delr2 = springs[n+1]->get_disp();
 
         bend_result_type result = bend_harmonic(kb, 0.0, delr1, delr2);
 
@@ -344,8 +340,8 @@ void filament::update_bending(double t)
         beads[n+1]->update_force(-result.force2);
         beads[n+2]->update_force(result.force2);
 
-        virial_add(bending_virial, outer(delr1, result.force1));
-        virial_add(bending_virial, outer(delr2, result.force2));
+        bending_virial += outer(delr1, result.force1);
+        bending_virial += outer(delr2, result.force2);
     }
 }
 
@@ -364,7 +360,7 @@ double filament::get_bending_energy(){
 
 }
 
-array<array<double, 2>, 2> filament::get_bending_virial()
+virial_type filament::get_bending_virial()
 {
     return bending_virial;
 }
@@ -397,12 +393,12 @@ double filament::get_kinetic_energy_vir()
     return ke_vir;
 }
 
-array<array<double, 2>, 2> filament::get_stretching_virial()
+virial_type filament::get_stretching_virial()
 {
-    array<array<double, 2>, 2> vir;
-    virial_clear(vir);
+    virial_type vir;
+    vir.zero();
     for (spring *s : springs) {
-        virial_add(vir, s->get_virial());
+        vir += s->get_virial();
     }
     return vir;
 }
@@ -417,7 +413,7 @@ double filament::get_total_energy()
     return this->get_potential_energy() + (this->get_kinetic_energy_vel());
 }
 
-array<double, 2> filament::get_bead_position(int n)
+vec_type filament::get_bead_position(int n)
 {
     return beads[n]->get_pos();
 }
@@ -463,12 +459,12 @@ void filament::grow(double dL)
         springs[0]->step();
     }
     else{
-        array<double, 2> dir = springs[0]->get_direction();
+        vec_type dir = springs[0]->get_direction();
         vec_type p2 = beads[1]->get_pos();
         //add a bead
-        array<double, 2> newpos = bc->pos_bc(p2-spring_l0*dir);
-        beads.insert(beads.begin()+1, new bead(newpos[0], newpos[1], beads[0]->get_length(), beads[0]->get_viscosity()));
-        prv_rnds.insert(prv_rnds.begin()+1, {{0, 0}});
+        vec_type newpos = bc->pos_bc(p2-spring_l0*dir);
+        beads.insert(beads.begin()+1, new bead(newpos.x, newpos.y, beads[0]->get_length(), beads[0]->get_viscosity()));
+        prv_rnds.insert(prv_rnds.begin()+1, {});
         //shift all springs from "1" onward forward
         //move backward; otherwise i'll just keep pushing all the motors to the pointed end, i think
         for (int i = int(springs.size()-1); i > 0; i--){

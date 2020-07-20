@@ -61,11 +61,11 @@ spacer::spacer(vector<double> mvec,
     /********************************/
 
     tension     = 0;
-    force       = {{0,0}}; // force on the spring
+    force.zero(); // force on the spring
     b_eng       = {{0,0}}; // filament / xlink bending energy
 
-    b_force[0]  = {{0,0}}; //b_force[0] = bending force on head 0 due to h0-h1-spring angle in cartesian coords
-    b_force[1]  = {{0,0}}; //b_force[1] = bending force on head 1 due to h1-h0-spring angle in cartesian coords
+    b_force[0].zero(); //b_force[0] = bending force on head 0 due to h0-h1-spring angle in cartesian coords
+    b_force[1].zero(); //b_force[1] = bending force on head 1 due to h1-h0-spring angle in cartesian coords
 
     ke_vel = 0; //assume m = 1
     ke_vir = 0;
@@ -79,10 +79,10 @@ spacer::spacer(vector<double> mvec,
     this->update_angle();
     this->update_force();
 
-    ldir_bind[0] = {{0,0}};
-    ldir_bind[1] = {{0,0}};
-    bind_disp[0] = {{0,0}};
-    bind_disp[1] = {{0,0}};
+    ldir_bind[0].zero();
+    ldir_bind[1].zero();
+    bind_disp[0].zero();
+    bind_disp[1].zero();
 
     at_barbed_end = {{false, false}};
 
@@ -96,9 +96,8 @@ spacer::spacer(vector<double> mvec,
         ldir_bind[1] = filament_network->get_direction(f_index[1], l_index[1]);
     }
 
-    prv_rnd_x = {{0,0}};
-    prv_rnd_y = {{0,0}};
-
+    prv_rnd[0].zero();
+    prv_rnd[1].zero();
 }
 
 spacer::~spacer(){}
@@ -117,15 +116,14 @@ void spacer::update_force()
     }
     else
     {
-        b_force[0] = {{0,0}};
-        b_force[1] = {{0,0}};
+        b_force[0].zero();
+        b_force[1].zero();
     }
 
     update_angle(); // need to recalculate this, since heads might've moved
 
     tension = mk*(len - mld);
-    force = {{tension*direc[0], tension*direc[1]}};
-    
+    force = tension * direc;
 }
   //Measure distance to FARTHER END of bead filament that the spacer is bound to
   //
@@ -134,9 +132,9 @@ int spacer::get_further_end(int hd, int findex, int lindex)
     return (pos_a_end[hd] > 0.5*filament_network->get_llength(findex, lindex));
 }
 
-array<double, 2> spacer::disp_from_bead(int hd, int findex, int aindex)
+vec_type spacer::disp_from_bead(int hd, int findex, int aindex)
 {
-    array<double, 2> pos = filament_network->get_filament(findex)->get_bead_position(aindex);
+    vec_type pos = filament_network->get_filament(findex)->get_bead_position(aindex);
     return bc->rij_bc(pos - h[hd]);
 }
 
@@ -144,20 +142,17 @@ void spacer::update_bending(int hd)
 {
     int bead_further_end = get_further_end(hd, f_index[hd], l_index[hd]);
 
-    array<double, 2> delr1 = disp_from_bead(hd, f_index[hd], l_index[hd] + bead_further_end);
-    array<double, 2> delr2 = {pow(-1, hd)*disp[0], pow(-1, hd)*disp[1]};
+    vec_type delr1 = disp_from_bead(hd, f_index[hd], l_index[hd] + bead_further_end);
+    vec_type delr2 = pow(-1, hd)*disp;
 
     bend_result_type result = bend_harmonic(kb, th0, delr1, delr2);
 
     // apply force to each of 3 atoms
     filament_network->update_forces(f_index[hd], l_index[hd] + bead_further_end, result.force1);
-    b_force[hd][0] -= result.force1[0];
-    b_force[hd][1] -= result.force1[1];
+    b_force[hd] -= result.force1;
 
-    b_force[pr(hd)][0] += result.force2[0];
-    b_force[pr(hd)][1] += result.force2[1];
-    b_force[hd][0] -= result.force2[0];
-    b_force[hd][1] -= result.force2[1];
+    b_force[pr(hd)] += result.force2;
+    b_force[hd] -= result.force2;
 
     b_eng[hd] = result.energy;
 }
@@ -176,38 +171,32 @@ void spacer::identify(){
 
 void spacer::brownian_relax(int hd)
 {
-    //cout<<"\nDEBUG: using spacer brownian_relax()";
-    
-    double new_rnd_x= rng_n(), new_rnd_y = rng_n();
-    
-    double vx =  (pow(-1,hd)*force[0] + b_force[hd][0]) / damp + bd_prefactor*(new_rnd_x + prv_rnd_x[hd]);
-    double vy =  (pow(-1,hd)*force[1] + b_force[hd][1]) / damp + bd_prefactor*(new_rnd_y + prv_rnd_y[hd]);
-    ke_vel = vx*vx + vy*vy;
-    ke_vir = -(0.5)*(pow(-1,hd))*(force[0]*h[hd][0] + force[1]*h[hd][1]);
-    h[hd] = bc->pos_bc({h[hd][0] + vx*dt, h[hd][1] + vy*dt});
-
-    prv_rnd_x[hd] = new_rnd_x;
-    prv_rnd_y[hd] = new_rnd_y;
+    vec_type new_rnd {rng_n(), rng_n()};
+    vec_type v = pow(-1, hd) * force + b_force[hd] / damp + bd_prefactor * (new_rnd + prv_rnd[hd]);
+    ke_vel = abs2(v);
+    ke_vir = -0.5 * pow(-1, hd) * dot(force, h[hd]);
+    h[hd] = bc->pos_bc(h[hd] + v*dt);
+    prv_rnd[hd] = new_rnd;
 }
 
 void spacer::filament_update()
 {
-    if (state[0]==motor_state::bound) this->filament_update_hd(0, {{ force[0] + b_force[0][0],  force[1] + b_force[0][1]}});
-    if (state[1]==motor_state::bound) this->filament_update_hd(1, {{-force[0] + b_force[1][0], -force[1] + b_force[1][1]}});
-    
+    if (state[0]==motor_state::bound) this->filament_update_hd(0, force + b_force[0]);
+    if (state[1]==motor_state::bound) this->filament_update_hd(1, -force + b_force[1]);
+
     //reset bending force
-    b_force[0] = {{0,0}};
-    b_force[1] = {{0,0}};
+    b_force[0].zero();
+    b_force[1].zero();
 }
 
-array<array<double, 2>,2> spacer::get_b_force()
+array<vec_type, 2> spacer::get_b_force()
 {
     return b_force;
 }
 
 
 //metropolis algorithm with rate constant
-double spacer::metropolis_prob(int hd, array<int, 2> fl_idx, array<double, 2> newpos, double maxprob)
+double spacer::metropolis_prob(int hd, array<int, 2> fl_idx, vec_type newpos, double maxprob)
 {
     double prob = maxprob;
 
@@ -216,8 +205,8 @@ double spacer::metropolis_prob(int hd, array<int, 2> fl_idx, array<double, 2> ne
 
     double bend_eng = 0.0;
     if (state[hd] == motor_state::free && state[pr(hd)] == motor_state::bound) { //it's trying to attach
-        array<double, 2> delr1 = disp_from_bead(hd, fl_idx[0], fl_idx[1] + get_further_end(hd, fl_idx[0], fl_idx[1]));
-        array<double, 2> delr2 = {pow(-1, hd)*disp[0], pow(-1, hd)*disp[1]};
+        vec_type delr1 = disp_from_bead(hd, fl_idx[0], fl_idx[1] + get_further_end(hd, fl_idx[0], fl_idx[1]));
+        vec_type delr2 = pow(-1, hd)*disp;
         bend_eng = bend_harmonic_energy(kb, th0, delr1, delr2);
     }
     double delEb = bend_eng - b_eng[hd];

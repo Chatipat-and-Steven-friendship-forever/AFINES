@@ -43,26 +43,25 @@ class spacer : public motor {
         
         int get_further_end(int, int, int);
 
-        array<double, 2> disp_from_bead(int, int, int);
+        vec_type disp_from_bead(int, int, int);
 
         void update_bending(int);
-        
-        array<array<double, 2>,2> get_b_force();
+
+        array<vec_type, 2> get_b_force();
 
         virtual void brownian_relax(int hd);
 
         void filament_update();
 
-        virtual double metropolis_prob(int hd, array<int, 2> flidx, array<double, 2> newpos, double maxRate);
-        
+        virtual double metropolis_prob(int hd, array<int, 2> flidx, vec_type newpos, double maxRate);
+
         virtual bool allowed_bind(int hd, array<int, 2> flidx);
-        
+
         array<double,2> get_bending_energy();
 
     private:
-
-        double kb, th0; 
-        array<array<double, 2>,2 > b_force;        
+        double kb, th0;
+        array<vec_type, 2> b_force;
         array<double, 2> b_eng;
 };
 
