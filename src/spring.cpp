@@ -34,7 +34,6 @@ spring::spring(double len, double stretching_stiffness, double max_ext_ratio, fi
     hy = {{0,0}};
 
     force = {{0,0}};
-    point = {{0,0}};
     llensq = l0*l0;
     llen = l0;
 }
@@ -210,28 +209,6 @@ array<double, 2> spring::intpoint(array<double, 2> pos)
     }
 }
 
-double spring::get_r_c(double x, double y)
-{
-    double l2 = disp[0]*disp[0] + disp[1]*disp[1];
-    if (l2 == 0.0) {
-        point = {hx[0], hy[0]};
-    } else {
-        double tp = bc->dot_bc({x - hx[0], y - hy[0]}, {hx[1] - hx[0], hy[1] - hy[0]}) / l2;
-        if (tp < 0.0) {
-            point = {hx[0], hy[0]};
-        } else if (tp > 1.0) {
-            point = {hx[1], hy[1]};
-        } else {
-            point = bc->pos_bc({hx[0] + tp*disp[0], hy[0] + tp*disp[1]});
-        }
-    }
-    array<double, 2> pos = {x, y};
-    double dx = pos[0] - point[0];
-    double dy = pos[1] - point[1];
-    double r_c = bc->dist_bc({dx, dy});
-    return r_c;
-}
-
 bool spring::get_line_intersect(spring *l2)
 {
     //Reference to Stack Overflow entry by iMalc on Feb 10, 2013
@@ -276,12 +253,6 @@ bool spring::get_line_intersect(spring *l2)
     //Else Collision have been detected, the filaments do intersect!
     else{ return true; }
 
-}
-
-array <double, 2> spring::get_point()
-{
-    //this->calc_r_c(bc,delrx,x,y);
-    return point;
 }
 
 array<double, 2> spring::get_direction()

@@ -117,7 +117,7 @@ class spring
 
         box *bc;
         double l0, kl, max_ext, eps_ext, llen, llensq;
-        array<double,2> hx, hy, disp, force, direc, point;
+        array<double,2> hx, hy, disp, force, direc;
         array<int, 2> aindex;
         filament *fil;
         map<motor *, int> mots;

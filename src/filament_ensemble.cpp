@@ -450,37 +450,34 @@ void filament_ensemble::update_force_between_filaments(double n1, double l1, dou
     //This function calculates the forces applied to the actin beads of a pair of filaments under certain limits.
     //Here, we use distance of closest approach to describe the direction and magnitude of the forces.
 
-    array <double, 4> r_c;
-    array <double, 2> p1, p2, p3, p4;
-    array <double, 2> len, hx_1, hy_1, hx_2, hy_2, dist;
-    double b = (1/rmax);
-    double r=0, x1=0, y1=0, x2=0, y2=0, length=0, len1=0, len2=0, r_1=0, r_2=0, Fx1=0, Fy1=0, Fx2=0, Fy2=0;
-    int index;
-    bool intersect;
+    double b = 1/rmax;
 
-    hx_1 = network[n1]->get_spring(l1)->get_hx();
-    hy_1 = network[n1]->get_spring(l1)->get_hy();
+    spring *s1 = network[n1]->get_spring(l1);
+    spring *s2 = network[n2]->get_spring(l2);
 
-    hx_2 = network[n2]->get_spring(l2)->get_hx();
-    hy_2 = network[n2]->get_spring(l2)->get_hy();
+    array<double, 2> hx_1 = s1->get_hx();
+    array<double, 2> hy_1 = s1->get_hy();
 
-    r_c[0] = network[n1]->get_spring(l1)->get_r_c(hx_2[0], hy_2[0]);
-    p1 = network[n1]->get_spring(l1)->get_point();
+    array<double, 2> hx_2 = s2->get_hx();
+    array<double, 2> hy_2 = s2->get_hy();
 
-    r_c[1] = network[n1]->get_spring(l1)->get_r_c(hx_2[1], hy_2[1]);
-    p2 = network[n1]->get_spring(l1)->get_point();
+    array<double, 2> p1 = s1->intpoint({hx_2[0], hy_2[0]});
+    array<double, 2> p2 = s1->intpoint({hx_2[1], hy_2[1]});
+    array<double, 2> p3 = s2->intpoint({hx_1[0], hy_1[0]});
+    array<double, 2> p4 = s2->intpoint({hx_1[1], hy_1[1]});
 
-    r_c[2] = network[n2]->get_spring(l2)->get_r_c(hx_1[0], hy_1[0]);
-    p3 = network[n2]->get_spring(l2)->get_point();
+    array<double, 4> r_c;
+    r_c[0] = bc->dist_bc({hx_2[0] - p1[0], hy_2[0] - p1[1]});
+    r_c[1] = bc->dist_bc({hx_2[1] - p2[0], hy_2[1] - p2[1]});
+    r_c[2] = bc->dist_bc({hx_1[0] - p3[0], hy_1[0] - p3[1]});
+    r_c[3] = bc->dist_bc({hx_1[1] - p4[0], hy_1[1] - p4[1]});
 
-    r_c[3] = network[n2]->get_spring(l2)->get_r_c(hx_1[1], hy_1[1]);
-    p4 = network[n2]->get_spring(l2)->get_point();
+    array<double, 2> len;
+    len[0] = s1->get_length();
+    len[1] = s2->get_length();
 
-    len[0] = network[n1]->get_spring(l1)->get_length();
-    len[1] = network[n2]->get_spring(l2)->get_length();
-
-    r = r_c[0];
-    index = 0;
+    double r = r_c[0];
+    int index = 0;
 
     for(int k = 1; k < 4; k++){
         if(r_c[k] < r){
@@ -489,15 +486,14 @@ void filament_ensemble::update_force_between_filaments(double n1, double l1, dou
         }
     }
 
-    spring *L2 = network[n2]->get_spring(l2);
-    intersect = network[n1]->get_spring(l1)->get_line_intersect(L2);
+    bool intersect = s1->get_line_intersect(s2);
 
     if(r < rmax)
     {
         if( !intersect )
         {
-            if(index == 0)
-            {
+            double x1=0, y1=0, x2=0, y2=0, length=0, len1=0;
+            if (index == 0) {
                 r = r_c[0];
                 x1 = hx_2[0];
                 y1 = hy_2[0];
@@ -505,9 +501,7 @@ void filament_ensemble::update_force_between_filaments(double n1, double l1, dou
                 y2 = p1[1];
                 len1 = bc->dist_bc({hx_1[0]-x2, hy_1[0]-y2});
                 length = len[0];
-            }
-            else if(index == 1)
-            {
+            } else if (index == 1) {
                 r = r_c[1];
                 x1 = hx_2[1];
                 y1 = hy_2[1];
@@ -515,9 +509,7 @@ void filament_ensemble::update_force_between_filaments(double n1, double l1, dou
                 y2 = p2[1];
                 len1 = bc->dist_bc({hx_1[0]-x2, hy_1[0]-y2});
                 length = len[0];
-            }
-            else if(index == 2)
-            {
+            } else if (index == 2) {
                 r = r_c[2];
                 x1 = hx_1[0];
                 y1 = hy_1[0];
@@ -525,9 +517,7 @@ void filament_ensemble::update_force_between_filaments(double n1, double l1, dou
                 y2 = p3[1];
                 len1 = bc->dist_bc({hx_2[0]-x2, hy_2[0]-y2});
                 length = len[1];
-            }
-            else if(index == 3)
-            {
+            } else if (index == 3) {
                 r = r_c[3];
                 x1 = hx_1[1];
                 y1 = hy_1[1];
@@ -537,49 +527,40 @@ void filament_ensemble::update_force_between_filaments(double n1, double l1, dou
                 length = len[1];
             }
 
-            dist = bc->rij_bc({x2-x1, y2-y1});
-            len2 = length - len1;
-            r_1 = (len2/length);
-            r_2 = (len1/length);
+            array<double, 2> dist = bc->rij_bc({x2-x1, y2-y1});
+            double len2 = length - len1;
+            double r_1 = len2/length;
+            double r_2 = len1/length;
 
-            Fx1 = 2*kexv*dist[0]*b*((1/r) - b);
-            Fx2 = -Fx1;
-            Fy1 = 2*kexv*dist[1]*b*((1/r) - b);
-            Fy2 = -Fy1;
+            double Fx1 = 2*kexv*dist[0]*b*((1/r) - b);
+            double Fx2 = -Fx1;
+            double Fy1 = 2*kexv*dist[1]*b*((1/r) - b);
+            double Fy2 = -Fy1;
 
             pe_exv += kexv*pow((1-r*b),2);
 
-            if(index == 0)
-            {
+            if (index == 0) {
                 network[n1]->update_forces(l1, Fx1*r_1, Fy1*r_1);
                 network[n1]->update_forces(l1+1, Fx1*r_2, Fy1*r_2);
                 network[n2]->update_forces(l2, Fx2, Fy2);
-            }
-            else if(index == 1)
-            {
+            } else if (index == 1) {
                 network[n1]->update_forces(l1, Fx1*r_1, Fy1*r_1);
                 network[n1]->update_forces(l1+1, Fx1*r_2, Fy1*r_2);
                 network[n2]->update_forces(l2+1, Fx2, Fy2);
-            }
-            else if(index == 2)
-            {
+            } else if (index == 2) {
                 network[n2]->update_forces(l2, Fx1*r_1, Fy1*r_1);
                 network[n2]->update_forces(l2+1, Fx1*r_2, Fy1*r_2);
                 network[n1]->update_forces(l1, Fx2, Fy2);
-            }
-            else if(index == 3)
-            {
+            } else if (index == 3) {
                 network[n2]->update_forces(l2, Fx1*r_1, Fy1*r_1);
                 network[n2]->update_forces(l2+1, Fx1*r_2, Fy1*r_2);
                 network[n1]->update_forces(l1+1, Fx2, Fy2);
             }
-        }
-        else
-        {
-            Fx1 = 2*kexv/(rmax*sqrt(2));
-            Fx2 = -Fx1;
-            Fy1 = 2*kexv/(rmax*sqrt(2));
-            Fy2 = -Fy1;
+        } else {
+            double Fx1 = 2*kexv/(rmax*sqrt(2));
+            double Fx2 = -Fx1;
+            double Fy1 = 2*kexv/(rmax*sqrt(2));
+            double Fy2 = -Fy1;
 
             pe_exv += kexv*pow((1-r*b),2);
 
