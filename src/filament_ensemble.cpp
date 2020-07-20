@@ -369,82 +369,67 @@ void filament_ensemble::update_spring_forces_from_quads()
     //The pairs found in he nieghbor list are then saved in a vector array.
     //On subsequent loops, this value will be searched for in order to ensure no repeats in the force calculation.
 
-    array<int, 2> nq = quads->get_nq();
-    array <int,2> spring_1;
-    array <int,2> spring_2;
-    int f1, f2, l1, l2, nsprings_at_quad;
-    double par1, par2;
     int max_nsprings = network.size()*nsprings_per_fil_max;
 
-    vector<vector<int>> int_lks (max_nsprings, vector<int> (max_nsprings, 0));
+    // track which excluded volume forces have already been calculated
+    vector<vector<int>> int_lks(max_nsprings, vector<int>(max_nsprings, 0));
 
-    for(int x = 0; x < nq[0]; x++)
-    {
-        for(int y = 0; y < nq[1]; y++)
-        {
+    // for each quadrant
+    array<int, 2> nq = quads->get_nq();
+    for (int x = 0; x < nq[0]; x++) {
+        for (int y = 0; y < nq[1]; y++) {
             vector<array<int, 2>> *q = quads->get_quad({x, y});
-            nsprings_at_quad = q->size();
 
-            for(int i = 0; i < nsprings_at_quad; i++)
-            {
-                spring_1 = q->at(i);
+            // for each pair of springs in the quadrant
+            int nsprings_at_quad = q->size();
+            for (int i = 0; i < nsprings_at_quad; i++) {
+                array<int, 2> spring_1 = q->at(i);
+                int f1 = spring_1[0];
+                int l1 = spring_1[1];
+                for (int j = i+1; j < nsprings_at_quad; j++) {
+                    array<int, 2> spring_2 = q->at(j);
+                    int f2 = spring_2[0];
+                    int l2 = spring_2[1];
 
-                for(int j = i+1; j < nsprings_at_quad; j++)
-                {
-                    spring_2 = q->at(j);
+                    // adjacent springs would yield excluded volume interactions between the same bead
+                    if (f1 == f2 && abs(l1 - l2) < 2) continue;
 
-                    f1 = spring_1[0];
-                    f2 = spring_2[0];
-                    l1 = spring_1[1];
-                    l2 = spring_2[1];
+                    // flattened index of springs
+                    int par1 = f1*nsprings_per_fil_max + l1;
+                    int par2 = f2*nsprings_per_fil_max + l2;
 
-                    par1 = f1*(network[f1]->get_nsprings()) + l1;
-                    par2 = f2*(network[f2]->get_nsprings()) + l2;
-
-                    if ( f1 == f2 && abs(l1 - l2) < 2 ) // adjacent springs would yield excluded volume interactions between the same bead
-                        continue;
-                    else
-                    {
-                        par1 = f1*nsprings_per_fil_max + l1;
-                        par2 = f2*nsprings_per_fil_max + l2;
-
-                        if ( ! int_lks[par1][par2] )
-                        {
-                            int_lks[par1][par2] = 1;
-                            int_lks[par2][par1] = 1;
-
-                            this->update_force_between_filaments(f1, l1, f2, l2);
-                        }
+                    // only compute excluded volume forces if it hasn't been computed already
+                    if (!int_lks[par1][par2]) {
+                        int_lks[par1][par2] = 1;
+                        int_lks[par2][par1] = 1;
+                        update_force_between_filaments(f1, l1, f2, l2);
                     }
                 }
             }
         }
     }
-    int_lks.clear();
 }
 
 void filament_ensemble::update_spring_forces(int f)
 {
     //This function loops through every filament and spring in the network and applies the force calulation under certain limits
-
     int net_sz = network.size();
+
+    // for every spring in filament f
     int lks_sz = network[f]->get_nsprings();
-    int oth_lks_sz;
+    for (int i = 0; i < lks_sz; i++) {
 
-    for(int i = 0; i < lks_sz; i++)
-    {
-        for(int g = f+1; g < net_sz; g++)
-        {
-            oth_lks_sz = network[g]->get_nsprings();
+        // for every spring in filaments g > f
+        for (int g = f+1; g < net_sz; g++) {
+            int oth_lks_sz = network[g]->get_nsprings();
+            for (int j = 0; j < oth_lks_sz; j++) {
 
-            for(int j = 0; j < oth_lks_sz; j++)
-            {
-                this->update_force_between_filaments(f, i, g, j);
+                update_force_between_filaments(f, i, g, j);
             }
         }
     }
-
 }
+
 void filament_ensemble::update_force_between_filaments(double n1, double l1, double n2, double l2)
 {
     //This function calculates the forces applied to the actin beads of a pair of filaments under certain limits.
@@ -461,24 +446,27 @@ void filament_ensemble::update_force_between_filaments(double n1, double l1, dou
     array<double, 2> hx_2 = s2->get_hx();
     array<double, 2> hy_2 = s2->get_hy();
 
+    array<double, 2> len;
+    len[0] = s1->get_length();
+    len[1] = s2->get_length();
+
+    // compute the nearest point on the other spring
     array<double, 2> p1 = s1->intpoint({hx_2[0], hy_2[0]});
     array<double, 2> p2 = s1->intpoint({hx_2[1], hy_2[1]});
     array<double, 2> p3 = s2->intpoint({hx_1[0], hy_1[0]});
     array<double, 2> p4 = s2->intpoint({hx_1[1], hy_1[1]});
 
+    // compute the distance to the nearest point
     array<double, 4> r_c;
     r_c[0] = bc->dist_bc({hx_2[0] - p1[0], hy_2[0] - p1[1]});
     r_c[1] = bc->dist_bc({hx_2[1] - p2[0], hy_2[1] - p2[1]});
     r_c[2] = bc->dist_bc({hx_1[0] - p3[0], hy_1[0] - p3[1]});
     r_c[3] = bc->dist_bc({hx_1[1] - p4[0], hy_1[1] - p4[1]});
 
-    array<double, 2> len;
-    len[0] = s1->get_length();
-    len[1] = s2->get_length();
-
+    // find the minimum distance between the filaments
+    // assuming that they don't intersect
     double r = r_c[0];
     int index = 0;
-
     for(int k = 1; k < 4; k++){
         if(r_c[k] < r){
             r = r_c[k];
@@ -488,10 +476,12 @@ void filament_ensemble::update_force_between_filaments(double n1, double l1, dou
 
     bool intersect = s1->get_line_intersect(s2);
 
-    if(r < rmax)
-    {
-        if( !intersect )
-        {
+    // assume spring length l0 < 2 rmax ?
+    if (r < rmax) {
+
+        if (!intersect) {
+            // doesn't intersect
+
             double x1=0, y1=0, x2=0, y2=0, length=0, len1=0;
             if (index == 0) {
                 r = r_c[0];
@@ -556,7 +546,12 @@ void filament_ensemble::update_force_between_filaments(double n1, double l1, dou
                 network[n2]->update_forces(l2+1, Fx1*r_2, Fy1*r_2);
                 network[n1]->update_forces(l1+1, Fx2, Fy2);
             }
+
         } else {
+            // intersects
+
+            // apply constant force?
+            // this doesn't look right
             double Fx1 = 2*kexv/(rmax*sqrt(2));
             double Fx2 = -Fx1;
             double Fy1 = 2*kexv/(rmax*sqrt(2));
@@ -568,6 +563,7 @@ void filament_ensemble::update_force_between_filaments(double n1, double l1, dou
             network[n1]->update_forces(l1+1, Fx1, Fy1);
             network[n2]->update_forces(l2, Fx2, Fy2);
             network[n2]->update_forces(l2+1, Fx2, Fy2);
+
         }
     }
 }
@@ -579,50 +575,40 @@ double filament_ensemble::get_exv_energy()
 
 void filament_ensemble::update_excluded_volume(int f)
 {
-    //For every filament bead on f, for every bead not on f, calculate the force between the two bead using the Jones potential, and update them ( maybe divide by half due to overcaluclations).	
+    //For every filament bead on f, for every bead not on f, calculate the force between the two bead using the Jones potential, and update them ( maybe divide by half due to overcaluclations).
 
     int net_sz = network.size();
-    int act_sz = network[f]->get_nbeads();
     //10^6 included to account for m to microm conversion
     double a = 0.004;
     double b = 1/rmax;
-    double x1, x2, y1, y2, Fx1, Fx2, Fy1, Fy2, r, dx, dy;
 
+    // for every bead in filament f
+    int act_sz = network[f]->get_nbeads();
+    for (int i = 0; i < act_sz; i++) {
+        double x1 = network[f]->get_bead(i)->get_xcm();
+        double y1 = network[f]->get_bead(i)->get_ycm();
 
-    for(int i = 0; i < act_sz; i++){
-        for(int g = f+1; g < net_sz; g++){
-            if(f == g){continue;}
-            if(f != g){
-                int act_sz_other = network[g]->get_nbeads();
-                for(int j = 0; j < act_sz_other; j++){
-                    x1 = network[f]->get_bead(i)->get_xcm();
-                    y1 = network[f]->get_bead(i)->get_ycm();
-                    x2 = network[g]->get_bead(j)->get_xcm();
-                    y2 = network[g]->get_bead(j)->get_ycm();
+        // for every bead in filament g > f
+        for (int g = f+1; g < net_sz; g++) {
+            int act_sz_other = network[g]->get_nbeads();
+            for (int j = 0; j < act_sz_other; j++) {
+                double x2 = network[g]->get_bead(j)->get_xcm();
+                double y2 = network[g]->get_bead(j)->get_ycm();
 
-                    dx = x1 - x2;
-                    dy = y1 - y2;
+                // compute forces for the potential
+                // U(r) = a (b r - 1)^2 if r < 1 / b
+                double dx = x1 - x2;
+                double dy = y1 - y2;
 
-                    r = bc->dist_bc({dx, dy});
-                    if(r == 0) { continue; }
-                    if(r <= rmax){
-                        Fx1 = 2*dx*a*b*((1/r)-b);
-                        Fx2 = -Fx1;
-                        Fy1 = 2*dy*a*b*((1/r)-b);
-                        Fy2 = -Fy1;
+                double r = bc->dist_bc({dx, dy});
+                if (r > 0.0 && r <= rmax) {
+                    double Fx1 = 2*dx*a*b*((1/r)-b);
+                    double Fx2 = -Fx1;
+                    double Fy1 = 2*dy*a*b*((1/r)-b);
+                    double Fy2 = -Fy1;
 
-                        network[f]->update_forces(i,Fx1,Fy1);
-                        network[g]->update_forces(j,Fx2,Fy2);
-                    }
-                    else{
-                        Fx1 = 0;
-                        Fx2 = 0;
-                        Fy1 = 0;
-                        Fy2 = 0;
-
-                        network[f]->update_forces(i,Fx1,Fy1);
-                        network[g]->update_forces(j,Fx2,Fy2);
-                    }
+                    network[f]->update_forces(i,Fx1,Fy1);
+                    network[g]->update_forces(j,Fx2,Fy2);
                 }
             }
         }
