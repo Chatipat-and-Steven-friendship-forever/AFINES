@@ -103,11 +103,6 @@ array<double,2> spring::get_disp()
     return disp;
 }
 
-array<double,2> spring::get_neg_disp()
-{
-    return {{-disp[0], -disp[1]}};
-}
-
 void spring::filament_update()
 {
     fil->update_forces(aindex[0],  force[0],  force[1]);
