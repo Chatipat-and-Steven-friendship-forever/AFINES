@@ -144,9 +144,8 @@ int spacer::get_further_end(int hd, int findex, int lindex)
 
 array<double, 2> spacer::disp_from_bead(int hd, int findex, int aindex)
 {
-  return bc->rij_bc({
-          filament_network->get_filament(findex)->get_bead(aindex)->get_xcm() - hx[hd],
-          filament_network->get_filament(findex)->get_bead(aindex)->get_ycm() - hy[hd]});
+    array<double, 2> pos = filament_network->get_filament(findex)->get_bead_position(aindex);
+    return bc->rij_bc({pos[0] - hx[hd], pos[1] - hy[hd]});
 }
 
 void spacer::update_bending(int hd)

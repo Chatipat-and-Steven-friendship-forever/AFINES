@@ -53,10 +53,10 @@ array<double,2> spring::get_hy(){
 
 void spring::step()
 {
-    hx[0] = fil->get_bead(aindex[0])->get_xcm();
-    hx[1] = fil->get_bead(aindex[1])->get_xcm();
-    hy[0] = fil->get_bead(aindex[0])->get_ycm();
-    hy[1] = fil->get_bead(aindex[1])->get_ycm();
+    array<double, 2> h0 = fil->get_bead_position(aindex[0]);
+    array<double, 2> h1 = fil->get_bead_position(aindex[1]);
+    hx = {h0[0], h1[0]};
+    hy = {h0[1], h1[1]};
 
     disp   = bc->rij_bc({hx[1]-hx[0], hy[1]-hy[0]});
     llensq = disp[0]*disp[0] + disp[1]*disp[1];

@@ -18,7 +18,6 @@ class filament_ensemble;
 
 //=====================================
 //included dependences
-#include "bead.h"
 #include "spring.h"
 
 //=====================================
@@ -27,7 +26,7 @@ class filament
 {
     public:
 
-        filament(filament_ensemble *net, vector<bead *> beadvec, double spring_length,
+        filament(filament_ensemble *net, vector<vector<double>> beadvec, double spring_length,
                 double stretching_stiffnes, double ext, double bending_stiffness,
                 double deltat, double temp, double fracture);
 
@@ -47,8 +46,6 @@ class filament
         
         void update_positions();
 
-        bead *get_bead(int i);
-
         spring *get_spring(int i);
 
         int get_nsprings();
@@ -67,7 +64,7 @@ class filament
         
         double get_end2end();
 
-        vector<bead *> get_beads(unsigned int first, unsigned int last);
+        vector<vector<double>> get_beads(unsigned int first, unsigned int last);
         
         vector<filament *> fracture(int node);
         
@@ -75,7 +72,7 @@ class filament
         
         bool operator==(const filament& that);
         
-        void add_bead(bead * a, double l0, double kl, double me);
+        void add_bead(vector<double> a, double l0, double kl, double me);
 
         inline double angle_between_springs(int i, int j);
 
@@ -129,7 +126,7 @@ class filament
 
         array<array<double, 2>, 2> bending_virial;
         vector<array<double, 2> > prv_rnds;
-        vector<bead *> beads;
+        vector<class bead *> beads;
         vector<spring *> springs;
 };
 

@@ -17,7 +17,7 @@
 #include "globals.h"
 #include "potentials.h"
 
-filament::filament(filament_ensemble *net, vector<bead *> beadvec, double spring_length,
+filament::filament(filament_ensemble *net, vector<vector<double>> beadvec, double spring_length,
         double stretching_stiffness, double max_ext_ratio, double bending_stiffness,
         double deltat, double temp, double frac_force)
 {
@@ -35,7 +35,9 @@ filament::filament(filament_ensemble *net, vector<bead *> beadvec, double spring
 
     if (beadvec.size() > 0)
     {
-        beads.push_back(new bead(*(beadvec[0])));
+        vector<double> &entry = beadvec[0];
+        if (entry.size() != 4) throw runtime_error("Wrong number of arguments in beadvec.");
+        beads.push_back(new bead(entry[0], entry[1], entry[2], entry[3]));
         prv_rnds.push_back({{0,0}});
         damp = beads[0]->get_friction();
     }
@@ -44,7 +46,9 @@ filament::filament(filament_ensemble *net, vector<bead *> beadvec, double spring
     if (beadvec.size() > 1){
         for (unsigned int j = 1; j < beadvec.size(); j++) {
 
-            beads.push_back(new bead(*(beadvec[j])));
+            vector<double> &entry = beadvec[j];
+            if (entry.size() != 4) throw runtime_error("Wrong number of arguments in beadvec.");
+            beads.push_back(new bead(entry[0], entry[1], entry[2], entry[3]));
             springs.push_back(new spring(spring_length, stretching_stiffness, max_ext_ratio, this, {(int)j-1, (int)j}));
             springs[j-1]->step();
             springs[j-1]->update_force();
@@ -76,9 +80,9 @@ filament::~filament(){
     prv_rnds.clear();
 }
 
-void filament::add_bead(bead * a, double spring_length, double stretching_stiffness, double max_ext_ratio){
-
-    beads.push_back(new bead(*a));
+void filament::add_bead(vector<double> a, double spring_length, double stretching_stiffness, double max_ext_ratio){
+    if (a.size() != 4) throw runtime_error("Wrong number of arguments in bead.");
+    beads.push_back(new bead({a[0], a[1], a[2], a[3]}));
     prv_rnds.push_back({{0,0}});
     if (beads.size() > 1){
         int j = (int) beads.size() - 1;
@@ -86,7 +90,7 @@ void filament::add_bead(bead * a, double spring_length, double stretching_stiffn
         springs[j-1]->step();
     }
     if (damp == infty)
-        damp = a->get_friction();
+        damp = beads[0]->get_friction();
 }
 
 void filament::update_positions()
@@ -143,11 +147,6 @@ vector<filament *> filament::update_stretching(double t)
     }
 
     return newfilaments;
-}
-
-bead *filament::get_bead(int i)
-{
-    return beads[i];
 }
 
 spring *filament::get_spring(int i)
@@ -255,15 +254,18 @@ string filament::write_thermo(int fil)
         "\t" + std::to_string(fil);
 }
 
-vector<bead *> filament::get_beads(unsigned int first, unsigned int last)
+vector<vector<double>> filament::get_beads(unsigned int first, unsigned int last)
 {
-    vector<bead *> newbeads;
-    for (unsigned int i = first; i < last; i++)
-    {
-        if (i >= beads.size())
+    vector<vector<double>> newbeads;
+    for (size_t i = first; i < last; i++) {
+        if (i >= beads.size()) {
             break;
-        else
-            newbeads.push_back(new bead(*(beads[i])));
+        } else {
+            bead *b = beads[i];
+            newbeads.push_back({
+                    b->get_xcm(), b->get_ycm(),
+                    b->get_length(), b->get_viscosity()});
+        }
     }
     return newbeads;
 }
@@ -276,8 +278,8 @@ vector<filament *> filament::fracture(int node){
     if(springs.size() == 0)
         return newfilaments;
 
-    vector<bead *> lower_half = this->get_beads(0, node+1);
-    vector<bead *> upper_half = this->get_beads(node+1, beads.size());
+    vector<vector<double>> lower_half = this->get_beads(0, node+1);
+    vector<vector<double>> upper_half = this->get_beads(node+1, beads.size());
 
     if (lower_half.size() > 0)
         newfilaments.push_back(
@@ -287,12 +289,6 @@ vector<filament *> filament::fracture(int node){
         newfilaments.push_back(
                 new filament(filament_network, upper_half, springs[0]->get_l0(), springs[0]->get_kl(), springs[0]->get_fene_ext(), kb,
                     dt, temperature, fracture_force));
-
-    for (int i = 0; i < (int)(lower_half.size()); i++) delete lower_half[i];
-    for (int i = 0; i < (int)(upper_half.size()); i++) delete upper_half[i];
-
-    lower_half.clear();
-    upper_half.clear();
 
     return newfilaments;
 

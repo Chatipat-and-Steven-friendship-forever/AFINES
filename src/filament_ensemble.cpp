@@ -70,13 +70,6 @@ array<double,2> filament_ensemble::get_end(int fil, int spring)
     return {{network[fil]->get_spring(spring)->get_hx()[1] , network[fil]->get_spring(spring)->get_hy()[1]}};
 }
 
-
-array<double,2> filament_ensemble::get_force(int fil, int bead)
-{
-    return network[fil]->get_bead(bead)->get_force();
-}
-
-
 array<double,2> filament_ensemble::get_direction(int fil, int spring)
 {
     return network[fil]->get_spring(spring)->get_direction();
@@ -253,15 +246,6 @@ int filament_ensemble::get_nsprings(){
 
 int filament_ensemble::get_nfilaments(){
     return network.size();
-}
-
-double filament_ensemble::get_bead_friction(){
-
-    if (network.size() > 0)
-        if (network[0]->get_nbeads() > 0)
-            return network[0]->get_bead(0)->get_friction();
-
-    return 0;
 }
 
 // Update bending forces between monomers
@@ -585,15 +569,17 @@ void filament_ensemble::update_excluded_volume(int f)
     // for every bead in filament f
     int act_sz = network[f]->get_nbeads();
     for (int i = 0; i < act_sz; i++) {
-        double x1 = network[f]->get_bead(i)->get_xcm();
-        double y1 = network[f]->get_bead(i)->get_ycm();
+        array<double, 2> h1 = network[f]->get_bead_position(i);
+        double x1 = h1[0];
+        double y1 = h1[1];
 
         // for every bead in filament g > f
         for (int g = f+1; g < net_sz; g++) {
             int act_sz_other = network[g]->get_nbeads();
             for (int j = 0; j < act_sz_other; j++) {
-                double x2 = network[g]->get_bead(j)->get_xcm();
-                double y2 = network[g]->get_bead(j)->get_ycm();
+                array<double, 2> h2 = network[g]->get_bead_position(j);
+                double x2 = h2[0];
+                double y2 = h2[1];
 
                 // compute forces for the potential
                 // U(r) = a (b r - 1)^2 if r < 1 / b
@@ -629,7 +615,7 @@ filament_ensemble::filament_ensemble(box *bc_, vector<vector<double> > beads, ar
     t = 0;
 
     int fil_idx = 0;
-    vector<bead *> avec;
+    vector<vector<double>> avec;
 
     nsprings_per_fil_max = 0;
     for (int i=0; i < int(beads.size()); i++){
@@ -638,17 +624,15 @@ filament_ensemble::filament_ensemble(box *bc_, vector<vector<double> > beads, ar
 
             network.push_back(new filament(this, avec, spring_len, stretching, ext, bending, delta_t, temp, frac_force));
             nsprings_per_fil_max = max(nsprings_per_fil_max, int(avec.size() - 1));
-            for (bead *b : avec) delete b;
             avec.clear();
             fil_idx = beads[i][3];
         }
-        avec.push_back(new bead(beads[i][0], beads[i][1], beads[i][2], vis));
+        avec.push_back({beads[i][0], beads[i][1], beads[i][2], vis});
     }
 
     if (avec.size() > 0)
       network.push_back(new filament(this, avec, spring_len, stretching, ext, bending, delta_t, temp, frac_force));
 
-    for (bead *b : avec) delete b;
     avec.clear();
 
     quads = new quadrants(bc, mynq);

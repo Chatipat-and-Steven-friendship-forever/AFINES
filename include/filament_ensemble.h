@@ -53,15 +53,11 @@ class filament_ensemble
         array<double,2> get_start(int fil, int spring);
         
         array<double,2> get_end(int fil, int spring);
-        
-        array<double,2> get_force(int fil, int bead);
-        
+
         double get_int_direction(int fil, int spring, double xp, double yp);
 
         double get_llength(int fil, int spring);
-       
-        double get_bead_friction();
-        
+
         box *get_box();
 
         double get_stretching_energy();
