@@ -7,127 +7,120 @@
  *
  */
 
-//=====================================
-//include guard
 #ifndef AFINES_FILAMENT_H
 #define AFINES_FILAMENT_H
 
-//=====================================
-// forward declared dependencies
 class filament_ensemble;
 
-//=====================================
-//included dependences
 #include "spring.h"
 
-//=====================================
-//bead filament class
-class filament
-{
+class filament {
     public:
-
         filament(filament_ensemble *net, vector<vector<double>> beadvec, double spring_length,
                 double stretching_stiffnes, double ext, double bending_stiffness,
                 double deltat, double temp, double fracture);
-
         ~filament();
-    
-        void update_d_strain(double);
 
-        box *get_box();
-
-        void pull_on_ends(double f);
-        
-        void affine_pull(double f);
-        
-        vector<filament *> update_stretching();
-        
-        void update_bending();
-        
-        void update_positions();
-
-        spring *get_spring(int i);
-
-        int get_nsprings();
+        // output
 
         vector<vector<double>> output_beads(int fil);
         vector<vector<double>> output_springs(int fil);
         vector<double> output_thermo(int fil);
 
         string write_beads(int fil);
-        
         string write_springs(int fil);
-        
-        string to_string();
-        
         string write_thermo(int fil);
-        
-        double get_end2end();
 
-        vector<vector<double>> get_beads(unsigned int first, unsigned int last);
-        
-        vector<filament *> fracture(int node);
-        
-        void update_forces(int index, vec_type f);
-        
-        bool operator==(const filament& that);
-        
-        void add_bead(vector<double> a, double l0, double kl, double me);
+        void print_thermo();
+        string to_string();
 
-        inline double angle_between_springs(int i, int j);
-
-        int get_nbeads();
-
-        double get_bending_energy();
-
-        virial_type get_bending_virial();
+        // thermo
 
         double get_stretching_energy();
-
-        double get_kinetic_energy_vel();
-
+        double get_bending_energy();
+        double get_potential_energy();
         double get_kinetic_energy_vir();
+        double get_kinetic_energy_vel();
+        double get_total_energy();
 
         virial_type get_stretching_virial();
-        
-        double get_potential_energy();
-        
-        double get_total_energy();
-        
-        void init_ubend();
-    
-        void print_thermo();
-        
-        void set_l0_max(double);
-        
-        void set_nsprings_max(int);
-        
-        void set_l0_min(double);
-        
-        void set_kgrow(double);
-        
-        void set_lgrow(double);
+        virial_type get_bending_virial();
 
+        // state
+
+        int get_nbeads();
         vec_type get_bead_position(int bead);
 
+        int get_nsprings();
+        spring *get_spring(int i);
+
+        double get_end2end();
+
+        // dynamics
+
+        void update_d_strain(double);
+        void update_positions();
+        vector<filament *> fracture(int node);
+
+        // internal forces
+
+        vector<filament *> update_stretching(); // also fractures
+        void update_bending();
+
+        // external forces
+
+        void pull_on_ends(double f);
+        void affine_pull(double f);
+        void update_forces(int index, vec_type f);
+
+        // misc
+
+        box *get_box();
+
+        void add_bead(vector<double> a, double l0, double kl, double me);
+
+        void init_ubend(); // computes bending energies only
+        inline double angle_between_springs(int i, int j);
+
+        vector<vector<double>> get_beads(size_t first, size_t last); // used for fractures
+
+        bool operator==(const filament& that);
+
+        // growing
+
+        void set_l0_max(double);
+        void set_nsprings_max(int);
+        void set_l0_min(double);
+        void set_kgrow(double);
+        void set_lgrow(double);
+
         void update_length();
-
         void grow(double);
-
-        void shrink(double);
 
     protected:
         box *bc;
         filament_ensemble *filament_network;
 
-        double kb, temperature, dt, fracture_force, fracture_force_sq, ke_vir, ke_vel, damp, bd_prefactor, ubend;
-        double spring_l0, l0_max, l0_min, kgrow, lgrow;
-        int nsprings_max;
-
-        virial_type bending_virial;
+        // state
         vector<vec_type> prv_rnds;
         vector<class bead *> beads;
         vector<spring *> springs;
+
+        // thermo
+        double ke_vir, ke_vel;
+        double ubend;
+        virial_type bending_virial;
+
+        // parameters
+        double kb, temperature, dt, fracture_force, damp;
+
+        // growing parameters
+        int nsprings_max;
+        double spring_l0, l0_max, l0_min, kgrow, lgrow;
+
+        // precompute
+        double bd_prefactor;
+        double fracture_force_sq;
 };
 
 #endif

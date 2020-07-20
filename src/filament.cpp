@@ -226,7 +226,7 @@ string filament::write_thermo(int fil)
         "\t" + std::to_string(fil);
 }
 
-vector<vector<double>> filament::get_beads(unsigned int first, unsigned int last)
+vector<vector<double>> filament::get_beads(size_t first, size_t last)
 {
     vector<vector<double>> newbeads;
     for (size_t i = first; i < last; i++) {
@@ -435,6 +435,8 @@ double filament::get_end2end()
         return bc->dist_bc(beads[beads.size() - 1]->get_pos() - beads[0]->get_pos());
     }
 }
+
+// GROWING
 
 void filament::set_l0_max(double lmax)
 {
