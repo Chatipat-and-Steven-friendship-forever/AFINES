@@ -93,14 +93,6 @@ void spring::update_force_fraenkel_fene()
 
 }
 
-void spring::update_force_marko_siggia(double kToverLp)
-{
-    double xrat = llen/l0, yrat = llen/l0;
-    if (xrat != xrat || xrat == 1) xrat = 0;
-    if (yrat != yrat || yrat == 1) yrat = 0;
-    force = {{kToverLp*(0.25/((1-xrat)*(1-xrat))-0.25+xrat), kToverLp*(0.25/((1-yrat)*(1-yrat))-0.25+yrat)}};
-}
-
 array<double,2> spring::get_force()
 {
     return force;

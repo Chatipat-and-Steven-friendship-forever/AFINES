@@ -69,8 +69,6 @@ class spring
         void update_force_fraenkel_fene();
         
         double get_stretching_energy_fene();
-        
-        void update_force_marko_siggia(double kToverA);
 
         array<double,2> get_force();
 
