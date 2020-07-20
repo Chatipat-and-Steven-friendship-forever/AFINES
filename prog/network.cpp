@@ -507,7 +507,7 @@ int main(int argc, char **argv)
     ofstream file_ke(kefile, write_mode);
 
     int count; double t;
-    for (count = 0, t = tinit; t <= tfinal; count++, tinit += dt) {
+    for (count = 0, t = tinit; t <= tfinal; count++, t += dt) {
 
         /*
         //print to file
