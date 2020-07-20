@@ -68,7 +68,7 @@ class filament
         
         vector<filament *> fracture(int node);
         
-        void update_forces(int index, double f1, double f2);
+        void update_forces(int index, vec_type f);
         
         bool operator==(const filament& that);
         
@@ -80,7 +80,7 @@ class filament
 
         double get_bending_energy();
 
-        array<array<double, 2>, 2> get_bending_virial();
+        virial_type get_bending_virial();
 
         double get_stretching_energy();
 
@@ -88,7 +88,7 @@ class filament
 
         double get_kinetic_energy_vir();
 
-        array<array<double, 2>, 2> get_stretching_virial();
+        virial_type get_stretching_virial();
         
         double get_potential_energy();
         
@@ -124,8 +124,8 @@ class filament
         double spring_l0, l0_max, l0_min, kgrow, lgrow;
         int nsprings_max;
 
-        array<array<double, 2>, 2> bending_virial;
-        vector<array<double, 2> > prv_rnds;
+        virial_type bending_virial;
+        vector<vec_type> prv_rnds;
         vector<class bead *> beads;
         vector<spring *> springs;
 };

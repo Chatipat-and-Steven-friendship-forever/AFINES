@@ -32,8 +32,8 @@ class spring {
 
         // state
 
-        array<double, 2> get_hx();
-        array<double, 2> get_hy();
+        array<double, 2> get_h0();
+        array<double, 2> get_h1();
 
         double get_length();
         double get_length_sq();
@@ -84,7 +84,7 @@ class spring {
     protected:
 
         // state
-        array<double, 2> hx, hy;
+        array<double, 2> h0, h1;
         map<motor *, int> mots;
         array<int, 2> aindex;  // bead indices
 

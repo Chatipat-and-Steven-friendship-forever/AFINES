@@ -95,9 +95,9 @@ class motor
 
         array<motor_state, 2> get_states();
 
-        array<double, 2> get_hx();
+        array<double, 2> get_h0();
 
-        array<double, 2> get_hy();
+        array<double, 2> get_h1();
 
         void detach_head(int hd);
 
@@ -146,7 +146,8 @@ class motor
         double mld, vs, stall_force, max_bind_dist, max_bind_dist_sq, mk, kon, koff, kend, dt, temperature, 
                damp, max_ext, eps_ext, ke_vel, ke_vir, bd_prefactor, tension, len, kon2, koff2, kend2;
 
-        array<double,2> hx, hy, pos_a_end, prv_rnd_x, prv_rnd_y, force, disp, direc;
+        array<double,2> pos_a_end, prv_rnd_x, prv_rnd_y, force, disp, direc;
+        array<vec_type, 2> h;
 
         array<array<double, 2>, 2> ldir_bind, bind_disp;
 

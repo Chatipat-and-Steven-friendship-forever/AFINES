@@ -48,9 +48,9 @@ void filament_ensemble::quad_update_serial()
     }
 }
 
-vector<array<int, 2>> *filament_ensemble::get_attach_list(double x, double y)
+vector<array<int, 2>> *filament_ensemble::get_attach_list(vec_type pos)
 {
-    return quads->get_attach_list({x, y});
+    return quads->get_attach_list(pos);
 }
 
 double filament_ensemble::get_llength(int fil, int spring)
@@ -61,13 +61,13 @@ double filament_ensemble::get_llength(int fil, int spring)
 
 array<double,2> filament_ensemble::get_start(int fil, int spring)
 {
-    return {{network[fil]->get_spring(spring)->get_hx()[0] , network[fil]->get_spring(spring)->get_hy()[0]}};
+    return network[fil]->get_spring(spring)->get_h0();
 }
 
 
 array<double,2> filament_ensemble::get_end(int fil, int spring)
 {
-    return {{network[fil]->get_spring(spring)->get_hx()[1] , network[fil]->get_spring(spring)->get_hy()[1]}};
+    return network[fil]->get_spring(spring)->get_h1();
 }
 
 array<double,2> filament_ensemble::get_direction(int fil, int spring)
@@ -216,8 +216,8 @@ bool filament_ensemble::is_polymer_start(int fil, int bead){
 
 }
 
-void filament_ensemble::update_forces(int f_index, int a_index, double f1, double f2){
-    network[f_index]->update_forces(a_index, f1,f2);
+void filament_ensemble::update_forces(int f_index, int a_index, vec_type f){
+    network[f_index]->update_forces(a_index, f);
 }
 
 
@@ -312,7 +312,7 @@ void filament_ensemble::update()
             for (int i = 0; i < network[f]->get_nbeads(); i++) {
                 array<double, 2> pos = network[f]->get_bead_position(i);
                 array<double, 2> force = external_force(pos);
-                update_forces(f, i, force[0], force[1]);
+                update_forces(f, i, force);
             }
         }
         network[f]->update_positions();
@@ -424,28 +424,28 @@ void filament_ensemble::update_force_between_filaments(double n1, double l1, dou
     spring *s1 = network[n1]->get_spring(l1);
     spring *s2 = network[n2]->get_spring(l2);
 
-    array<double, 2> hx_1 = s1->get_hx();
-    array<double, 2> hy_1 = s1->get_hy();
+    vec_type h0_1 = s1->get_h0();
+    vec_type h1_1 = s1->get_h1();
 
-    array<double, 2> hx_2 = s2->get_hx();
-    array<double, 2> hy_2 = s2->get_hy();
+    vec_type h0_2 = s2->get_h0();
+    vec_type h1_2 = s2->get_h1();
 
     array<double, 2> len;
     len[0] = s1->get_length();
     len[1] = s2->get_length();
 
     // compute the nearest point on the other spring
-    array<double, 2> p1 = s1->intpoint({hx_2[0], hy_2[0]});
-    array<double, 2> p2 = s1->intpoint({hx_2[1], hy_2[1]});
-    array<double, 2> p3 = s2->intpoint({hx_1[0], hy_1[0]});
-    array<double, 2> p4 = s2->intpoint({hx_1[1], hy_1[1]});
+    vec_type p1 = s1->intpoint(h0_2);
+    vec_type p2 = s1->intpoint(h1_2);
+    vec_type p3 = s2->intpoint(h0_1);
+    vec_type p4 = s2->intpoint(h1_1);
 
     // compute the distance to the nearest point
     array<double, 4> r_c;
-    r_c[0] = bc->dist_bc({hx_2[0] - p1[0], hy_2[0] - p1[1]});
-    r_c[1] = bc->dist_bc({hx_2[1] - p2[0], hy_2[1] - p2[1]});
-    r_c[2] = bc->dist_bc({hx_1[0] - p3[0], hy_1[0] - p3[1]});
-    r_c[3] = bc->dist_bc({hx_1[1] - p4[0], hy_1[1] - p4[1]});
+    r_c[0] = bc->dist_bc(h0_2 - p1);
+    r_c[1] = bc->dist_bc(h1_2 - p2);
+    r_c[2] = bc->dist_bc(h0_1 - p3);
+    r_c[3] = bc->dist_bc(h1_1 - p4);
 
     // find the minimum distance between the filaments
     // assuming that they don't intersect
@@ -466,69 +466,54 @@ void filament_ensemble::update_force_between_filaments(double n1, double l1, dou
         if (!intersect) {
             // doesn't intersect
 
-            double x1=0, y1=0, x2=0, y2=0, length=0, len1=0;
+            double length=0, len1=0;
+            vec_type dist;
             if (index == 0) {
                 r = r_c[0];
-                x1 = hx_2[0];
-                y1 = hy_2[0];
-                x2 = p1[0];
-                y2 = p1[1];
-                len1 = bc->dist_bc({hx_1[0]-x2, hy_1[0]-y2});
+                len1 = bc->dist_bc(h0_1 - p1);
                 length = len[0];
+                dist = bc->rij_bc(p1 - h0_2);
             } else if (index == 1) {
                 r = r_c[1];
-                x1 = hx_2[1];
-                y1 = hy_2[1];
-                x2 = p2[0];
-                y2 = p2[1];
-                len1 = bc->dist_bc({hx_1[0]-x2, hy_1[0]-y2});
+                len1 = bc->dist_bc(h0_1 - p2);
                 length = len[0];
+                dist = bc->rij_bc(p2 - h1_2);
             } else if (index == 2) {
                 r = r_c[2];
-                x1 = hx_1[0];
-                y1 = hy_1[0];
-                x2 = p3[0];
-                y2 = p3[1];
-                len1 = bc->dist_bc({hx_2[0]-x2, hy_2[0]-y2});
+                len1 = bc->dist_bc(h0_2 - p3);
                 length = len[1];
+                dist = bc->rij_bc(p3 - h0_1);
             } else if (index == 3) {
                 r = r_c[3];
-                x1 = hx_1[1];
-                y1 = hy_1[1];
-                x2 = p4[0];
-                y2 = p4[1];
-                len1 = bc->dist_bc({hx_2[0]-x2, hy_2[0]-y2});
+                len1 = bc->dist_bc(h0_2 - p4);
                 length = len[1];
+                dist = bc->rij_bc(p4 - h1_1);
             }
 
-            array<double, 2> dist = bc->rij_bc({x2-x1, y2-y1});
             double len2 = length - len1;
             double r_1 = len2/length;
             double r_2 = len1/length;
 
-            double Fx1 = 2*kexv*dist[0]*b*((1/r) - b);
-            double Fx2 = -Fx1;
-            double Fy1 = 2*kexv*dist[1]*b*((1/r) - b);
-            double Fy2 = -Fy1;
+            vec_type F = 2*kexv*dist*b*((1/r) - b);
 
             pe_exv += kexv*pow((1-r*b),2);
 
             if (index == 0) {
-                network[n1]->update_forces(l1, Fx1*r_1, Fy1*r_1);
-                network[n1]->update_forces(l1+1, Fx1*r_2, Fy1*r_2);
-                network[n2]->update_forces(l2, Fx2, Fy2);
+                network[n1]->update_forces(l1, F*r_1);
+                network[n1]->update_forces(l1+1, F*r_2);
+                network[n2]->update_forces(l2, -F);
             } else if (index == 1) {
-                network[n1]->update_forces(l1, Fx1*r_1, Fy1*r_1);
-                network[n1]->update_forces(l1+1, Fx1*r_2, Fy1*r_2);
-                network[n2]->update_forces(l2+1, Fx2, Fy2);
+                network[n1]->update_forces(l1, F*r_1);
+                network[n1]->update_forces(l1+1, F*r_2);
+                network[n2]->update_forces(l2+1, -F);
             } else if (index == 2) {
-                network[n2]->update_forces(l2, Fx1*r_1, Fy1*r_1);
-                network[n2]->update_forces(l2+1, Fx1*r_2, Fy1*r_2);
-                network[n1]->update_forces(l1, Fx2, Fy2);
+                network[n2]->update_forces(l2, F*r_1);
+                network[n2]->update_forces(l2+1, F*r_2);
+                network[n1]->update_forces(l1, -F);
             } else if (index == 3) {
-                network[n2]->update_forces(l2, Fx1*r_1, Fy1*r_1);
-                network[n2]->update_forces(l2+1, Fx1*r_2, Fy1*r_2);
-                network[n1]->update_forces(l1+1, Fx2, Fy2);
+                network[n2]->update_forces(l2, F*r_1);
+                network[n2]->update_forces(l2+1, F*r_2);
+                network[n1]->update_forces(l1+1, -F);
             }
 
         } else {
@@ -536,17 +521,14 @@ void filament_ensemble::update_force_between_filaments(double n1, double l1, dou
 
             // apply constant force?
             // this doesn't look right
-            double Fx1 = 2*kexv/(rmax*sqrt(2));
-            double Fx2 = -Fx1;
-            double Fy1 = 2*kexv/(rmax*sqrt(2));
-            double Fy2 = -Fy1;
+            vec_type F = {2*kexv/(rmax*sqrt(2)), 2*kexv/(rmax*sqrt(2))};
 
             pe_exv += kexv*pow((1-r*b),2);
 
-            network[n1]->update_forces(l1, Fx1, Fy1);
-            network[n1]->update_forces(l1+1, Fx1, Fy1);
-            network[n2]->update_forces(l2, Fx2, Fy2);
-            network[n2]->update_forces(l2+1, Fx2, Fy2);
+            network[n1]->update_forces(l1, F);
+            network[n1]->update_forces(l1+1, F);
+            network[n2]->update_forces(l2, -F);
+            network[n2]->update_forces(l2+1, -F);
 
         }
     }
@@ -588,13 +570,12 @@ void filament_ensemble::update_excluded_volume(int f)
 
                 double r = bc->dist_bc({dx, dy});
                 if (r > 0.0 && r <= rmax) {
-                    double Fx1 = 2*dx*a*b*((1/r)-b);
-                    double Fx2 = -Fx1;
-                    double Fy1 = 2*dy*a*b*((1/r)-b);
-                    double Fy2 = -Fy1;
+                    double Fx = 2*dx*a*b*((1/r)-b);
+                    double Fy = 2*dy*a*b*((1/r)-b);
+                    vec_type F = {Fx, Fy};
 
-                    network[f]->update_forces(i,Fx1,Fy1);
-                    network[g]->update_forces(j,Fx2,Fy2);
+                    network[f]->update_forces(i,F);
+                    network[g]->update_forces(j,-F);
                 }
             }
         }

@@ -95,8 +95,10 @@ void quadrants::check_duplicates()
 void quadrants::add_spring_nonperiodic(spring *s, array<int, 2> fl)
 {
     array<double, 2> fov = bc->get_fov();
-    array<double, 2> hx = s->get_hx();
-    array<double, 2> hy = s->get_hy();
+    vec_type h0 = s->get_h0();
+    vec_type h1 = s->get_h1();
+    array<double, 2> hx = {h0[0], h1[0]};
+    array<double, 2> hy = {h0[1], h1[1]};
     array<double, 2> disp = s->get_disp();
 
     double xlo = hx[0], xhi = hx[1];
@@ -138,8 +140,10 @@ void quadrants::add_spring_periodic(spring *s, array<int, 2> fl)
 {
     array<double, 2> fov = bc->get_fov();
     double delrx = bc->get_delrx();
-    array<double, 2> hx = s->get_hx();
-    array<double, 2> hy = s->get_hy();
+    vec_type h0 = s->get_h0();
+    vec_type h1 = s->get_h1();
+    array<double, 2> hx = {h0[0], h1[0]};
+    array<double, 2> hy = {h0[1], h1[1]};
     array<double, 2> disp = s->get_disp();
 
     double xlo, xhi;

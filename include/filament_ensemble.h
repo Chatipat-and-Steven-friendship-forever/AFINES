@@ -42,7 +42,7 @@ class filament_ensemble
 
         void quad_update_serial();
 
-        vector<array<int, 2>> *get_attach_list(double, double);
+        vector<array<int, 2>> *get_attach_list(vec_type pos);
 
         vector<filament *> * get_network();
 
@@ -92,7 +92,7 @@ class filament_ensemble
 
         void update_positions();
 
-        void update_forces(int fil, int bead, double f2, double f3);
+        void update_forces(int fil, int bead, vec_type f);
 
         vector<vector<double>> output_beads();
 

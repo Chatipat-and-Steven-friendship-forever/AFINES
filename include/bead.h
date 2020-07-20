@@ -21,6 +21,8 @@ class bead {
 
         // state
 
+        array<double, 2> get_pos();
+        void set_pos(array<double, 2> pos);
         double get_xcm();
         double get_ycm();
         void set_xcm(double xcm);
@@ -31,8 +33,8 @@ class bead {
         void set_fx(double);
         void set_fy(double);
 
-        array<double,2> get_force();
-        void update_force(double f1, double f2);
+        array<double, 2> get_force();
+        void update_force(array<double, 2> f);
         void reset_force();
 
         // parameters

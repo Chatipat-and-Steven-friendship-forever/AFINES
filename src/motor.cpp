@@ -71,12 +71,8 @@ motor::motor(vector<double> mvec,
     pos_a_end = {{0, 0}}; // pos_a_end = distance from pointy end -- by default 0
                         // i.e., if l_index[hd] = j, then pos_a_end[hd] is the distance to the "j+1"th bead
 
-    array<double, 2> posH0 = bc->pos_bc({mvec[0], mvec[1]});
-    array<double, 2> posH1 = bc->pos_bc({mvec[0] + mvec[2], mvec[1] + mvec[3]});
-    hx[0] = posH0[0];
-    hy[0] = posH0[1];
-    hx[1] = posH1[0];
-    hy[1] = posH1[1];
+    h[0] = bc->pos_bc({mvec[0], mvec[1]});
+    h[1] = bc->pos_bc({mvec[0] + mvec[2], mvec[1] + mvec[3]});
     //force can be non-zero and angle is determined from disp vector
     this->update_angle();
     this->update_force();
@@ -89,14 +85,12 @@ motor::motor(vector<double> mvec,
     at_barbed_end = {{false, false}};
 
     if (state[0] == motor_state::bound){
-        pos_a_end[0] = bc->dist_bc({filament_network->get_end(f_index[0], l_index[0])[0] - hx[0],
-                                    filament_network->get_end(f_index[0], l_index[0])[1] - hy[0]});
+        pos_a_end[0] = bc->dist_bc(filament_network->get_end(f_index[0], l_index[0]) - h[0]);
         ldir_bind[0] = filament_network->get_direction(f_index[0], l_index[0]);
 
     }
     if (state[1] == motor_state::bound){
-        pos_a_end[1] = bc->dist_bc({filament_network->get_end(f_index[1], l_index[1])[0] - hx[1],
-                                    filament_network->get_end(f_index[1], l_index[1])[1] - hy[1]});
+        pos_a_end[1] = bc->dist_bc(filament_network->get_end(f_index[1], l_index[1]) - h[1]);
         ldir_bind[1] = filament_network->get_direction(f_index[1], l_index[1]);
     }
 
@@ -111,23 +105,23 @@ array<motor_state, 2> motor::get_states()
     return state;
 }
 
-array<double, 2> motor::get_hx()
+array<double, 2> motor::get_h0()
 {
-    return hx;
+    return h[0];
 }
 
 
-array<double, 2> motor::get_hy()
+array<double, 2> motor::get_h1()
 {
-    return hy;
+    return h[1];
 }
 
 //metropolis algorithm with rate constant
 //NOTE: while fl_idx doesn't matter for this xlink implementation, it does for "spacers"
-double motor::metropolis_prob(int hd, array<int, 2> fl_idx, array<double, 2> newpos, double maxprob)
+double motor::metropolis_prob(int hd, array<int, 2> fl_idx, vec_type newpos, double maxprob)
 {
     double prob = maxprob;
-    double stretch  = bc->dist_bc({newpos[0] - hx[pr(hd)], newpos[1] - hy[pr(hd)]}) - mld;
+    double stretch  = bc->dist_bc(newpos - h[pr(hd)]) - mld;
     double delE = 0.5*mk*stretch*stretch - this->get_stretching_energy();
 
     if( delE > 0 )
@@ -140,24 +134,23 @@ bool motor::allowed_bind(int hd, array<int, 2> fl_idx){
     return (f_index[pr(hd)] != fl_idx[0] || l_index[pr(hd)] != fl_idx[1]);
 }
 
-void motor::attach_head(int hd, array<double, 2> intpoint, array<int, 2> fl)
+void motor::attach_head(int hd, vec_type intpoint, array<int, 2> fl)
 {
     // update state
     state[hd] = motor_state::bound;
     f_index[hd] = fl[0];
-    this->set_l_index(hd, fl[1]);
+    set_l_index(hd, fl[1]);
 
     // record displacement of head and orientation of spring for future unbinding move
     ldir_bind[hd] = filament_network->get_direction(f_index[hd], l_index[hd]);
-    bind_disp[hd] = bc->rij_bc({intpoint[0] - hx[hd], intpoint[1] - hy[hd]});
+    bind_disp[hd] = bc->rij_bc(intpoint - h[hd]);
 
     // update head position
-    hx[hd] = intpoint[0];
-    hy[hd] = intpoint[1];
+    h[hd] = intpoint;
 
     // update relative head position
-    array<double, 2> ref = filament_network->get_end(f_index[hd], l_index[hd]);
-    pos_a_end[hd] = bc->dist_bc({ref[0] - hx[hd], ref[1] - hy[hd]});
+    vec_type ref = filament_network->get_end(f_index[hd], l_index[hd]);
+    pos_a_end[hd] = bc->dist_bc(ref - intpoint);
 
     // even if the head is at the barbed end upon binding,
     // it could have negative velocity,
@@ -169,7 +162,7 @@ bool motor::attach_opt(int hd)
 {
     double mf_rand = rng_u();
     double onrate = (state[pr(hd)] == motor_state::bound) ? kon2 : kon;
-    vector<array<int, 2>> *attach_list = filament_network->get_attach_list(hx[hd], hy[hd]);
+    vector<array<int, 2>> *attach_list = filament_network->get_attach_list(h[hd]);
     int count = attach_list->size();
     if (onrate * count > 1.0) throw std::runtime_error("onrate * count > 1");
     int i = floor(mf_rand / onrate);
@@ -182,10 +175,10 @@ bool motor::attach_opt(int hd)
         array<int, 2> fl = attach_list->at(i);
         filament *f = filament_network->get_filament(fl[0]);
         spring *s = f->get_spring(fl[1]);
-        array<double ,2> intpoint = s->intpoint({hx[hd], hy[hd]});
+        vec_type intpoint = s->intpoint(h[hd]);
 
         // don't bind if binding site is further away than the cutoff
-        array<double, 2> dr = bc->rij_bc({intpoint[0] - hx[hd], intpoint[1] - hy[hd]});
+        vec_type dr = bc->rij_bc(intpoint - h[hd]);
         double dist_sq = dr[0] * dr[0] + dr[1] * dr[1];
         if (dist_sq > max_bind_dist_sq || !allowed_bind(hd, fl)) {
             return false;
@@ -205,11 +198,11 @@ bool motor::attach_opt(int hd)
 bool motor::attach(int hd)
 {
     set<tuple<double, array<int, 2>, array<double, 2>>> dist_sq_sorted;
-    for (array<int, 2> fl : *filament_network->get_attach_list(hx[hd], hy[hd])) {
+    for (array<int, 2> fl : *filament_network->get_attach_list(h[hd])) {
         filament *f = filament_network->get_filament(fl[0]);
         spring *s = f->get_spring(fl[1]);
-        array<double, 2> intpoint = s->intpoint({hx[hd], hy[hd]});
-        array<double, 2> dr = bc->rij_bc({intpoint[0] - hx[hd], intpoint[1] - hy[hd]});
+        vec_type intpoint = s->intpoint(h[hd]);
+        vec_type dr = bc->rij_bc(intpoint - h[hd]);
         double dist_sq = dr[0] * dr[0] + dr[1] * dr[1];
         dist_sq_sorted.insert(tuple<double, array<int, 2>, array<double, 2>>(dist_sq, fl, intpoint));
     }
@@ -239,8 +232,7 @@ bool motor::attach(int hd)
 void motor::update_force()
 {
     tension = mk*(len - mld);
-    force = {{tension*direc[0], tension*direc[1]}};
-//    force = {{tension*disp[0]/len, tension*disp[1]/len}};
+    force = tension * direc;
 }
 
 /* Taken from hsieh, jain, larson, jcp 2006; eqn (5)
@@ -257,27 +249,22 @@ void motor::update_force_fraenkel_fene()
         scaled_ext = (max_ext - eps_ext)/max_ext;
 
     mkp = mk/(1-scaled_ext*scaled_ext)*(len-mld);
-    force = {{mkp*direc[0], mkp*direc[1]}};
-
+    force = mkp * direc;
 }
 
 
 void motor::brownian_relax(int hd)
 {
+    vec_type new_rnd = {rng_n(), rng_n()};
+    vec_type prv_rnd = {prv_rnd_x[hd], prv_rnd_y[hd]};
 
-    double new_rnd_x= rng_n(), new_rnd_y = rng_n();
+    vec_type v = pow(-1, hd) * force / damp + bd_prefactor * (new_rnd + prv_rnd);
+    ke_vel = v[0] * v[0] + v[1] * v[1];
+    ke_vir = -0.5 * pow(-1, hd) * (force[0] * h[hd][0] + force[1] * h[hd][1]);
+    h[hd] = bc->pos_bc(h[hd] + v*dt);
 
-    double vx =  pow(-1,hd)*force[0] / damp + bd_prefactor*(new_rnd_x + prv_rnd_x[hd]);
-    double vy =  pow(-1,hd)*force[1] / damp + bd_prefactor*(new_rnd_y + prv_rnd_y[hd]);
-    ke_vel = vx*vx + vy*vy;
-    ke_vir = -(0.5)*(pow(-1,hd))*(force[0]*hx[hd] + force[1]*hy[hd]);
-    array<double, 2> pos = bc->pos_bc({hx[hd] + vx*dt, hy[hd] + vy*dt});
-    hx[hd] = pos[0];
-    hy[hd] = pos[1];
-
-    prv_rnd_x[hd] = new_rnd_x;
-    prv_rnd_y[hd] = new_rnd_y;
-
+    prv_rnd_x[hd] = new_rnd[0];
+    prv_rnd_y[hd] = new_rnd[1];
 }
 
 void motor::kill_head(int hd)
@@ -292,15 +279,12 @@ void motor::deactivate_head(int hd)
 
 void motor::relax_head(int hd)
 {
-    array<double, 2> newpos = bc->pos_bc({hx[pr(hd)] - pow(-1, hd)*mld*direc[0], hy[pr(hd)] - pow(-1, hd)*mld*direc[1]});
-    hx[hd] = newpos[0];
-    hy[hd] = newpos[1];
+    h[hd] = bc->pos_bc(h[pr(hd)] - pow(-1, hd)*mld*direc);
 }
-
 
 void motor::update_angle()
 {
-    disp  = bc->rij_bc({hx[1]-hx[0], hy[1]-hy[0]});
+    disp  = bc->rij_bc(h[1] - h[0]);
     len   = hypot(disp[0], disp[1]);
     if ( len != 0 )
         direc = {{disp[0]/len, disp[1]/len}};
@@ -316,7 +300,7 @@ array<double, 2> motor::generate_off_pos(int hd){
 
     array<double, 2> bind_disp_rot = {{bind_disp[hd][0]*c - bind_disp[hd][1]*s, bind_disp[hd][0]*s + bind_disp[hd][1]*c}};
 
-    return bc->pos_bc({hx[hd] - bind_disp_rot[0], hy[hd] - bind_disp_rot[1]});
+    return bc->pos_bc(h[hd] - bind_disp_rot);
 }
 
 
@@ -385,16 +369,10 @@ void motor::update_pos_a_end(int hd, double pos)
 }
 
 
-void motor::update_position_attached(int hd){
-
-    double posx = filament_network->get_end(f_index[hd],l_index[hd])[0]-pos_a_end[hd]*filament_network->get_direction(f_index[hd],l_index[hd])[0];
-    double posy = filament_network->get_end(f_index[hd],l_index[hd])[1]-pos_a_end[hd]*filament_network->get_direction(f_index[hd],l_index[hd])[1];
-
-    array<double, 2> newpos = bc->pos_bc({posx, posy});
-
-    hx[hd] = newpos[0];
-    hy[hd] = newpos[1];
-
+void motor::update_position_attached(int hd)
+{
+    vec_type pos = filament_network->get_end(f_index[hd],l_index[hd]) - pos_a_end[hd]*filament_network->get_direction(f_index[hd],l_index[hd]);
+    h[hd] = bc->pos_bc(pos);
 }
 
 // Using the lever rule to propagate force as outlined in Nedelec F 2002
@@ -402,14 +380,14 @@ void motor::update_position_attached(int hd){
 void motor::filament_update_hd(int hd, array<double, 2> f)
 {
     double pos_ratio = pos_a_end[hd]/filament_network->get_llength(f_index[hd], l_index[hd]);
-    filament_network->update_forces(f_index[hd], l_index[hd],   f[0] *    pos_ratio , f[1] *    pos_ratio );
-    filament_network->update_forces(f_index[hd], l_index[hd]+1, f[0] * (1-pos_ratio), f[1] * (1-pos_ratio));
+    filament_network->update_forces(f_index[hd], l_index[hd],   f * pos_ratio);
+    filament_network->update_forces(f_index[hd], l_index[hd]+1, f * (1 - pos_ratio));
 }
 
 void motor::filament_update()
 {
     if (state[0] == motor_state::bound) this->filament_update_hd(0, force);
-    if (state[1] == motor_state::bound) this->filament_update_hd(1, {{-force[0], -force[1]}});
+    if (state[1] == motor_state::bound) this->filament_update_hd(1, -force);
 }
 
 void motor::detach_head(int hd)
@@ -421,8 +399,7 @@ void motor::detach_head(int hd)
 void motor::detach_head(int hd, array<double, 2> newpos)
 {
     detach_head_without_moving(hd);
-    hx[hd] = newpos[0];
-    hy[hd] = newpos[1];
+    h[hd] = newpos;
 }
 
 void motor::detach_head_without_moving(int hd)
@@ -497,7 +474,7 @@ string motor::to_string()
             \nviscosity = %f\t max binding distance = %f\t stiffness = %f\t stall force = %f\t length = %f\
             \nkon = %f\t koff = %f\t kend = %f\t dt = %f\t temp = %f\t damp = %f\
             \ndistance from end of spring = (%f, %f)\t tension = (%f, %f)\n",
-            hx[0], hy[0], hx[1], hy[1],
+            h[0][0], h[0][1], h[1][0], h[1][1],
             static_cast<int>(state[0]),  static_cast<int>(state[1]),
             f_index[0],  f_index[1], l_index[0], l_index[1],
             vs, max_bind_dist, mk, stall_force, mld,
@@ -508,7 +485,7 @@ string motor::to_string()
 
 vector<double> motor::output()
 {
-    return {hx[0], hy[0], disp[0], disp[1],
+    return {h[0][0], h[0][1], disp[0], disp[1],
         double(f_index[0]), double(f_index[1]),
         double(l_index[0]), double(l_index[1])};
 }
@@ -572,7 +549,7 @@ void motor::remove_from_spring(int hd)
 
 string motor::write()
 {
-    return "\n" + std::to_string(hx[0]) + "\t" + std::to_string(hy[0])
+    return "\n" + std::to_string(h[0][0]) + "\t" + std::to_string(h[0][1])
         +  "\t" + std::to_string(disp[0]) + "\t" + std::to_string(disp[1])
         +  "\t" + std::to_string(f_index[0]) + "\t" + std::to_string(f_index[1])
         +  "\t" + std::to_string(l_index[0]) + "\t" + std::to_string(l_index[1]);
@@ -586,12 +563,8 @@ void motor::revive_head(int hd)
 void motor::update_d_strain(double g)
 {
     array<double, 2> fov = bc->get_fov();
-    array<double, 2> pos0 = bc->pos_bc({hx[0] + g * hy[0] / fov[1], hy[0]});
-    array<double, 2> pos1 = bc->pos_bc({hx[1] + g * hy[1] / fov[1], hy[1]});
-    hx[0] = pos0[0];
-    hx[1] = pos1[0];
-    hy[0] = pos0[1];
-    hy[1] = pos1[1];
+    h[0] = bc->pos_bc({h[0][0] + g * h[0][1] / fov[1], h[0][1]});
+    h[1] = bc->pos_bc({h[1][0] + g * h[1][1] / fov[1], h[1][1]});
 }
 
 void motor::inc_l_index(int hd){

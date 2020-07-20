@@ -30,10 +30,10 @@ spring::spring(double len, double stretching_stiffness, double max_ext_ratio, fi
     max_ext = max_ext_ratio * l0;
     eps_ext = 0.01*max_ext;
 
-    hx = {{0,0}};
-    hy = {{0,0}};
+    h0 = {0, 0};
+    h1 = {0, 0};
 
-    force = {{0,0}};
+    force = {0, 0};
     llensq = l0*l0;
     llen = l0;
 }
@@ -41,38 +41,38 @@ spring::spring(double len, double stretching_stiffness, double max_ext_ratio, fi
 spring::~spring(){
 }
 
-array<double,2> spring::get_hx(){
-    return hx;
+vec_type spring::get_h0()
+{
+    return h0;
 }
 
-array<double,2> spring::get_hy(){
-    return hy;
+vec_type spring::get_h1()
+{
+    return h1;
 }
 
 // stepping kinetics
 
 void spring::step()
 {
-    array<double, 2> h0 = fil->get_bead_position(aindex[0]);
-    array<double, 2> h1 = fil->get_bead_position(aindex[1]);
-    hx = {h0[0], h1[0]};
-    hy = {h0[1], h1[1]};
+    vec_type h0 = fil->get_bead_position(aindex[0]);
+    vec_type h1 = fil->get_bead_position(aindex[1]);
 
-    disp   = bc->rij_bc({hx[1]-hx[0], hy[1]-hy[0]});
+    disp   = bc->rij_bc(h1 - h0);
     llensq = disp[0]*disp[0] + disp[1]*disp[1];
     llen   = sqrt(llensq);
 
     if (llen != 0)
-        direc = {{disp[0]/llen, disp[1]/llen}};
+        direc = disp / llen;
     else
-        direc = {{0, 0}};
+        direc = {0, 0};
 
 }
 
 void spring::update_force()
 {
     double kf = kl*(llen-l0);
-    force = {{kf*direc[0], kf*direc[1]}};
+    force = kf * direc;
 }
 
 /* Taken from hsieh, jain, larson, jcp 2006; eqn (5)
@@ -89,7 +89,7 @@ void spring::update_force_fraenkel_fene()
     }
 
     klp = kl/(1-scaled_ext*scaled_ext)*(llen-l0);
-    force = {{klp*direc[0], klp*direc[1]}};
+    force = klp * direc;
 
 }
 
@@ -105,9 +105,8 @@ array<double,2> spring::get_disp()
 
 void spring::filament_update()
 {
-    fil->update_forces(aindex[0],  force[0],  force[1]);
-    fil->update_forces(aindex[1], -force[0], -force[1]);
-
+    fil->update_forces(aindex[0],  force);
+    fil->update_forces(aindex[1], -force);
 }
 
 double spring::get_kl(){
@@ -136,12 +135,12 @@ double spring::get_length_sq(){
 
 vector<double> spring::output()
 {
-    return {hx[0], hy[0], disp[0], disp[1]};
+    return {h0[0], h0[1], disp[0], disp[1]};
 }
 
 std::string spring::write()
 {
-    return "\n" + std::to_string(hx[0]) + "\t" + std::to_string(hy[0]) + "\t" + std::to_string(disp[0]) + "\t"
+    return "\n" + std::to_string(h0[0]) + "\t" + std::to_string(h0[1]) + "\t" + std::to_string(disp[0]) + "\t"
         + std::to_string(disp[1]);
 }
 
@@ -180,18 +179,18 @@ array<double, 2> spring::intpoint(array<double, 2> pos)
 {
     double l2 = disp[0]*disp[0]+disp[1]*disp[1];
     if (l2 == 0) {
-        return {hx[0], hy[0]};
+        return h0;
     } else {
         //Consider the line extending the spring, parameterized as h0 + tp ( h1 - h0 )
         //tp = projection of pos onto the line
-        double tp = bc->dot_bc({pos[0]-hx[0], pos[1]-hy[0]}, {hx[1]-hx[0], hy[1]-hy[0]})/l2;
+        double tp = bc->dot_bc(pos - h0, h1 - h0)/l2;
         if (tp < 0.0) {
-            return {hx[0], hy[0]};
+            return h0;
         } else if (tp > 1.0 ) {
-            return {hx[1], hy[1]};
+            return h1;
         } else{
             //velocity and dt are 0 since not relevant
-            return bc->pos_bc({hx[0] + tp*disp[0], hy[0] + tp*disp[1]});
+            return bc->pos_bc(h0 + tp * disp);
         }
     }
 }
@@ -201,45 +200,25 @@ bool spring::get_line_intersect(spring *l2)
     //Reference to Stack Overflow entry by iMalc on Feb 10, 2013
     //Web Address: https://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
 
-    //double dx1, dx2, dy1, dy2, dx12,
-    double dx12, dy12, denom, s_num, t_num;
-    array <double,2> disp1, disp2, disp12, hx2, hy2;
-    bool denomPos;
+    vec_type disp1 = this->get_disp();
+    vec_type disp2 = l2->get_disp();
 
-    //dx1 = hx[1]-hx[0];
-    //dy1 = hy[1]-hy[0];
-    //dx2 = hx2[1]-hx2[0];
-    //dy2 = hy2[1]-hy2[0];
+    vec_type disp12 = bc->rij_bc(h0 - l2->get_h0());
 
-    disp1 = this->get_disp();
-    disp2 = l2->get_disp();
+    double denom = disp1[0]*disp2[1] - disp1[1]*disp2[0];
+    if (denom == 0) return false;
+    bool denomPos = denom > 0;
 
-    //disp1 = bc->rij_bc({dx1, dy1});
-    //disp2 = bc->rij_bc({dx2, dy2});
+    double s_num = disp1[0]*disp12[1] - disp1[1]*disp12[0];
+    double t_num = disp2[0]*disp12[1] - disp2[1]*disp12[0];
 
-    hx2 = l2->get_hx();
-    hy2 = l2->get_hy();
+    if ((s_num < 0) == denomPos) return false;
+    if ((t_num < 0) == denomPos) return false;
 
-    dx12 = hx[0]-hx2[0];
-    dy12 = hy[0]-hy2[0];
-
-    disp12 = bc->rij_bc({dx12, dy12});
-
-    denom  = (disp1[0]*disp2[1] - disp1[1]*disp2[0]);
-    if(denom == 0){return false;}
-    denomPos = denom > 0;
-
-    s_num = disp1[0]*disp12[1] - disp1[1]*disp12[0];
-    t_num = disp2[0]*disp12[1] - disp2[1]*disp12[0];
-
-    if((s_num < 0) == denomPos){ return false; }
-    if((t_num < 0) == denomPos){ return false; }
-
-    if(((s_num > denom) == denomPos) || ((t_num > denom) == denomPos)){ return false; }
+    if (((s_num > denom) == denomPos) || ((t_num > denom) == denomPos)) return false;
 
     //Else Collision have been detected, the filaments do intersect!
-    else{ return true; }
-
+    return true;
 }
 
 array<double, 2> spring::get_direction()
@@ -253,10 +232,7 @@ double spring::get_stretching_energy(){
 
 array<array<double, 2>, 2> spring::get_virial() {
     double k = kl*(llen-l0)/llen;
-    return {
-        array<double, 2>{k * disp[0] * disp[0], k * disp[0] * disp[1]},
-        array<double, 2>{k * disp[0] * disp[1], k * disp[1] * disp[1]}
-    };
+    return outer(disp, k * disp);
 }
 
 double spring::get_stretching_energy_fene()

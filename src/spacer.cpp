@@ -72,12 +72,8 @@ spacer::spacer(vector<double> mvec,
     pos_a_end = {{0, 0}}; // pos_a_end = distance from pointy end -- by default 0
                           // i.e., if l_index[hd] = j, then pos_a_end[hd] is the distance to the "j+1"th bead
 
-    array<double, 2> posH0 = bc->pos_bc({mvec[0], mvec[1]});
-    array<double, 2> posH1 = bc->pos_bc({mvec[0] + mvec[2], mvec[1] + mvec[3]});
-    hx[0] = posH0[0];
-    hy[0] = posH0[1];
-    hx[1] = posH1[0];
-    hy[1] = posH1[1];
+    h[0] = bc->pos_bc({mvec[0], mvec[1]});
+    h[1] = bc->pos_bc({mvec[0] + mvec[2], mvec[1] + mvec[3]});
 
     //force can be non-zero and angle is determined from disp vector
     this->update_angle();
@@ -91,16 +87,12 @@ spacer::spacer(vector<double> mvec,
     at_barbed_end = {{false, false}};
 
     if (state[0] == motor_state::bound){
-        pos_a_end[0] = bc->dist_bc({
-                filament_network->get_end(f_index[0], l_index[0])[0] - hx[0],
-                filament_network->get_end(f_index[0], l_index[0])[1] - hy[0]});
+        pos_a_end[0] = bc->dist_bc(filament_network->get_end(f_index[0], l_index[0]) - h[0]);
         ldir_bind[0] = filament_network->get_direction(f_index[0], l_index[0]);
 
     }
     if (state[1] == motor_state::bound){
-        pos_a_end[1] = bc->dist_bc({
-                filament_network->get_end(f_index[1], l_index[1])[0] - hx[1],
-                filament_network->get_end(f_index[1], l_index[1])[1] - hy[1]});
+        pos_a_end[1] = bc->dist_bc(filament_network->get_end(f_index[1], l_index[1]) - h[1]);
         ldir_bind[1] = filament_network->get_direction(f_index[1], l_index[1]);
     }
 
@@ -145,7 +137,7 @@ int spacer::get_further_end(int hd, int findex, int lindex)
 array<double, 2> spacer::disp_from_bead(int hd, int findex, int aindex)
 {
     array<double, 2> pos = filament_network->get_filament(findex)->get_bead_position(aindex);
-    return bc->rij_bc({pos[0] - hx[hd], pos[1] - hy[hd]});
+    return bc->rij_bc(pos - h[hd]);
 }
 
 void spacer::update_bending(int hd)
@@ -158,9 +150,7 @@ void spacer::update_bending(int hd)
     bend_result_type result = bend_harmonic(kb, th0, delr1, delr2);
 
     // apply force to each of 3 atoms
-    filament_network->update_forces(
-            f_index[hd], l_index[hd] + bead_further_end,
-            result.force1[0], result.force1[1]);
+    filament_network->update_forces(f_index[hd], l_index[hd] + bead_further_end, result.force1);
     b_force[hd][0] -= result.force1[0];
     b_force[hd][1] -= result.force1[1];
 
@@ -193,14 +183,11 @@ void spacer::brownian_relax(int hd)
     double vx =  (pow(-1,hd)*force[0] + b_force[hd][0]) / damp + bd_prefactor*(new_rnd_x + prv_rnd_x[hd]);
     double vy =  (pow(-1,hd)*force[1] + b_force[hd][1]) / damp + bd_prefactor*(new_rnd_y + prv_rnd_y[hd]);
     ke_vel = vx*vx + vy*vy;
-    ke_vir = -(0.5)*(pow(-1,hd))*(force[0]*hx[hd] + force[1]*hy[hd]);
-    array<double, 2> pos = bc->pos_bc({hx[hd] + vx*dt, hy[hd] + vy*dt});
-    hx[hd] = pos[0];
-    hy[hd] = pos[1];
+    ke_vir = -(0.5)*(pow(-1,hd))*(force[0]*h[hd][0] + force[1]*h[hd][1]);
+    h[hd] = bc->pos_bc({h[hd][0] + vx*dt, h[hd][1] + vy*dt});
 
     prv_rnd_x[hd] = new_rnd_x;
     prv_rnd_y[hd] = new_rnd_y;
-
 }
 
 void spacer::filament_update()
@@ -224,7 +211,7 @@ double spacer::metropolis_prob(int hd, array<int, 2> fl_idx, array<double, 2> ne
 {
     double prob = maxprob;
 
-    double stretch  = bc->dist_bc({newpos[0] - hx[pr(hd)], newpos[1] - hy[pr(hd)]}) - mld;
+    double stretch  = bc->dist_bc(newpos - h[pr(hd)]) - mld;
     double delEs = 0.5 * mk * stretch * stretch - get_stretching_energy();
 
     double bend_eng = 0.0;

@@ -51,8 +51,10 @@ double bead::get_length()
     return rad;
 }
 
-void bead::update_force(double f1, double f2)
+void bead::update_force(array<double, 2> f)
 {
+    double f1 = f[0];
+    double f2 = f[1];
     if(f1 == f1 && f2 == f2 && std::isfinite(f1) && std::isfinite(f2)){
         force[0]+=f1;
         force[1]+=f2;
@@ -85,6 +87,17 @@ void bead::set_fx(double fx)
 void bead::set_fy(double fy)
 {
     force[1] = fy;
+}
+
+array<double, 2> bead::get_pos()
+{
+    return {x, y};
+}
+
+void bead::set_pos(array<double, 2> pos)
+{
+    x = pos[0];
+    y = pos[1];
 }
 
 double bead::get_xcm()
