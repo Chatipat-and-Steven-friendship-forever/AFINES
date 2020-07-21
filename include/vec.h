@@ -1,8 +1,6 @@
 #ifndef AFINES_VEC_H
 #define AFINES_VEC_H
 
-#include "globals.h"
-
 struct vec_type {
     double x, y;
 
