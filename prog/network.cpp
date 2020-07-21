@@ -288,6 +288,21 @@ int main(int argc, char **argv)
         po::notify(vm);
     }
 
+    string tdir   = dir  + "/txt_stack";
+    string ddir   = dir  + "/data";
+    fs::path dir1(tdir), dir2(ddir);
+
+    string afile  = tdir + "/actins.txt";
+    string lfile  = tdir + "/links.txt";
+    string amfile = tdir + "/amotors.txt";
+    string pmfile = tdir + "/pmotors.txt";
+    string thfile = ddir + "/filament_e.txt";
+    string pefile = ddir + "/pe.txt";
+    string kefile = ddir + "/ke.txt";
+
+    if(fs::create_directory(dir1)) cerr<< "Directory Created: "<<afile<<std::endl;
+    if(fs::create_directory(dir2)) cerr<< "Directory Created: "<<thfile<<std::endl;
+
     // Write the full configuration file
     ofstream o_file(dir + "/data/config_full.cfg");
     for (auto const &it : vm) {
@@ -309,21 +324,6 @@ int main(int argc, char **argv)
     int n_bw_stdout = max(int((tfinal)/(dt*double(nmsgs))),1);
     int n_bw_print  = max(int((tfinal)/(dt*double(nframes))),1);
     int unprinted_count = int(double(tinit)/dt);
-
-    string tdir   = dir  + "/txt_stack";
-    string ddir   = dir  + "/data";
-    fs::path dir1(tdir), dir2(ddir);
-
-    string afile  = tdir + "/actins.txt";
-    string lfile  = tdir + "/links.txt";
-    string amfile = tdir + "/amotors.txt";
-    string pmfile = tdir + "/pmotors.txt";
-    string thfile = ddir + "/filament_e.txt";
-    string pefile = ddir + "/pe.txt";
-    string kefile = ddir + "/ke.txt";
-
-    if(fs::create_directory(dir1)) cerr<< "Directory Created: "<<afile<<std::endl;
-    if(fs::create_directory(dir2)) cerr<< "Directory Created: "<<thfile<<std::endl;
 
     vector<vector<double>> actin_pos_vec;
     vector<vector<double>> a_motor_pos_vec, p_motor_pos_vec;
