@@ -34,9 +34,9 @@ int main(int argc, char **argv)
     string config_file;
     po::options_description generic("Command Line Only Options");
     generic.add_options()
-        ("version, v", "print version string")
-        ("help, h", "produce help message")
-        ("config, c", po::value<string>(&config_file)->default_value("config/network.cfg"), "name of a configuration file")
+        ("version,v", "print version string")
+        ("help,h", "produce help message")
+        ("config,c", po::value<string>(&config_file)->default_value("config/network.cfg"), "name of a configuration file")
         ;
 
     // environment
@@ -290,7 +290,6 @@ int main(int argc, char **argv)
 
     string tdir   = dir  + "/txt_stack";
     string ddir   = dir  + "/data";
-    fs::path dir1(tdir), dir2(ddir);
 
     string afile  = tdir + "/actins.txt";
     string lfile  = tdir + "/links.txt";
@@ -300,23 +299,26 @@ int main(int argc, char **argv)
     string pefile = ddir + "/pe.txt";
     string kefile = ddir + "/ke.txt";
 
-    if(fs::create_directory(dir1)) cerr<< "Directory Created: "<<afile<<std::endl;
-    if(fs::create_directory(dir2)) cerr<< "Directory Created: "<<thfile<<std::endl;
+    if (fs::create_directory(fs::path(dir))) cerr << "Directory Created: " << dir << endl;
+    if (fs::create_directory(fs::path(tdir))) cerr << "Directory Created: " << tdir << endl;
+    if (fs::create_directory(fs::path(ddir))) cerr << "Directory Created: " << ddir << endl;
 
     // Write the full configuration file
-    ofstream o_file(dir + "/data/config_full.cfg");
-    for (auto const &it : vm) {
-        if (it.first == "config") continue;
-        boost::any val = it.second.value();
+    {
+        ofstream o_file(dir + "/data/config_full.cfg");
+        for (auto const &it : vm) {
+            if (it.first == "config") continue;
+            boost::any val = it.second.value();
 
-        if(typeid(bool) == val.type())
-            o_file << it.first <<"="<< boost::any_cast<bool>(val) <<endl;
-        else if(typeid(int) == val.type())
-            o_file << it.first <<"="<< boost::any_cast<int>(val) <<endl;
-        else if(typeid(double) == val.type())
-            o_file << it.first <<"="<< boost::any_cast<double>(val) <<endl;
-        else if(typeid(string) == val.type())
-            o_file << it.first <<"="<< boost::any_cast<string>(val) <<endl;
+            if(typeid(bool) == val.type())
+                o_file << it.first <<"="<< boost::any_cast<bool>(val) <<endl;
+            else if(typeid(int) == val.type())
+                o_file << it.first <<"="<< boost::any_cast<int>(val) <<endl;
+            else if(typeid(double) == val.type())
+                o_file << it.first <<"="<< boost::any_cast<double>(val) <<endl;
+            else if(typeid(string) == val.type())
+                o_file << it.first <<"="<< boost::any_cast<string>(val) <<endl;
+        }
     }
 
     // END PROGRAM OPTIONS
