@@ -88,7 +88,7 @@ void filament::update_positions()
     ke_vir = 0.0;
     size_t sa = beads.size();
     for (size_t i = 0; i < sa; i++) {
-        vec_type new_rnds = {rng_n(), rng_n()};
+        vec_type new_rnds = vec_randn();
         vec_type f = beads[i]->get_force() + bd_prefactor*damp*(new_rnds + prv_rnds[i]);
         vec_type v = f / damp;
         vec_type pos = beads[i]->get_pos();

@@ -254,7 +254,7 @@ void motor::update_force_fraenkel_fene()
 
 void motor::brownian_relax(int hd)
 {
-    vec_type new_rnd = {rng_n(), rng_n()};
+    vec_type new_rnd = vec_randn();
     vec_type v = pow(-1, hd) * force / damp + bd_prefactor * (new_rnd + prv_rnd[hd]);
     ke_vel = abs2(v);
     ke_vir = -0.5 * pow(-1, hd) * dot(force, h[hd]);

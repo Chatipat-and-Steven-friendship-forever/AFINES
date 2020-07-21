@@ -126,4 +126,12 @@ void intarray_printer(array<int,2> a);
 boost::optional<vec_type> seg_seg_intersection(vec_type, vec_type, vec_type, vec_type);
 std::string quads_error_message(std::string, vector<array<int, 2> >, vector<array<int, 2> > );
 
+inline vec_type vec_randn()
+{
+    // separate statements to keep call order correct
+    double x = rng_n();
+    double y = rng_n();
+    return {x, y};
+}
+
 #endif

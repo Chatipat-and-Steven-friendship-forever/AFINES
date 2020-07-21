@@ -55,8 +55,8 @@ vec_type spring::get_h1()
 
 void spring::step()
 {
-    vec_type h0 = fil->get_bead_position(aindex[0]);
-    vec_type h1 = fil->get_bead_position(aindex[1]);
+    h0 = fil->get_bead_position(aindex[0]);
+    h1 = fil->get_bead_position(aindex[1]);
 
     disp   = bc->rij_bc(h1 - h0);
     llensq = abs2(disp);

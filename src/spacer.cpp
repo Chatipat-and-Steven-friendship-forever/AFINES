@@ -171,7 +171,7 @@ void spacer::identify(){
 
 void spacer::brownian_relax(int hd)
 {
-    vec_type new_rnd {rng_n(), rng_n()};
+    vec_type new_rnd = vec_randn();
     vec_type v = pow(-1, hd) * force + b_force[hd] / damp + bd_prefactor * (new_rnd + prv_rnd[hd]);
     ke_vel = abs2(v);
     ke_vir = -0.5 * pow(-1, hd) * dot(force, h[hd]);
