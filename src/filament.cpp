@@ -196,34 +196,30 @@ vector<double> filament::output_thermo(int fil)
     return {get_kinetic_energy_vel(), get_kinetic_energy_vir(), get_potential_energy(), get_total_energy(), double(fil)};
 }
 
-string filament::write_beads(int fil){
+string filament::write_beads(int fil)
+{
     string all_beads;
-    for (unsigned int i =0; i < beads.size(); i++)
-    {
-        all_beads += beads[i]->write() + "\t" + std::to_string(fil);
+    for (bead *b : beads) {
+        all_beads += fmt::format("{}\t{}", b->write(), fil);
     }
-
     return all_beads;
 }
 
-string filament::write_springs(int fil){
+string filament::write_springs(int fil)
+{
     string all_springs;
-    for (unsigned int i =0; i < springs.size(); i++)
-    {
-        all_springs += springs[i]->write() + "\t" + std::to_string(fil);
+    for (spring *s : springs) {
+        all_springs += fmt::format("{}\t{}", s->write(), fil);
     }
-
     return all_springs;
 }
 
 string filament::write_thermo(int fil)
 {
-    return
-        "\n" + std::to_string(this->get_kinetic_energy_vel()) +
-        "\t" + std::to_string(this->get_kinetic_energy_vir()) +
-        "\t" + std::to_string(this->get_potential_energy()) +
-        "\t" + std::to_string(this->get_total_energy()) +
-        "\t" + std::to_string(fil);
+    return fmt::format(
+            "\n{}\t{}\t{}\t{}",
+            get_kinetic_energy_vel(), get_kinetic_energy_vir(),
+            get_potential_energy(), get_total_energy());
 }
 
 vector<vector<double>> filament::get_beads(size_t first, size_t last)
@@ -283,20 +279,22 @@ bool filament::operator==(const filament& that){
 
 }
 
-string filament::to_string(){
-
+string filament::to_string()
+{
     // Note: not including springs in to_string, because spring's to_string includes filament's to_string
-    char buffer[200];
     string out = "\n";
 
-    for (unsigned int i = 0; i < beads.size(); i++)
-        out += beads[i]->to_string();
+    for (bead *b : beads) {
+        out += b->to_string();
+    }
 
-    sprintf(buffer, "temperature = %f\tdt = %f\tfracture_force=%f\n",
+    out += fmt::format(
+            "temperature = {}\t"
+            "dt = {}\t"
+            "fracture_force = {}\n",
             temperature, dt, fracture_force);
 
-    return out + buffer;
-
+    return out;
 }
 
 inline double filament::angle_between_springs(int i, int j){
@@ -420,11 +418,9 @@ vec_type filament::get_bead_position(int n)
 
 void filament::print_thermo()
 {
-    cout
-        << "\tKE = "<< this->get_kinetic_energy_vel()
-        << "\tKEvir = "<< this->get_kinetic_energy_vir()
-        << "\tPE = "<< this->get_potential_energy()
-        << "\tTE = "<< this->get_total_energy();
+    fmt::print("\tKEvel = {}\tKEvir = {}\tPE = {}\tTE = {}",
+            get_kinetic_energy_vel(), get_kinetic_energy_vir(),
+            get_potential_energy(), get_total_energy());
 }
 
 double filament::get_end2end()

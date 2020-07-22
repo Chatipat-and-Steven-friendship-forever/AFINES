@@ -224,7 +224,15 @@ virial_type motor_ensemble<motor_type>::get_virial()
 template <class motor_type>
 void motor_ensemble<motor_type>::print_ensemble_thermo()
 {
-    cout << "\nAll Motors\t:\tKE = " << ke_vel << "\tKEvir" << ke_vir << "\tPEs = " << pe << "\tPEb = " << 0 << "\tTE = " << (ke_vel + pe);
+    fmt::print(
+            "\n"
+            "All Motors\t:\t"
+            "KEvel = {}\t"
+            "KEvir = {}\t"
+            "PEs = {}\t"
+            "PEb = {}\t"
+            "TE = {}",
+            ke_vel, ke_vir, pe, 0, ke_vel + pe);
 }
 
 template <class motor_type>
@@ -251,11 +259,9 @@ template <class motor_type>
 void motor_ensemble<motor_type>::motor_write_doubly_bound(ostream& fout)
 {
     array<motor_state, 2> doubly_bound = {motor_state::bound, motor_state::bound};
-
-    for (unsigned int i=0; i<n_motors.size(); i++) {
-        if (n_motors[i]->get_states() == doubly_bound){
-            fout<<n_motors[i]->write();
-            fout<<"\t"<<i;
+    for (size_t i = 0; i < n_motors.size(); i++) {
+        if (n_motors[i]->get_states() == doubly_bound) {
+            fmt::print(fout, "{}\t{}", n_motors[i]->write(), i);
         }
     }
 }

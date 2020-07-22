@@ -140,18 +140,18 @@ vector<double> spring::output()
 
 std::string spring::write()
 {
-    return "\n" + std::to_string(h0.x) + "\t" + std::to_string(h0.y) + "\t" + std::to_string(disp.x) + "\t"
-        + std::to_string(disp.y);
+    return fmt::format("\n{}\t{}\t{}\t{}", h0.x, h0.y, disp.x, disp.y);
 }
 
-std::string spring::to_string(){
-
-    char buffer [100];
-    sprintf(buffer, "aindex[0] = %d;\t aindex[1] = %d;\t kl = %f;\t l0 = %f\nfilament : \n",
-                        aindex[0], aindex[1], kl, l0);
-
-    return buffer + fil->to_string();
-
+std::string spring::to_string()
+{
+    return fmt::format(
+            "aindex[0] = {};\t "
+            "aindex[1] = {};\t "
+            "kl = {};\t "
+            "l0 = {}\n"
+            "filament : \n{}",
+            aindex[0], aindex[1], kl, l0, fil->to_string());
 }
 
 bool spring::operator==(const spring& that)

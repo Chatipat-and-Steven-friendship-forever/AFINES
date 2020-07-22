@@ -149,14 +149,12 @@ void filament_ensemble::update_d_strain(double g)
     }
 }
 
-void filament_ensemble::print_filament_thermo(){
-
-    for (unsigned int f = 0; f < network.size(); f++)
-    {
-        cout<<"\nF"<<f<<"\t:";
-        network[f]->print_thermo();
+void filament_ensemble::print_filament_thermo()
+{
+    for (size_t i = 0; i < network.size(); i++) {
+        fmt::print("\nF{}\t:", i);
+        network[i]->print_thermo();
     }
-
 }
 
 void filament_ensemble::update_energies()
@@ -198,15 +196,25 @@ double filament_ensemble::get_kinetic_energy_vir(){
     return ke_vir;
 }
 
-void filament_ensemble::print_network_thermo(){
-    cout<<"\nAll Fs\t:\tKE = "<<ke_vir<<"\tPEs = "<<pe_stretch<<"\tPEb = "<<pe_bend<<"\tPEexv = "<<pe_exv<<"\tTE = "<<(ke_vir+pe_stretch+pe_bend+pe_exv);
+void filament_ensemble::print_network_thermo()
+{
+    fmt::print(
+            "\nAll Fs\t:\t"
+            "KEvel = {}\t"
+            "KEvir = {}\t"
+            "PEs = {}\t"
+            "PEb = {}\t"
+            "PEexv = {}\t"
+            "TE = {}",
+            ke_vel, ke_vir,
+            pe_stretch, pe_bend, pe_exv,
+            ke_vir + pe_stretch + pe_bend + pe_exv);
 }
 
-
-void filament_ensemble::print_filament_lengths(){
-    for (unsigned int f = 0; f < network.size(); f++)
-    {
-        cout<<"\nF"<<f<<" : "<<network[f]->get_end2end()<<" um";
+void filament_ensemble::print_filament_lengths()
+{
+    for (size_t f = 0; f < network.size(); f++) {
+        fmt::print("\nF{} : {} um", f, network[f]->get_end2end());
     }
 }
 

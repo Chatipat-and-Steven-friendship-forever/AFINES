@@ -81,15 +81,19 @@ vector<double> bead::output()
 
 string bead::write()
 {
-    return "\n" + std::to_string(pos.x) + "\t" + std::to_string(pos.y) + "\t" + std::to_string(rad);
+    return fmt::format("\n{}\t{}\t{}", pos.x, pos.y, rad);
 }
 
 string bead::to_string()
 {
-    return "x : " + std::to_string(pos.x) + "\ty : " + std::to_string(pos.y) +
-           "\trad : " + std::to_string(rad) + "\tvisc : "+ std::to_string(visc) + 
-           "\tforce[0] : " + std::to_string(force.x) + "\tforce[1] : "+ std::to_string(force.y) + "\n";
- 
+    return fmt::format(
+            "x : {}\t"
+            "y : {}\t"
+            "rad : {}\t"
+            "visc : {}\t"
+            "force[0] : {}\t"
+            "force[1] : {}\n",
+            pos.x, pos.y, rad, visc, force.x, force.y);
 }
 
 double bead::get_viscosity(){

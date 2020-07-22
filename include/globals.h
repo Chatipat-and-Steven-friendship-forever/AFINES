@@ -46,6 +46,9 @@
 #include <unordered_set>
 #include <vector>
 
+#include <fmt/core.h>
+#include <fmt/ostream.h>
+
 #include "vec.h"
 
 using namespace std;

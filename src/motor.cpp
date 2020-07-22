@@ -456,22 +456,36 @@ double motor::get_kinetic_energy_vir()
 
 string motor::to_string()
 {
-    char buffer[1000];
-    string out ="";
+    return fmt::format("\n"
+            "head 0 position = ({}, {})\t "
+            "head 1 position = ({}, {})\n"
 
-    sprintf(buffer, "\
-            \nhead 0 position = (%f, %f)\t head 1 position=(%f,%f)\
-            \nstate = (%d, %d)\t f_index = (%d, %d)\t l_index = (%d, %d)\
-            \nviscosity = %f\t max binding distance = %f\t stiffness = %f\t stall force = %f\t length = %f\
-            \nkon = %f\t koff = %f\t kend = %f\t dt = %f\t temp = %f\t damp = %f\
-            \ndistance from end of spring = (%f, %f)\t tension = (%f, %f)\n",
-            h[0].x, h[0].y, h[1].x, h[1].y,
-            static_cast<int>(state[0]),  static_cast<int>(state[1]),
-            f_index[0],  f_index[1], l_index[0], l_index[1],
-            vs, max_bind_dist, mk, stall_force, mld,
-            kon, koff, kend, dt, temperature, damp,
-            pos_a_end[0], pos_a_end[1], force.x, force.y);
-    return buffer;
+            "state = ({}, {})\t "
+            "f_index = ({}, {})\t "
+            "l_index = ({}, {})\n"
+
+            "viscosity = {}\t "
+            "max binding distance = {}\t "
+            "stiffness = {}\t "
+            "stall force = {}\t "
+            "length = {}\n"
+
+            "kon = {}\t "
+            "koff = {}\t "
+            "kend = {}\t "
+            "dt = {}\t "
+            "temp = {}\t "
+            "damp = {}\n"
+
+            "distance from end of spring = ({}, {})\t "
+            "tension = ({}, {})\n",
+
+        h[0].x, h[0].y, h[1].x, h[1].y,
+        static_cast<int>(state[0]),  static_cast<int>(state[1]),
+        f_index[0],  f_index[1], l_index[0], l_index[1],
+        vs, max_bind_dist, mk, stall_force, mld,
+        kon, koff, kend, dt, temperature, damp,
+        pos_a_end[0], pos_a_end[1], force.x, force.y);
 }
 
 vector<double> motor::output()
@@ -540,10 +554,11 @@ void motor::remove_from_spring(int hd)
 
 string motor::write()
 {
-    return "\n" + std::to_string(h[0].x) + "\t" + std::to_string(h[0].y)
-        +  "\t" + std::to_string(disp.x) + "\t" + std::to_string(disp.y)
-        +  "\t" + std::to_string(f_index[0]) + "\t" + std::to_string(f_index[1])
-        +  "\t" + std::to_string(l_index[0]) + "\t" + std::to_string(l_index[1]);
+    return fmt::format("\n{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
+            h[0].x, h[0].y,
+            disp.x, disp.y,
+            f_index[0], f_index[1],
+            l_index[0], l_index[1]);
 }
 
 void motor::revive_head(int hd)

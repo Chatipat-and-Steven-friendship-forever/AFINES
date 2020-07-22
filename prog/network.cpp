@@ -22,7 +22,7 @@ ostream& operator<<(ostream& os, const vector<T>& v)
 
 ostream &operator<<(ostream &os, const virial_type &a)
 {
-    os << a.xx << "\t" << a.xy << "\t" << a.yx << "\t" << a.yy;
+    fmt::print(os, "{}\t{}\t{}\t{}", a.xx, a.xy, a.yx, a.yy);
     return os;
 }
 
@@ -606,12 +606,13 @@ int main(int argc, char **argv)
                 d_strain += restart_strain + d_strain_amp*d_strain_freq*(t - time_of_dstrain);
             }
             bc->update_d_strain(d_strain - prev_d_strain);
-            cout << "\nDEBUG: t = " << t << "; adding d_strain of " << (d_strain - prev_d_strain) << " um here; total strain = " << d_strain;
+            fmt::print("\nDEBUG: t = {}; adding d_strain of {} um here; total strain = {}",
+                    t, d_strain - prev_d_strain, d_strain);
             prev_d_strain = d_strain;
         }
 
         if (count%n_bw_stdout==0) {
-            cout<<"\nTime counts: "<<count;
+            fmt::print("\nTime counts: {}", count);
             //net->print_filament_thermo();
             net->print_network_thermo();
             crosslks->print_ensemble_thermo();
@@ -624,31 +625,31 @@ int main(int argc, char **argv)
             if (t>tinit) time_str ="\n";
             time_str += "t = "+to_string(t);
 
-            file_a << time_str<<"\tN = "<<to_string(net->get_nbeads());
+            fmt::print(file_a, "{}\tN = {}", time_str, net->get_nbeads());
             net->write_beads(file_a);
 
-            file_l << time_str<<"\tN = "<<to_string(net->get_nsprings());
+            fmt::print(file_l, "{}\tN = {}", time_str, net->get_nsprings());
             net->write_springs(file_l);
 
-            file_am << time_str<<"\tN = "<<to_string(myosins->get_nmotors());
+            fmt::print(file_am, "{}\tN = {}", time_str, myosins->get_nmotors());
             myosins->motor_write(file_am);
 
-            file_pm << time_str<<"\tN = "<<to_string(crosslks->get_nmotors());
+            fmt::print(file_pm, "{}\tN = {}", time_str, crosslks->get_nmotors());
             crosslks->motor_write(file_pm);
 
-            file_th << time_str<<"\tN = "<<to_string(net->get_nfilaments());
+            fmt::print(file_th, "{}\tN = {}", time_str, net->get_nfilaments());
             net->write_thermo(file_th);
 
-            file_pe
-                << net->get_stretching_energy() << "\t"
-                << net->get_bending_energy() << "\t"
-                << myosins->get_potential_energy() << "\t"
-                << crosslks->get_potential_energy() << "\t"
-                << prev_d_strain << "\t"
-                << net->get_stretching_virial() << "\t"
-                << net->get_bending_virial() << "\t"
-                << myosins->get_virial() << "\t"
-                << crosslks->get_virial() << endl;
+            fmt::print(file_pe, "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
+                    net->get_stretching_energy(),
+                    net->get_bending_energy(),
+                    myosins->get_potential_energy(),
+                    crosslks->get_potential_energy(),
+                    prev_d_strain,
+                    net->get_stretching_virial(),
+                    net->get_bending_virial(),
+                    myosins->get_virial(),
+                    crosslks->get_virial());
 
             file_a<<std::flush;
             file_l<<std::flush;
