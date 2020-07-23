@@ -99,74 +99,71 @@ void motor_ensemble<motor_type>::motor_update()
 {
     this->check_broken_filaments();
 
-    for (motor *m : n_motors) {
-        if (static_flag) {
-            // Used for static, constantly attached, motors -- ASSUMES both heads are ALWAYS attached
+    if (static_flag) {
+        // static, constantly attached motors
+        // assumes both heads are ALWAYS attached
+        for (motor *m : n_motors) {
             m->update_position_attached(0);
             m->update_position_attached(1);
             m->update_angle();
             m->update_force();
             m->filament_update();
+        }
 
-        } else {
+    } else {
+
+        // Brownian dynamics for unbound heads
+        for (motor *m : n_motors) {
             array<motor_state, 2> s = m->get_states();
-
-            // Dynamics
             if (s[0] == motor_state::free || s[0] == motor_state::inactive) {
                 m->brownian_relax(0);
             }
             if (s[1] == motor_state::free || s[1] == motor_state::inactive) {
                 m->brownian_relax(1);
             }
+        }
 
-            m->update_angle();
-            m->update_force();
-            m->filament_update();
+        // note: bound head positions were determined
+        // in the last time step
 
-            // Attachment or Movement + Detachment
+        // update derived quantities
+        for (motor *m : n_motors) m->update_angle();
+
+        // compute stretching forces
+        for (motor *m : n_motors) m->update_force();
+
+        // apply forces to filaments
+        for (motor *m : n_motors) m->filament_update();
+
+        for (motor *m : n_motors) {
+            array<motor_state, 2> s = m->get_states();
+
             if (s[0] == motor_state::free) {
-                if (attach_opt_flag) {
-                    m->attach_opt(0);
-                } else {
-                    m->attach(0);
-                }
+                // attempt attachment
+                m->try_attach(0, attach_opt_flag);
             } else if (s[0] != motor_state::inactive) {
-                m->step_onehead(0);
+                if (!m->try_detach(0)) {
+                    m->walk(0);
+                    if (m->get_states()[0] == motor_state::bound)
+                        m->update_position_attached(0);
+                }
             }
 
             if (s[1] == motor_state::free) {
-                if (attach_opt_flag) {
-                    m->attach_opt(1);
-                } else {
-                    m->attach(1);
-                }
+                // attempt attachment
+                m->try_attach(1, attach_opt_flag);
             } else if (s[1] != motor_state::inactive) {
-                m->step_onehead(1);
+                if (!m->try_detach(1)) {
+                    m->walk(1);
+                    if (m->get_states()[1] == motor_state::bound)
+                        m->update_position_attached(1);
+                }
             }
-
-            /*
-            if (s[0] == motor_state::bound) {
-                m->step_onehead(0);
-            } else if (s[0] == motor_state::free) {
-                bool attached = m->attach(0);
-                if (!attached) m->brownian_relax(0);
-            }
-
-            if (s[1] == motor_state::bound) {
-                m->step_onehead(1);
-            } else if (s[1] == motor_state::free) {
-                bool attached = m->attach(1);
-                if (!attached) m->brownian_relax(1);
-            }
-
-            m->update_angle();
-            m->update_force();
-            m->filament_update();
-            */
-
         }
+
     }
-    this->update_energies();
+
+    update_energies();
 }
 
 template <class motor_type>

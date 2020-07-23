@@ -157,6 +157,14 @@ void motor::attach_head(int hd, vec_type intpoint, array<int, 2> fl)
     at_barbed_end[hd] = false;
 }
 
+bool motor::try_attach(int hd, bool opt)
+{
+    if (opt)
+        return attach_opt(hd);
+    else
+        return attach(hd);
+}
+
 // does the same thing as motor::attach, but faster
 bool motor::attach_opt(int hd)
 {
@@ -304,34 +312,33 @@ vec_type motor::generate_off_pos(int hd)
     return bc->pos_bc(h[hd] - bind_disp_rot);
 }
 
-// stepping and detachment kinetics of a single bound head
-void motor::step_onehead(int hd)
+bool motor::try_detach(int hd)
 {
-
     vec_type hpos_new = generate_off_pos(hd);
     double offrate = at_barbed_end[hd] ? kend : koff;
     if (state[pr(hd)] == motor_state::bound)
         offrate = at_barbed_end[hd] ? kend2 : koff2;
 
-    double off_prob = metropolis_prob(hd, {{0,0}}, hpos_new, offrate);
+    double off_prob = metropolis_prob(hd, {}, hpos_new, offrate);
 
-    //cout<<"\nDEBUG: at barbed end? : "<<at_barbed_end[hd]<<"; off_prob = "<<off_prob;
-    // attempt detachment
-    if ( event(off_prob) ) this->detach_head(hd, hpos_new);
-    else{
-
-        //calculate motor velocity
-        if (vs != 0 && !(at_barbed_end[hd])){
-            double vm = vs;
-            if (state[pr(hd)] != motor_state::free) {
-                vm = my_velocity(vs,
-                        pow(-1, hd)*dot(force, filament_network->get_direction(f_index[hd], l_index[hd])),
-                        stall_force);
-            }
-            this->update_pos_a_end(hd, pos_a_end[hd]+dt*vm); // update relative position
-        }
-        if (state[hd] == motor_state::bound) this->update_position_attached(hd);  // update absolute position
+    if (event(off_prob)) {
+        detach_head(hd, hpos_new);
+        return true;
     }
+    return false;
+}
+
+// stepping and detachment kinetics of a single bound head
+void motor::walk(int hd)
+{
+    if (vs == 0 || at_barbed_end[hd]) return;
+    //calculate motor velocity
+    double vm = vs;
+    if (state[pr(hd)] != motor_state::free) {
+        vec_type dir = filament_network->get_direction(f_index[hd], l_index[hd]);
+        vm = my_velocity(vs, pow(-1, hd)*dot(force, dir), stall_force);
+    }
+    update_pos_a_end(hd, pos_a_end[hd] + dt * vm); // update relative position
 }
 
 // set pos_a_end relative to the start of the spring the head is bound to

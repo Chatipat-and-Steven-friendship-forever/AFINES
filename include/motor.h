@@ -54,9 +54,11 @@ class motor
 
         // attach/detach
         virtual bool allowed_bind( int hd, array<int, 2> fl_idx);
+        bool try_attach(int head, bool opt);
         bool attach(int hd);
         bool attach_opt(int hd);
         void attach_head(int hd, vec_type intpoint, array<int, 2> fl);
+        bool try_detach(int head);
         void detach_head(int hd);
         void detach_head(int hd, vec_type pos);
         void detach_head_without_moving(int hd);
@@ -65,7 +67,7 @@ class motor
 
         // step/walk
         void update_angle();
-        void step_onehead( int hd);
+        void walk(int hd);
         void update_pos_a_end(int hd, double pos);
         virtual void brownian_relax(int hd);
         void set_pos_a_end(int hd, double pos);
