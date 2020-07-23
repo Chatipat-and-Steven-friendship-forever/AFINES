@@ -157,26 +157,31 @@ void motor::attach_head(int hd, vec_type intpoint, array<int, 2> fl)
     at_barbed_end[hd] = false;
 }
 
-bool motor::try_attach(int hd, bool opt)
+bool motor::try_attach(int hd, bool opt, mc_prob &p)
 {
     if (opt)
-        return attach_opt(hd);
+        return attach_opt(hd, p);
     else
-        return attach(hd);
+        return attach(hd, p);
 }
 
 // does the same thing as motor::attach, but faster
-bool motor::attach_opt(int hd)
+bool motor::attach_opt(int hd, mc_prob &p)
 {
-    double mf_rand = rng_u();
     double onrate = (state[pr(hd)] == motor_state::bound) ? kon2 : kon;
     vector<array<int, 2>> *attach_list = filament_network->get_attach_list(h[hd]);
+
     int count = attach_list->size();
-    if (onrate * count > 1.0) throw std::runtime_error("onrate * count > 1");
-    int i = floor(mf_rand / onrate);
-    if (i < 0) throw std::logic_error("attach list index < 0");
-    if (i < count) {
+    double needprob = onrate * count;
+    boost::optional<double> opt_p = p(needprob);
+
+    if (opt_p) {
+        double mf_rand = *opt_p;
+        int i = floor(mf_rand / onrate);
         double remprob = mf_rand - onrate * i;
+
+        if (i < 0) throw std::logic_error("attach list index < 0");
+        if (i >= count) throw std::logic_error("attach list index >= count");
         if (remprob < 0 || remprob > onrate) throw std::logic_error("invalid remaining probability");
 
         // compute and get attachment point
@@ -199,13 +204,14 @@ bool motor::attach_opt(int hd)
             return true;
         }
     }
+
     return false;
 }
 
 // attempt to attach unbound head to a filament
 // does NOT check that the head in unbound
 //check for attachment of unbound heads given head index (0 for head 1, and 1 for head 2)
-bool motor::attach(int hd)
+bool motor::attach(int hd, mc_prob &p)
 {
     set<tuple<double, array<int, 2>, vec_type>> dist_sq_sorted;
     for (array<int, 2> fl : *filament_network->get_attach_list(h[hd])) {
@@ -217,8 +223,6 @@ bool motor::attach(int hd)
         dist_sq_sorted.insert(tuple<double, array<int, 2>, vec_type>(dist_sq, fl, intpoint));
     }
 
-    double not_off_prob = 0.0;
-    double mf_rand = rng_u();
     double onrate = (state[pr(hd)] == motor_state::bound) ? kon2 : kon;
     for (auto it : dist_sq_sorted) {
         double dist_sq; array<int, 2> fl; vec_type intpoint;
@@ -228,9 +232,8 @@ bool motor::attach(int hd)
 
         //head can't bind to the same filament spring the other head is bound to
         else if (allowed_bind(hd, fl)) {
-            not_off_prob += metropolis_prob(hd, fl, intpoint, onrate);
-
-            if (mf_rand < not_off_prob) {
+            double needprob = metropolis_prob(hd, fl, intpoint, onrate);
+            if (p(needprob)) {
                 attach_head(hd, intpoint, fl);
                 return true;
             }
@@ -312,16 +315,16 @@ vec_type motor::generate_off_pos(int hd)
     return bc->pos_bc(h[hd] - bind_disp_rot);
 }
 
-bool motor::try_detach(int hd)
+bool motor::try_detach(int hd, mc_prob &p)
 {
     vec_type hpos_new = generate_off_pos(hd);
     double offrate = at_barbed_end[hd] ? kend : koff;
     if (state[pr(hd)] == motor_state::bound)
         offrate = at_barbed_end[hd] ? kend2 : koff2;
 
-    double off_prob = metropolis_prob(hd, {}, hpos_new, offrate);
+    double needprob = metropolis_prob(hd, {}, hpos_new, offrate);
 
-    if (rng_u() < off_prob) {
+    if (p(needprob)) {
         detach_head(hd, hpos_new);
         return true;
     }

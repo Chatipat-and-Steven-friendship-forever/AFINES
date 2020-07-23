@@ -54,11 +54,11 @@ class motor
 
         // attach/detach
         virtual bool allowed_bind( int hd, array<int, 2> fl_idx);
-        bool try_attach(int head, bool opt);
-        bool attach(int hd);
-        bool attach_opt(int hd);
+        bool try_attach(int head, bool opt, mc_prob &p);
+        bool attach(int hd, mc_prob &p);
+        bool attach_opt(int hd, mc_prob &p);
         void attach_head(int hd, vec_type intpoint, array<int, 2> fl);
-        bool try_detach(int head);
+        bool try_detach(int head, mc_prob &p);
         void detach_head(int hd);
         void detach_head(int hd, vec_type pos);
         void detach_head_without_moving(int hd);

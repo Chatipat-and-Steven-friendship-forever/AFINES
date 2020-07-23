@@ -133,16 +133,18 @@ void motor_ensemble<motor_type>::montecarlo()
     for (motor *m : n_motors) {
         array<motor_state, 2> s = m->get_states();
 
+        mc_prob p;
+
         if (s[0] == motor_state::free) {
-            m->try_attach(0, attach_opt_flag);
+            m->try_attach(0, attach_opt_flag, p);
         } else if (s[0] != motor_state::inactive) {
-            m->try_detach(0);
+            m->try_detach(0, p);
         }
 
         if (s[1] == motor_state::free) {
-            m->try_attach(1, attach_opt_flag);
+            m->try_attach(1, attach_opt_flag, p);
         } else if (s[1] != motor_state::inactive) {
-            m->try_detach(1);
+            m->try_detach(1, p);
         }
     }
 }

@@ -127,4 +127,29 @@ inline vec_type vec_randn()
     return {x, y};
 }
 
+struct mc_prob {
+    mc_prob()
+    {
+        prob = rng_u();
+        used = 0.0;
+    }
+
+    double prob;
+    double used;
+
+    boost::optional<double> operator()(double needprob)
+    {
+        boost::optional<double> result;
+        if (used <= prob && prob < used + needprob) {
+            result = {prob - used};
+        }
+        used += needprob;
+        if (used > 1) {
+            throw runtime_error("Need too much probability.");
+        }
+        return result;
+    }
+
+};
+
 #endif
