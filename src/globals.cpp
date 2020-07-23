@@ -20,11 +20,6 @@ normal_distribution<double> distribution(0,1);
 
 /*generic functions to be used below*/
 
-double rng(double start, double end)
-{
-    return start+(end-start)*((double)rand()/(RAND_MAX));
-}
-
 double rng_u()
 {
     return (double)rand()/(RAND_MAX);
@@ -58,34 +53,6 @@ double rng_n()
 
 }
 
-bool event(double prob)
-{
-    return rng(0,1) < prob;
-}
-
-int event(double rate, double timestep)
-{
-    if (rng(0,1.0)<rate*timestep) {
-        return 1;
-    }
-    else
-        return 0;
-}
-
-double my_velocity(double vel0, double force, double fstall)
-{
-    if (force>=fstall) {
-        return 0;
-    }
-    else if ((force > -fstall) && (force < fstall)){
-        return vel0*(1-force/fstall);
-    }
-    else{
-        return 2*vel0;
-    }
-
-}
-
 array<double, 2> cm_bc(string bc, const vector<double>& xi, const vector<double>& yi, double xbox, double ybox, double delrx)
 {
     if (bc == "PERIODIC" || bc == "LEES-EDWARDS")
@@ -112,26 +79,6 @@ double mean_periodic(const vector<double>& nums, double bnd)
     }
     double thetabar = atan2(zetatot/((double) nums.size()), xitot/((double) nums.size())) + pi;
     return bnd*thetabar/(2*pi);
-}
-
-double cross(double ax, double ay, double bx, double by)
-{
-    return ax*by-bx*ay;
-}
-
-double cross(const array<double, 2>& v1, const array<double, 2>& v2)
-{
-    return v1[0]*v2[1]-v2[0]*v1[1];
-}
-
-double dot(double x1, double y1, double x2, double y2)
-{
-    return x1*x2+y1*y2;
-}
-
-double dot(const array<double, 2>& v1, const array<double, 2>& v2)
-{
-    return v1[0]*v2[0]+v1[1]*v2[1];
 }
 
 double var(const vector<double>& vals)

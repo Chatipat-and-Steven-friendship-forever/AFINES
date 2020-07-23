@@ -26,9 +26,9 @@ vector<vector<double>> generate_filament_ensemble(
             y = pos_sets[i][1];
             phi = pos_sets[i][2];
         } else {
-            x = rng(-0.5 * view[0] * fov[0], 0.5 * view[0] * fov[0]);
-            y = rng(-0.5 * view[1] * fov[1], 0.5 * view[1] * fov[1]);
-            phi = rng(0.0, 2.0 * pi);
+            x = view[0] * fov[0] * (rng_u() - 0.5);
+            y = view[1] * fov[1] * (rng_u() - 0.5);
+            phi = 2.0 * pi * rng_u();
         }
         beads.push_back({x, y, radius, double(i)});
         int nbeads = nbeads_min + distribution(generator);
@@ -66,9 +66,9 @@ vector<vector<double>> generate_filament_ensemble(
             y = pos_sets[i][1];
             phi = pos_sets[i][2];
         } else {
-            x = rng(-0.5 * view[0] * fov[0], 0.5 * view[0] * fov[0]);
-            y = rng(-0.5 * view[1] * fov[1], 0.5 * view[1] * fov[1]);
-            phi = rng(0.0, 2.0 * pi);
+            x = view[0] * fov[0] * (rng_u() - 0.5);
+            y = view[1] * fov[1] * (rng_u() - 0.5);
+            phi = 2.0 * pi * rng_u();
             // phi = atan2(1+x-y*y, -1-x*x+y); first example in Mathematica's streamplot documentation
         }
         beads.push_back({x, y, radius, double(i)});
@@ -97,9 +97,9 @@ vector<vector<double>> generate_motor_ensemble(box *bc, double density, double l
             y = positions[i][1];
             a = positions[i][2];
         } else {
-            x = rng(-0.5 * (fov[0] * alpha - l0), 0.5 * (fov[0] * alpha - l0));
-            y = rng(-0.5 * (fov[1] * alpha - l0), 0.5 * (fov[1] * alpha - l0));
-            a = rng(0.0, 2.0 * pi);
+            x = (fov[0] * alpha - l0) * (rng_u() - 0.5);
+            y = (fov[1] * alpha - l0) * (rng_u() - 0.5);
+            a = 2.0 * pi * rng_u();
         }
         double dx = l0 * cos(a);
         double dy = l0 * sin(a);
@@ -137,7 +137,7 @@ vector<vector<double>> spring_spring_intersections(box *bc, vector<vector<double
                     vec_type s1 = filaments[f2][l2];
                     vec_type s2 = filaments[f2][l2 + 1];
                     boost::optional<vec_type> inter = seg_seg_intersection_bc(bc, r1, r2, s1, s2);
-                    if (inter && rng(0, 1) <= prob) {
+                    if (inter && rng_u() <= prob) {
                         vec_type disp = bc->rij_bc(s2 - s1);
                         double llen = abs(disp);
                         vec_type direc = disp / llen;

@@ -321,7 +321,7 @@ bool motor::try_detach(int hd)
 
     double off_prob = metropolis_prob(hd, {}, hpos_new, offrate);
 
-    if (event(off_prob)) {
+    if (rng_u() < off_prob) {
         detach_head(hd, hpos_new);
         return true;
     }
@@ -332,13 +332,20 @@ bool motor::try_detach(int hd)
 void motor::walk(int hd)
 {
     if (vs == 0 || at_barbed_end[hd]) return;
+
     //calculate motor velocity
     double vm = vs;
     if (state[pr(hd)] != motor_state::free) {
         vec_type dir = filament_network->get_direction(f_index[hd], l_index[hd]);
-        vm = my_velocity(vs, pow(-1, hd)*dot(force, dir), stall_force);
+        double f = pow(-1, hd) * dot(force, dir);
+        double factor = 1.0 - f / stall_force;
+        if (factor < 0.0) factor = 0.0;
+        if (factor > 2.0) factor = 2.0;
+        vm = factor * vs;
     }
-    update_pos_a_end(hd, pos_a_end[hd] + dt * vm); // update relative position
+
+    // update relative position
+    update_pos_a_end(hd, pos_a_end[hd] + dt * vm);
 }
 
 // set pos_a_end relative to the start of the spring the head is bound to

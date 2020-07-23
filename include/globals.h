@@ -65,13 +65,9 @@ const double actin_mass_density = 2.6e-14; //miligram / micron
 /*generic functions to be used below*/
 void set_seed(int s);
 double rng_u();
-double rng(double start, double end);
 int pr(int num);
 double rng_exp(double mean);
 double rng_n(); //default parameters --> mu = 0, sig = 1
-double rng_n(double mean, double var);
-bool event(double prob);
-int event(double rate, double timestep);
 
 vector<int> range_bc(string bc, double delrx, int botq, int topq, int low, int high);
 vector<int> range_bc(string bc, double delrx, int botq, int topq, int low, int high, int di);
@@ -86,12 +82,6 @@ array<int, 2> coord2quad(const array<double, 2>& fov, const array<int, 2>& nq, c
 int coord2quad_floor(double fov, int nq, double pos);
 int coord2quad_ceil(double fov, int nq, double pos);
 int coord2quad(double fov, int nq, double pos);
-
-double my_velocity(double vel0, double force, double fstall);
-double cross(double ax, double ay, double bx, double by);
-double dot(double x1, double y1, double x2, double y2);
-double cross(const array<double, 2>& v1, const array<double, 2>& v2);
-double dot(const array<double, 2>& v1, const array<double, 2>& v2);
 
 double angBC(double ang);
 double angBC(double ang, double max);
