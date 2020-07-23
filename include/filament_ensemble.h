@@ -7,21 +7,13 @@
  *
  */
 
-//=====================================
-//include guard
 #ifndef AFINES_FILAMENT_ENSEMBLE_H
 #define AFINES_FILAMENT_ENSEMBLE_H
 
-//=====================================
-// forward declared dependencies
-
-//=====================================
-//included dependences
 #include "filament.h"
 #include "box.h"
 #include "quadrants.h"
-//=====================================
-//filament network class
+#include "exv.h"
 
 enum class external_force_type
 {
@@ -76,26 +68,26 @@ class filament_ensemble
         double get_kinetic_energy_vel();
         double get_kinetic_energy_vir();
 
+        // monte carlo
+        void set_growing(double, double, double, double, int);
+        void try_grow();
+        void try_fracture();
+        void montecarlo();
+
         // dynamics
-        void update();
+        void integrate();
         void update_positions();
         void update_d_strain(double);
 
         // update forces/energies
-
+        void compute_forces();
         void update_stretching();
-        void update_filament_stretching(int); // fragments also
         void update_bending();
-        void update_int_forces();
+        void update_external();
+        void update_excluded_volume();
         void update_forces(int fil, int bead, vec_type f);
         vec_type external_force(vec_type pos);
         void update_energies();
-
-        // excluded volume
-        void update_spring_forces(int f); 
-        void update_spring_forces_from_quads(); 
-        void update_force_between_filaments(double n1, double l1, double n2, double l2); 
-        void update_excluded_volume(int f); 
 
         // output
 
@@ -111,17 +103,13 @@ class filament_ensemble
         void print_network_thermo();
         void print_filament_lengths();
 
-        // fracture
-        vector<int> get_broken();
-        void clear_broken();
-
-        // growing
-        void set_growing(double, double, double, double, int);
-
     protected:
         box *bc;
         quadrants *quads;
+        excluded_volume *exv;
         vector<filament *> network;
+
+        int nsprings_per_fil_max;
 
         // parameters
         double dt, temperature, spring_rest_len, visc;
@@ -130,16 +118,9 @@ class filament_ensemble
         double pe_stretch, pe_bend, pe_exv, ke_vel, ke_vir;
         virial_type vir_stretch, vir_bend;
 
-        // excluded volume
-        double rmax, kexv;
-        int nsprings_per_fil_max;
-
         // external forces
         external_force_type external_force_flag;
         double circle_wall_radius, circle_wall_spring_constant;
-
-        // fracture
-        vector<int> broken_filaments;
 };
 
 #endif

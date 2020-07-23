@@ -511,31 +511,37 @@ int main(int argc, char **argv)
     int count; double t;
     for (count = 0, t = tinit; t <= tfinal; count++, t += dt) {
 
-        /*
-        //print to file
+        // output to file
         if (t+dt/100 >= tinit && (count-unprinted_count)%n_bw_print==0) {
 
             if (t>tinit) time_str ="\n";
             time_str += "t = "+to_string(t);
 
-            file_a << time_str<<"\tN = "<<to_string(net->get_nbeads());
+            fmt::print(file_a, "{}\tN = {}", time_str, net->get_nbeads());
             net->write_beads(file_a);
 
-            file_l << time_str<<"\tN = "<<to_string(net->get_nsprings());
+            fmt::print(file_l, "{}\tN = {}", time_str, net->get_nsprings());
             net->write_springs(file_l);
 
-            file_am << time_str<<"\tN = "<<to_string(myosins->get_nmotors());
+            fmt::print(file_am, "{}\tN = {}", time_str, myosins->get_nmotors());
             myosins->motor_write(file_am);
 
-            file_pm << time_str<<"\tN = "<<to_string(crosslks->get_nmotors());
+            fmt::print(file_pm, "{}\tN = {}", time_str, crosslks->get_nmotors());
             crosslks->motor_write(file_pm);
 
-            file_th << time_str<<"\tN = "<<to_string(net->get_nfilaments());
+            fmt::print(file_th, "{}\tN = {}", time_str, net->get_nfilaments());
             net->write_thermo(file_th);
 
-            file_pe <<net->get_stretching_energy()<<"\t"<<net->get_bending_energy()<<"\t"<<net->get_exv_energy()<<"\t"<<myosins->get_potential_energy()<<"\t"<<crosslks->get_potential_energy()<<endl;
-
-            file_ke <<net->get_kinetic_energy_vir()<<"\t"<<myosins->get_kinetic_energy()<<"\t"<<crosslks->get_kinetic_energy()<<endl;
+            fmt::print(file_pe, "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
+                    net->get_stretching_energy(),
+                    net->get_bending_energy(),
+                    myosins->get_potential_energy(),
+                    crosslks->get_potential_energy(),
+                    prev_d_strain,
+                    net->get_stretching_virial(),
+                    net->get_bending_virial(),
+                    myosins->get_virial(),
+                    crosslks->get_virial());
 
             file_a<<std::flush;
             file_l<<std::flush;
@@ -543,19 +549,23 @@ int main(int argc, char **argv)
             file_pm<<std::flush;
             file_th<<std::flush;
             file_pe<<std::flush;
-            file_ke<<std::flush;
-
         }
 
-        //print time count
-        if (time_of_strain!=0 && close(t, time_of_strain, dt/(10*time_of_strain))){
-            //Perform the shear here
-            cout<<"\nDEBUG: t = "<<t<<"; adding pre_strain of "<<pre_strain<<" um here";
-            net->update_delrx( pre_strain );
-            net->update_shear();
+        // print to stdout
+        if (count%n_bw_stdout==0) {
+            fmt::print("\nTime counts: {}", count);
+            //net->print_filament_thermo();
+            net->print_network_thermo();
+            crosslks->print_ensemble_thermo();
+            myosins->print_ensemble_thermo();
         }
-        */
 
+        // Brownian dynamics and motor walking
+        net->integrate();
+        crosslks->integrate();
+        myosins->integrate();
+
+        // shear
         if (t >= time_of_dstrain && count % n_bw_shear == 0) {
             double d_strain = 0.0;
             if (stress_flag) {
@@ -611,56 +621,9 @@ int main(int argc, char **argv)
             prev_d_strain = d_strain;
         }
 
-        if (count%n_bw_stdout==0) {
-            fmt::print("\nTime counts: {}", count);
-            //net->print_filament_thermo();
-            net->print_network_thermo();
-            crosslks->print_ensemble_thermo();
-            myosins->print_ensemble_thermo();
-        }
-
-        //print to file
-        if (t+dt/100 >= tinit && (count-unprinted_count)%n_bw_print==0) {
-
-            if (t>tinit) time_str ="\n";
-            time_str += "t = "+to_string(t);
-
-            fmt::print(file_a, "{}\tN = {}", time_str, net->get_nbeads());
-            net->write_beads(file_a);
-
-            fmt::print(file_l, "{}\tN = {}", time_str, net->get_nsprings());
-            net->write_springs(file_l);
-
-            fmt::print(file_am, "{}\tN = {}", time_str, myosins->get_nmotors());
-            myosins->motor_write(file_am);
-
-            fmt::print(file_pm, "{}\tN = {}", time_str, crosslks->get_nmotors());
-            crosslks->motor_write(file_pm);
-
-            fmt::print(file_th, "{}\tN = {}", time_str, net->get_nfilaments());
-            net->write_thermo(file_th);
-
-            fmt::print(file_pe, "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
-                    net->get_stretching_energy(),
-                    net->get_bending_energy(),
-                    myosins->get_potential_energy(),
-                    crosslks->get_potential_energy(),
-                    prev_d_strain,
-                    net->get_stretching_virial(),
-                    net->get_bending_virial(),
-                    myosins->get_virial(),
-                    crosslks->get_virial());
-
-            file_a<<std::flush;
-            file_l<<std::flush;
-            file_am<<std::flush;
-            file_pm<<std::flush;
-            file_th<<std::flush;
-            file_pe<<std::flush;
-        }
-
-        //update network
-        net->update();//updates all forces, velocities and positions of filaments
+        // filament growth and fracturing
+        // also unbinds motors
+        net->montecarlo();
 
         if (quad_off_flag) {
             // we want results that are correct regardless of other settings when quadrants are off
@@ -677,14 +640,14 @@ int main(int argc, char **argv)
 
         }
 
-        //update cross linkers
-        crosslks->motor_update();
+        // motor attachment/detachment
+        crosslks->montecarlo();
+        myosins->montecarlo();
 
-        //update motors
-        myosins->motor_update();
-
-        //clear the vector of fractured filaments
-        net->clear_broken();
+        // compute forces and energies
+        net->compute_forces();
+        crosslks->compute_forces();
+        myosins->compute_forces();
     }
 
     file_a << "\n";

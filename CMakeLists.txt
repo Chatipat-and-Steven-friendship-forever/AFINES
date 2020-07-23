@@ -15,6 +15,7 @@ set(sources
     src/spacer.cpp
     src/motor_ensemble.cpp
     src/potentials.cpp
+    src/exv.cpp
     src/box.cpp
     src/quadrants.cpp
     src/generate.cpp

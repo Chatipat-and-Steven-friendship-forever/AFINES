@@ -42,8 +42,13 @@ motor_ensemble<motor_type>::motor_ensemble(vector<vector<double>> motors, double
 template <class motor_type>
 motor_ensemble<motor_type>::~motor_ensemble()
 {
-    cout << "DELETING MOTOR ENSEMBLE\n";
     for (motor *m : n_motors) delete m;
+}
+
+template <class motor_type>
+void motor_ensemble<motor_type>::add_motor(motor_type *m)
+{
+    n_motors.push_back(m);
 }
 
 template <class motor_type>
@@ -58,210 +63,7 @@ motor *motor_ensemble<motor_type>::get_motor(int i)
     return n_motors[i];
 }
 
-template <class motor_type>
-void motor_ensemble<motor_type>::kill_heads(int hd)
-{
-    for (motor *m : n_motors) {
-        m->kill_head(hd);
-    }
-}
-
-//check if any motors attached to filaments that no longer exist;
-// if they do, detach them
-// Worst case scenario, this is a O(m*n*p) function,
-// where m is the number of filaments
-//       n is the number of rods per filament
-//       p is the number of motors
-// However: we don't expect to fracture often,
-// so this loop should rarely if ever be accessed.
-template <class motor_type>
-void motor_ensemble<motor_type>::check_broken_filaments()
-{
-    for (int i : f_network->get_broken()) {
-        for (motor *m : n_motors) {
-            array<int, 2> f_index = m->get_f_index();
-
-            if (f_index[0] == i) {
-                m->detach_head_without_moving(0);
-                //cout<<"\nDEBUG: detaching head 0 of motor "<<j<<" from broken filament "<<broken_filaments[i];
-            }
-
-            if (f_index[1] == i) {
-                m->detach_head_without_moving(1);
-                //cout<<"\nDEBUG: detaching head 1 of motor "<<j<<" from broken filament "<<broken_filaments[i];
-            }
-        }
-    }
-}
-
-template <class motor_type>
-void motor_ensemble<motor_type>::motor_update()
-{
-    this->check_broken_filaments();
-
-    if (static_flag) {
-        // static, constantly attached motors
-        // assumes both heads are ALWAYS attached
-        for (motor *m : n_motors) {
-            m->update_position_attached(0);
-            m->update_position_attached(1);
-            m->update_angle();
-            m->update_force();
-            m->filament_update();
-        }
-
-    } else {
-
-        // Brownian dynamics for unbound heads
-        for (motor *m : n_motors) {
-            array<motor_state, 2> s = m->get_states();
-            if (s[0] == motor_state::free || s[0] == motor_state::inactive) {
-                m->brownian_relax(0);
-            }
-            if (s[1] == motor_state::free || s[1] == motor_state::inactive) {
-                m->brownian_relax(1);
-            }
-        }
-
-        // note: bound head positions were determined
-        // in the last time step
-
-        // update derived quantities
-        for (motor *m : n_motors) m->update_angle();
-
-        // compute stretching forces
-        for (motor *m : n_motors) m->update_force();
-
-        // apply forces to filaments
-        for (motor *m : n_motors) m->filament_update();
-
-        for (motor *m : n_motors) {
-            array<motor_state, 2> s = m->get_states();
-
-            if (s[0] == motor_state::free) {
-                // attempt attachment
-                m->try_attach(0, attach_opt_flag);
-            } else if (s[0] != motor_state::inactive) {
-                if (!m->try_detach(0)) {
-                    m->walk(0);
-                    if (m->get_states()[0] == motor_state::bound)
-                        m->update_position_attached(0);
-                }
-            }
-
-            if (s[1] == motor_state::free) {
-                // attempt attachment
-                m->try_attach(1, attach_opt_flag);
-            } else if (s[1] != motor_state::inactive) {
-                if (!m->try_detach(1)) {
-                    m->walk(1);
-                    if (m->get_states()[1] == motor_state::bound)
-                        m->update_position_attached(1);
-                }
-            }
-        }
-
-    }
-
-    update_energies();
-}
-
-template <class motor_type>
-vector<vector<double>> motor_ensemble<motor_type>::output()
-{
-    vector<vector<double>> out;
-    for (motor *m : n_motors) {
-        out.push_back(m->output());
-    }
-    return out;
-}
-
-template <class motor_type>
-void motor_ensemble<motor_type>::motor_write(ostream& fout)
-{
-    for (motor *m : n_motors) {
-        fout << m->write();
-    }
-}
-
-template <class motor_type>
-void motor_ensemble<motor_type>::add_motor(motor_type *m)
-{
-    n_motors.push_back(m);
-}
-
-template <class motor_type>
-void motor_ensemble<motor_type>::update_energies()
-{
-    ke_vel = 0.0;
-    ke_vir = 0.0;
-    pe = 0.0;
-    virial.zero();
-
-    for (motor *m : n_motors) {
-        ke_vel += m->get_kinetic_energy_vel();
-        ke_vir += m->get_kinetic_energy_vir();
-        pe += m->get_stretching_energy();
-        virial += m->get_virial();
-    }
-}
-
-template <class motor_type>
-double motor_ensemble<motor_type>::get_potential_energy()
-{
-    return pe;
-}
-
-template <class motor_type>
-virial_type motor_ensemble<motor_type>::get_virial()
-{
-    return virial;
-}
-
-template <class motor_type>
-void motor_ensemble<motor_type>::print_ensemble_thermo()
-{
-    fmt::print(
-            "\n"
-            "All Motors\t:\t"
-            "KEvel = {}\t"
-            "KEvir = {}\t"
-            "PEs = {}\t"
-            "PEb = {}\t"
-            "TE = {}",
-            ke_vel, ke_vir, pe, 0, ke_vel + pe);
-}
-
-template <class motor_type>
-void motor_ensemble<motor_type>::unbind_all_heads()
-{
-    for (motor *m : n_motors) {
-        m->detach_head(0);
-        m->detach_head(1);
-        m->deactivate_head(0);
-        m->deactivate_head(1);
-    }
-}
-
-template <class motor_type>
-void motor_ensemble<motor_type>::revive_heads()
-{
-    for (motor *m : n_motors) {
-        m->revive_head(0);
-        m->revive_head(1);
-    }
-}
-
-template <class motor_type>
-void motor_ensemble<motor_type>::motor_write_doubly_bound(ostream& fout)
-{
-    array<motor_state, 2> doubly_bound = {motor_state::bound, motor_state::bound};
-    for (size_t i = 0; i < n_motors.size(); i++) {
-        if (n_motors[i]->get_states() == doubly_bound) {
-            fmt::print(fout, "{}\t{}", n_motors[i]->write(), i);
-        }
-    }
-}
+// begin [settings]
 
 template <class motor_type>
 void motor_ensemble<motor_type>::set_binding_two(double kon2, double koff2, double kend2){
@@ -294,6 +96,79 @@ void motor_ensemble<motor_type>::use_static(bool flag)
 }
 
 template <class motor_type>
+void motor_ensemble<motor_type>::kill_heads(int hd)
+{
+    for (motor *m : n_motors) {
+        m->kill_head(hd);
+    }
+}
+
+template <class motor_type>
+void motor_ensemble<motor_type>::unbind_all_heads()
+{
+    for (motor *m : n_motors) {
+        m->detach_head(0);
+        m->detach_head(1);
+        m->deactivate_head(0);
+        m->deactivate_head(1);
+    }
+}
+
+template <class motor_type>
+void motor_ensemble<motor_type>::revive_heads()
+{
+    for (motor *m : n_motors) {
+        m->revive_head(0);
+        m->revive_head(1);
+    }
+}
+
+// end [settings]
+
+// begin [dynamics]
+
+template <class motor_type>
+void motor_ensemble<motor_type>::montecarlo()
+{
+    for (motor *m : n_motors) {
+        array<motor_state, 2> s = m->get_states();
+
+        if (s[0] == motor_state::free) {
+            m->try_attach(0, attach_opt_flag);
+        } else if (s[0] != motor_state::inactive) {
+            m->try_detach(0);
+        }
+
+        if (s[1] == motor_state::free) {
+            m->try_attach(1, attach_opt_flag);
+        } else if (s[1] != motor_state::inactive) {
+            m->try_detach(1);
+        }
+    }
+}
+
+template <class motor_type>
+void motor_ensemble<motor_type>::integrate()
+{
+    for (motor *m : n_motors) {
+        array<motor_state, 2> s = m->get_states();
+        if (s[0] == motor_state::free || s[0] == motor_state::inactive) {
+            m->brownian_relax(0);
+        } else if (s[0] == motor_state::bound) {
+            if (!static_flag) m->walk(0);
+            m->update_position_attached(0);
+        }
+        if (s[1] == motor_state::free || s[1] == motor_state::inactive) {
+            m->brownian_relax(1);
+        } else if (s[1] == motor_state::bound) {
+            if (!static_flag) m->walk(1);
+            m->update_position_attached(1);
+        }
+        m->update_angle();
+    }
+}
+
+template <class motor_type>
 void motor_ensemble<motor_type>::update_d_strain(double g)
 {
     if (shear_flag) {
@@ -302,6 +177,97 @@ void motor_ensemble<motor_type>::update_d_strain(double g)
         }
     }
 }
+
+template <class motor_type>
+void motor_ensemble<motor_type>::compute_forces()
+{
+    for (motor *m : n_motors) {
+        m->update_force();
+        m->filament_update();
+    }
+    update_energies();
+}
+
+template <class motor_type>
+void motor_ensemble<motor_type>::update_energies()
+{
+    ke_vel = 0.0;
+    ke_vir = 0.0;
+    pe = 0.0;
+    virial.zero();
+
+    for (motor *m : n_motors) {
+        ke_vel += m->get_kinetic_energy_vel();
+        ke_vir += m->get_kinetic_energy_vir();
+        pe += m->get_stretching_energy();
+        virial += m->get_virial();
+    }
+}
+
+// end [dynamics]
+
+// begin [thermo]
+
+template <class motor_type>
+double motor_ensemble<motor_type>::get_potential_energy()
+{
+    return pe;
+}
+
+template <class motor_type>
+virial_type motor_ensemble<motor_type>::get_virial()
+{
+    return virial;
+}
+
+// end [thermo]
+
+// begin [output]
+
+template <class motor_type>
+void motor_ensemble<motor_type>::print_ensemble_thermo()
+{
+    fmt::print(
+            "\n"
+            "All Motors\t:\t"
+            "KEvel = {}\t"
+            "KEvir = {}\t"
+            "PEs = {}\t"
+            "PEb = {}\t"
+            "TE = {}",
+            ke_vel, ke_vir, pe, 0, ke_vel + pe);
+}
+
+template <class motor_type>
+vector<vector<double>> motor_ensemble<motor_type>::output()
+{
+    vector<vector<double>> out;
+    for (motor *m : n_motors) {
+        out.push_back(m->output());
+    }
+    return out;
+}
+
+template <class motor_type>
+void motor_ensemble<motor_type>::motor_write(ostream& fout)
+{
+    for (motor *m : n_motors) {
+        fout << m->write();
+    }
+}
+
+template <class motor_type>
+void motor_ensemble<motor_type>::motor_write_doubly_bound(ostream& fout)
+{
+    array<motor_state, 2> doubly_bound = {motor_state::bound, motor_state::bound};
+    for (size_t i = 0; i < n_motors.size(); i++) {
+        if (n_motors[i]->get_states() == doubly_bound) {
+            fmt::print(fout, "{}\t{}", n_motors[i]->write(), i);
+        }
+    }
+}
+
+// end [output]
 
 template class motor_ensemble<motor>;
 template class motor_ensemble<spacer>;

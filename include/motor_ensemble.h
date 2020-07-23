@@ -59,16 +59,16 @@ class motor_ensemble
 
         // shear
         void update_d_strain(double g);
-        void set_shear(double g);
 
         // update
-        void motor_update();
+        void integrate();
+        void montecarlo();
         void update_energies();
+        void compute_forces();
         void unbind_all_heads();
         void revive_heads();
 
         // misc
-        void check_broken_filaments();
         void add_motor(motor_type *m);
 
     protected:

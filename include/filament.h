@@ -64,10 +64,12 @@ class filament
         void update_d_strain(double);
         void update_positions();
         vector<filament *> fracture(int node);
+        vector<filament *> try_fracture();
+        void detach_all_motors();
 
         // internal forces
 
-        vector<filament *> update_stretching(); // also fractures
+        void update_stretching();
         void update_bending();
 
         // external forces

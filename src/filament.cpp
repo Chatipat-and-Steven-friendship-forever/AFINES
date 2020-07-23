@@ -27,11 +27,19 @@ filament::filament(filament_ensemble *net, vector<vector<double>> beadvec, doubl
     dt = deltat;
     temperature = temp;
     fracture_force = frac_force;
+    fracture_force_sq = fracture_force*fracture_force;
     kb = bending_stiffness;
 
     ke_vel = 0.0;
     ke_vir = 0.0;
+
     spring_l0 = spring_length;
+
+    nsprings_max = 0;
+    l0_max = 0.0;
+    l0_min = 0.0;
+    kgrow = 0.0;
+    lgrow = 0.0;
 
     if (beadvec.size() > 0)
     {
@@ -60,7 +68,6 @@ filament::filament(filament_ensemble *net, vector<vector<double>> beadvec, doubl
     bd_prefactor = sqrt(temperature/(2*dt*damp));
 
     this->init_ubend();
-    fracture_force_sq = fracture_force*fracture_force;
 }
 
 filament::~filament()
@@ -102,25 +109,12 @@ void filament::update_positions()
     for (spring *s : springs) s->step();
 }
 
-vector<filament *> filament::update_stretching()
+void filament::update_stretching()
 {
-    vector<filament *> newfilaments;
-    vec_type spring_force;
-    if(springs.size() == 0)
-        return newfilaments;
-
-    for (unsigned int i=0; i < springs.size(); i++) {
-        springs[i]->update_force();
-        spring_force = springs[i]->get_force();
-        if (abs2(spring_force) > fracture_force_sq) {
-            newfilaments = this->fracture(i);
-            break;
-        }
-        else
-            springs[i]->filament_update();
+    for (spring *s : springs) {
+        s->update_force();
+        s->filament_update();
     }
-
-    return newfilaments;
 }
 
 spring *filament::get_spring(int i)
@@ -242,6 +236,17 @@ vector<vector<double>> filament::get_beads(size_t first, size_t last)
     return newbeads;
 }
 
+vector<filament *> filament::try_fracture()
+{
+    for (size_t i = 0; i < springs.size(); i++) {
+        vec_type f = springs[i]->get_force();
+        if (abs2(f) > fracture_force_sq) {
+            return fracture(i);
+        }
+    }
+    return {};
+}
+
 vector<filament *> filament::fracture(int node){
 
     vector<filament *> newfilaments;
@@ -264,6 +269,17 @@ vector<filament *> filament::fracture(int node){
 
     return newfilaments;
 
+}
+
+void filament::detach_all_motors()
+{
+    for (spring *s : springs) {
+        for (auto it : s->get_mots()) {
+            motor *m = it.first;
+            int hd = it.second;
+            m->detach_head_without_moving(hd);
+        }
+    }
 }
 
 bool filament::operator==(const filament& that){
