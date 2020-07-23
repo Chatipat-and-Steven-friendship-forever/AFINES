@@ -13,8 +13,10 @@
 class filament_ensemble;
 
 #include "spring.h"
+#include "globals.h"
 
-class filament {
+class filament
+{
     public:
         filament(filament_ensemble *net, vector<vector<double>> beadvec, double spring_length,
                 double stretching_stiffnes, double ext, double bending_stiffness,
@@ -55,6 +57,7 @@ class filament {
         spring *get_spring(int i);
 
         double get_end2end();
+        vec_type get_force(int i);
 
         // dynamics
 

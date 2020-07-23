@@ -141,6 +141,11 @@ box *filament::get_box()
     return bc;
 }
 
+vec_type filament::get_force(int i)
+{
+    return beads[i]->get_force();
+}
+
 void filament::update_forces(int index, vec_type f)
 {
     beads[index]->update_force(f);

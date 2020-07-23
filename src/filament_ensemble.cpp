@@ -75,6 +75,11 @@ vec_type filament_ensemble::get_direction(int fil, int spring)
     return network[fil]->get_spring(spring)->get_direction();
 }
 
+vec_type filament_ensemble::get_force(int fil, int spring)
+{
+    return network[fil]->get_force(spring);
+}
+
 void filament_ensemble::update_positions()
 {
     int net_sz = int(network.size());
