@@ -16,8 +16,6 @@
 #include "globals.h"
 #include "filament.h"
 
-spring::spring(){ }
-
 spring::spring(double len, double stretching_stiffness, double max_ext_ratio, filament* f,
         array<int, 2> myaindex)
 {
@@ -30,15 +28,7 @@ spring::spring(double len, double stretching_stiffness, double max_ext_ratio, fi
     max_ext = max_ext_ratio * l0;
     eps_ext = 0.01*max_ext;
 
-    h0 = {0, 0};
-    h1 = {0, 0};
-
-    force = {0, 0};
-    llensq = l0*l0;
     llen = l0;
-}
-
-spring::~spring(){
 }
 
 vec_type spring::get_h0()
@@ -58,15 +48,11 @@ void spring::step()
     h0 = fil->get_bead_position(aindex[0]);
     h1 = fil->get_bead_position(aindex[1]);
 
-    disp   = bc->rij_bc(h1 - h0);
-    llensq = abs2(disp);
-    llen   = sqrt(llensq);
+    disp = bc->rij_bc(h1 - h0);
+    llen = abs(disp);
 
-    if (llen != 0)
-        direc = disp / llen;
-    else
-        direc = {0, 0};
-
+    direc.zero();
+    if (llen != 0.0) direc = disp / llen;
 }
 
 void spring::update_force()
@@ -127,10 +113,6 @@ double spring::get_fene_ext(){
 
 double spring::get_length(){
     return llen;
-}
-
-double spring::get_length_sq(){
-    return llensq;
 }
 
 vector<double> spring::output()
