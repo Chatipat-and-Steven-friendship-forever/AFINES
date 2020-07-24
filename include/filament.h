@@ -23,7 +23,7 @@ class filament
                 double deltat, double temp, double fracture);
         ~filament();
 
-        // output
+        // [output]
 
         vector<vector<double>> output_beads(int fil);
         vector<vector<double>> output_springs(int fil);
@@ -36,7 +36,7 @@ class filament
         void print_thermo();
         string to_string();
 
-        // thermo
+        // [thermo]
 
         double get_stretching_energy();
         double get_bending_energy();
@@ -48,50 +48,70 @@ class filament
         virial_type get_stretching_virial();
         virial_type get_bending_virial();
 
-        // state
+        // [state]
 
         int get_nbeads();
         vec_type get_bead_position(int bead);
+        vec_type get_force(int i);
 
         int get_nsprings();
         spring *get_spring(int i);
 
         double get_end2end();
-        vec_type get_force(int i);
 
-        // dynamics
+        inline double angle_between_springs(int i, int j);
 
-        void update_d_strain(double);
+        // [dynamics]
+
+        // updates bead and spring positions
+        // computes kinetic energies
+        // clears forces, but doesn't compute them
         void update_positions();
-        vector<filament *> fracture(int node);
+
+        // shears beads and springs
+        void update_d_strain(double);
+
+        // attempts to fracture the filament
+        // failure: returns no filaments
+        // success: returns two filaments, split at the first fracture site
         vector<filament *> try_fracture();
+        vector<filament *> fracture(int node);  // helper method
+        vector<vector<double>> get_beads(size_t first, size_t last);  // helper method
+
         void detach_all_motors();
 
-        // internal forces
+        void update_length();
+        void grow(double);  // helper method
 
+        // [internal forces]
+
+        // updates spring forces
+        // and applies them to beads
         void update_stretching();
+
+        // computes and applies bending forces to beads
+        // also computes bending energy and virial
         void update_bending();
 
-        // external forces
+        // [external forces]
 
+        // applies forces to beads
         void pull_on_ends(double f);
         void affine_pull(double f);
         void update_forces(int index, vec_type f);
 
-        // misc
+        // [misc]
 
         box *get_box();
 
         void add_bead(vector<double> a, double l0, double kl, double me);
 
         void init_ubend(); // computes bending energies only
-        inline double angle_between_springs(int i, int j);
 
-        vector<vector<double>> get_beads(size_t first, size_t last); // used for fractures
 
         bool operator==(const filament& that);
 
-        // attached positions
+        // [attached positions]
 
         int new_attached(motor *m, int hd, int l, vec_type pos);
         void del_attached(int i);
@@ -104,16 +124,12 @@ class filament
         bool at_barbed_end(int i);
         bool at_pointed_end(int i);
 
-        // growing
-
+        // [growing settings]
         void set_l0_max(double);
         void set_nsprings_max(int);
         void set_l0_min(double);
         void set_kgrow(double);
         void set_lgrow(double);
-
-        void update_length();
-        void grow(double);
 
     protected:
         box *bc;

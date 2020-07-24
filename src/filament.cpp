@@ -128,6 +128,9 @@ void filament::update_d_strain(double g)
         vec_type pos = b->get_pos();
         b->set_pos({pos.x + g * pos.y / bc->get_ybox(), pos.y});
     }
+    for (spring *s : springs) {
+        s->step();
+    }
 }
 
 box *filament::get_box()
@@ -192,7 +195,13 @@ vector<vector<double>> filament::output_springs(int fil)
 
 vector<double> filament::output_thermo(int fil)
 {
-    return {get_kinetic_energy_vel(), get_kinetic_energy_vir(), get_potential_energy(), get_total_energy(), double(fil)};
+    return {
+        this->get_kinetic_energy_vel(),
+        this->get_kinetic_energy_vir(),
+        this->get_potential_energy(),
+        this->get_total_energy(),
+        double(fil)
+    };
 }
 
 string filament::write_beads(int fil)
@@ -217,8 +226,8 @@ string filament::write_thermo(int fil)
 {
     return fmt::format(
             "\n{}\t{}\t{}\t{}",
-            get_kinetic_energy_vel(), get_kinetic_energy_vir(),
-            get_potential_energy(), get_total_energy());
+            this->get_kinetic_energy_vel(), this->get_kinetic_energy_vir(),
+            this->get_potential_energy(), this->get_total_energy());
 }
 
 vector<vector<double>> filament::get_beads(size_t first, size_t last)
@@ -343,7 +352,7 @@ void filament::update_bending()
     ubend = 0.0;
     for (int n = 0; n < int(springs.size())-1; n++) {
 
-        vec_type delr1 = springs[n]->get_disp();
+        vec_type delr1 = springs[n+0]->get_disp();
         vec_type delr2 = springs[n+1]->get_disp();
 
         bend_result_type result = bend_harmonic(kb, 0.0, delr1, delr2);
@@ -351,7 +360,7 @@ void filament::update_bending()
         ubend += result.energy;
 
         // apply force to each of 3 atoms
-        beads[n  ]->update_force(-result.force1);
+        beads[n+0]->update_force(-result.force1);
         beads[n+1]->update_force(result.force1);
 
         beads[n+1]->update_force(-result.force2);
@@ -413,7 +422,6 @@ double filament::get_kinetic_energy_vir()
 virial_type filament::get_stretching_virial()
 {
     virial_type vir;
-    vir.zero();
     for (spring *s : springs) {
         vir += s->get_virial();
     }
@@ -427,7 +435,7 @@ double filament::get_potential_energy()
 
 double filament::get_total_energy()
 {
-    return this->get_potential_energy() + (this->get_kinetic_energy_vel());
+    return this->get_potential_energy() + this->get_kinetic_energy_vel();
 }
 
 vec_type filament::get_bead_position(int n)
@@ -438,8 +446,8 @@ vec_type filament::get_bead_position(int n)
 void filament::print_thermo()
 {
     fmt::print("\tKEvel = {}\tKEvir = {}\tPE = {}\tTE = {}",
-            get_kinetic_energy_vel(), get_kinetic_energy_vir(),
-            get_potential_energy(), get_total_energy());
+            this->get_kinetic_energy_vel(), this->get_kinetic_energy_vir(),
+            this->get_potential_energy(), this->get_total_energy());
 }
 
 double filament::get_end2end()
@@ -478,11 +486,13 @@ void filament::grow(double dL)
         springs[0]->step();
 
     } else {
-        // split spring "0" into two
 
         vec_type dir = springs[0]->get_direction();
         vec_type p2 = beads[1]->get_pos();
-        //add a bead
+
+        // split spring "0" into two
+
+        // add a new bead "1" to split spring "0"
         vec_type newpos = bc->pos_bc(p2 - spring_l0 * dir);
         bead *b = new bead(
                 newpos.x, newpos.y,
@@ -493,20 +503,23 @@ void filament::grow(double dL)
         // shift all springs forward, except the first one
         for (size_t i = 1; i < springs.size(); i++) {
             springs[i]->inc_aindex();
-            springs[i]->step();
         }
 
-        //add spring "1"
+        // add new spring "1" with length l0
         spring *s = new spring(
                 spring_l0, springs[0]->get_kl(), springs[0]->get_max_ext(),
                 this, {1, 2});
         springs.insert(springs.begin() + 1, s);
-        springs[1]->step();
 
-        //reset l0 at barbed end
-        springs[0]->set_l0(spring_l0);
-        springs[0]->step();
+        // set spring at barbed end to remaining length
+        springs[0]->set_l0(lb + dL - spring_l0);
 
+        // update springs (I think only springs "0" and "1" need updating)
+        for (spring *s : springs) {
+            s->step();
+        }
+
+        // fix attached points
         for (auto &a : attached) {
             if (a.l > 0) {
                 // shift attachment points forward if they aren't on the first spring
@@ -617,7 +630,7 @@ void filament::add_attached_pos(int i, double dist)
         } else {
             // move to previous spring
             l += 1;
-            // subtract NEW spring length
+            // add NEW spring length
             pos += springs[l]->get_l0();
         }
     }
