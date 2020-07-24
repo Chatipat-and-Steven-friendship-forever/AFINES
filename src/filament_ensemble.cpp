@@ -22,9 +22,6 @@ filament_ensemble::filament_ensemble(box *bc_, vector<vector<double> > beads, ar
 
     bc->add_callback([this](double g) { this->update_d_strain(g); });
 
-    exv = nullptr;
-    dt = delta_t;
-
     int fil_idx = 0;
     vector<vector<double>> avec;
 
@@ -46,16 +43,18 @@ filament_ensemble::filament_ensemble(box *bc_, vector<vector<double> > beads, ar
 
     avec.clear();
 
+    exv = nullptr;
     if (A > 0) {
         exv = new excluded_volume(bc, RMAX, A);
     }
 
     quads = new quadrants(bc, mynq);
-    this->update_energies();
 
     pe_stretch = 0;
     pe_bend = 0;
     pe_exv = 0;
+    pe_ext = 0;
+    ke_vel = 0;
     ke_vir = 0;
 }
 
@@ -275,10 +274,9 @@ void filament_ensemble::print_network_thermo()
             "PEs = {}\t"
             "PEb = {}\t"
             "PEexv = {}\t"
-            "TE = {}",
+            "PEext = {}\t",
             ke_vel, ke_vir,
-            pe_stretch, pe_bend, pe_exv,
-            ke_vir + pe_stretch + pe_bend + pe_exv);
+            pe_stretch, pe_bend, pe_exv, pe_ext);
 }
 
 void filament_ensemble::print_filament_lengths()
@@ -292,6 +290,9 @@ void filament_ensemble::print_filament_lengths()
 
 // begin [thermo]
 
+// update kinetic, stretching, and bending energies
+// Note: excluded volume and external energies
+// are already updated along with their forces
 void filament_ensemble::update_energies()
 {
     pe_stretch = 0.0;
@@ -333,6 +334,11 @@ double filament_ensemble::get_kinetic_energy_vir(){
 double filament_ensemble::get_exv_energy()
 {
     return pe_exv;
+}
+
+double filament_ensemble::get_ext_energy()
+{
+    return pe_ext;
 }
 
 // end [thermo]
@@ -378,8 +384,8 @@ void filament_ensemble::try_fracture() {
 
 void filament_ensemble::montecarlo()
 {
-    for (filament *f : network) f->update_length();
-    try_fracture();
+    this->try_grow();
+    this->try_fracture();
 }
 
 // end [monte carlo]
@@ -407,9 +413,11 @@ void filament_ensemble::update_d_strain(double g)
 
 void filament_ensemble::compute_forces()
 {
-    update_excluded_volume();
-    update_stretching();
-    update_bending();
+    this->update_stretching();
+    this->update_bending();
+    this->update_excluded_volume();
+    this->update_external();
+    this->update_energies();
 }
 
 void filament_ensemble::update_bending()
@@ -446,13 +454,13 @@ void filament_ensemble::update_excluded_volume()
 
 void filament_ensemble::update_external()
 {
+    pe_ext = 0.0;
+    if (external_force_flag == external_force_type::none) return;
     for (size_t f = 0; f < network.size(); f++) {
-        if (external_force_flag != external_force_type::none) {
-            for (int i = 0; i < network[f]->get_nbeads(); i++) {
-                vec_type pos = network[f]->get_bead_position(i);
-                vec_type force = external_force(pos);
-                update_forces(f, i, force);
-            }
+        for (int i = 0; i < network[f]->get_nbeads(); i++) {
+            vec_type pos = network[f]->get_bead_position(i);
+            vec_type force = this->external_force(pos);
+            this->update_forces(f, i, force);
         }
     }
 }
@@ -462,10 +470,12 @@ vec_type filament_ensemble::external_force(vec_type pos)
     if (external_force_flag == external_force_type::circle) {
         double rsq = abs2(pos);
         if (rsq < circle_wall_radius * circle_wall_radius) {
-            return {0, 0};
+            return {};
         }
         double r = sqrt(rsq);
-        double k = -circle_wall_spring_constant * (1.0 - circle_wall_radius / r);
+        double dr = r - circle_wall_radius;
+        pe_ext += 0.5 * circle_wall_spring_constant * dr * dr;
+        double k = -circle_wall_spring_constant * dr / r;
         return k * pos;
     } else {
         throw std::logic_error("External force flag not recognized.");

@@ -76,29 +76,32 @@ class filament_ensemble
         double get_bending_energy();
         virial_type get_bending_virial();
         double get_exv_energy();
+        double get_ext_energy();
         double get_kinetic_energy_vel();
         double get_kinetic_energy_vir();
 
         // monte carlo
+        void montecarlo();
+
         void set_growing(double, double, double, double, int);
         void try_grow();
         void try_fracture();
-        void montecarlo();
 
         // dynamics
         void integrate();
-        void update_positions();
         void update_d_strain(double);
 
         // update forces/energies
         void compute_forces();
+
         void update_stretching();
         void update_bending();
-        void update_external();
         void update_excluded_volume();
-        void update_forces(int fil, int bead, vec_type f);
-        vec_type external_force(vec_type pos);
+        void update_external();
+        vec_type external_force(vec_type pos);  // helper
         void update_energies();
+
+        void update_forces(int fil, int bead, vec_type f);
 
         // output
 
@@ -120,13 +123,12 @@ class filament_ensemble
         excluded_volume *exv;
         vector<filament *> network;
 
+        // excluded volume
+        // TODO: make quads handle this
         int nsprings_per_fil_max;
 
-        // parameters
-        double dt, temperature, spring_rest_len, visc;
-
         // thermo
-        double pe_stretch, pe_bend, pe_exv, ke_vel, ke_vir;
+        double pe_stretch, pe_bend, pe_exv, pe_ext, ke_vel, ke_vir;
         virial_type vir_stretch, vir_bend;
 
         // external forces
