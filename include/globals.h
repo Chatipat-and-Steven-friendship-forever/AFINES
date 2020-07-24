@@ -127,7 +127,8 @@ inline vec_type vec_randn()
     return {x, y};
 }
 
-struct mc_prob {
+struct mc_prob
+{
     mc_prob()
     {
         prob = rng_u();
@@ -150,6 +151,12 @@ struct mc_prob {
         return result;
     }
 
+};
+
+struct fp_index_type
+{
+    int f_index;
+    int p_index;
 };
 
 #endif

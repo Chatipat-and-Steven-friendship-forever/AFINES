@@ -47,15 +47,13 @@ motor::motor(vector<double> mvec,
 
 
     // filament and spring indices for each head
-    f_index = {int(mvec[4]), int(mvec[5])};
-    array<int,2 > mylindex = {int(mvec[6]), int(mvec[7])};
+    array<int, 2> f_index = {int(mvec[4]), int(mvec[5])};
+    array<int, 2> l_index = {int(mvec[6]), int(mvec[7])};
 
-    state[0] = (f_index[0] == -1 && mylindex[0] == -1) ? motor_state::free : motor_state::bound;
-    state[1] = (f_index[1] == -1 && mylindex[1] == -1) ? motor_state::free : motor_state::bound;
+    state[0] = (f_index[0] == -1 && l_index[0] == -1) ? motor_state::free : motor_state::bound;
+    state[1] = (f_index[1] == -1 && l_index[1] == -1) ? motor_state::free : motor_state::bound;
 
     filament_network = network;
-    init_l_index(0, mylindex[0]);
-    init_l_index(1, mylindex[1]);
     damp        =(6*pi*vis*mld);
     bd_prefactor= sqrt(temperature/(2*damp*dt));
 
@@ -68,8 +66,6 @@ motor::motor(vector<double> mvec,
     force.zero(); // force on the spring
     ke_vel = 0; //assume m = 1
     ke_vir = 0;
-    pos_a_end = {{0, 0}}; // pos_a_end = distance from pointy end -- by default 0
-                        // i.e., if l_index[hd] = j, then pos_a_end[hd] is the distance to the "j+1"th bead
 
     h[0] = bc->pos_bc({mvec[0], mvec[1]});
     h[1] = bc->pos_bc({mvec[0] + mvec[2], mvec[1] + mvec[3]});
@@ -77,25 +73,15 @@ motor::motor(vector<double> mvec,
     this->update_angle();
     this->update_force();
 
-    ldir_bind[0].zero();
-    ldir_bind[1].zero();
-    bind_disp[0].zero();
-    bind_disp[1].zero();
-
-    at_barbed_end = {{false, false}};
-
     if (state[0] == motor_state::bound){
-        pos_a_end[0] = bc->dist_bc(filament_network->get_end(f_index[0], l_index[0]) - h[0]);
-        ldir_bind[0] = filament_network->get_direction(f_index[0], l_index[0]);
+        fp_index[0] = filament_network->new_attached(this, 0, f_index[0], l_index[0], h[0]);
+        ldir_bind[0] = filament_network->get_attached_direction(fp_index[0]);
 
     }
     if (state[1] == motor_state::bound){
-        pos_a_end[1] = bc->dist_bc(filament_network->get_end(f_index[1], l_index[1]) - h[1]);
-        ldir_bind[1] = filament_network->get_direction(f_index[1], l_index[1]);
+        fp_index[1] = filament_network->new_attached(this, 1, f_index[1], l_index[1], h[1]);
+        ldir_bind[1] = filament_network->get_attached_direction(fp_index[1]);
     }
-
-    prv_rnd[0].zero();
-    prv_rnd[1].zero();
 }
 
 //return motor state with a given head number
@@ -130,31 +116,23 @@ double motor::metropolis_prob(int hd, array<int, 2> fl_idx, vec_type newpos, dou
 }
 
 bool motor::allowed_bind(int hd, array<int, 2> fl_idx){
-    return (f_index[pr(hd)] != fl_idx[0] || l_index[pr(hd)] != fl_idx[1]);
+    array<int, 2> fl = filament_network->get_attached_fl(fp_index[pr(hd)]);
+    return fl[0] != fl_idx[0] || fl[1] != fl_idx[1];
 }
 
 void motor::attach_head(int hd, vec_type intpoint, array<int, 2> fl)
 {
     // update state
     state[hd] = motor_state::bound;
-    f_index[hd] = fl[0];
-    set_l_index(hd, fl[1]);
+    fp_index[hd] = filament_network->new_attached(this, hd, fl[0], fl[1], intpoint);
 
     // record displacement of head and orientation of spring for future unbinding move
-    ldir_bind[hd] = filament_network->get_direction(f_index[hd], l_index[hd]);
+    ldir_bind[hd] = filament_network->get_attached_direction(fp_index[hd]);
     bind_disp[hd] = bc->rij_bc(intpoint - h[hd]);
 
     // update head position
+    // TODO: check that intpoint and get_attached_pos coincide
     h[hd] = intpoint;
-
-    // update relative head position
-    vec_type ref = filament_network->get_end(f_index[hd], l_index[hd]);
-    pos_a_end[hd] = bc->dist_bc(ref - intpoint);
-
-    // even if the head is at the barbed end upon binding,
-    // it could have negative velocity,
-    // so always set this to false until it steps
-    at_barbed_end[hd] = false;
 }
 
 bool motor::try_attach(int hd, bool opt, mc_prob &p)
@@ -298,15 +276,15 @@ void motor::update_angle()
 {
     disp = bc->rij_bc(h[1] - h[0]);
     len = abs(disp);
+    direc.zero();
     if (len != 0) direc = disp / len;
-    else direc.zero();
 }
 
 // compute unbinding position
 // head must be bound
 vec_type motor::generate_off_pos(int hd)
 {
-    vec_type ldir = filament_network->get_direction(f_index[hd], l_index[hd]);
+    vec_type ldir = filament_network->get_attached_direction(fp_index[hd]);
     double c = dot(ldir, ldir_bind[hd]);
     double s = cross(ldir, ldir_bind[hd]);
 
@@ -318,9 +296,9 @@ vec_type motor::generate_off_pos(int hd)
 bool motor::try_detach(int hd, mc_prob &p)
 {
     vec_type hpos_new = generate_off_pos(hd);
-    double offrate = at_barbed_end[hd] ? kend : koff;
+    double offrate = filament_network->at_barbed_end(fp_index[hd]) ? kend : koff;
     if (state[pr(hd)] == motor_state::bound)
-        offrate = at_barbed_end[hd] ? kend2 : koff2;
+        offrate = filament_network->at_barbed_end(fp_index[hd]) ? kend2 : koff2;
 
     double needprob = metropolis_prob(hd, {}, hpos_new, offrate);
 
@@ -334,12 +312,14 @@ bool motor::try_detach(int hd, mc_prob &p)
 // stepping and detachment kinetics of a single bound head
 void motor::walk(int hd)
 {
-    if (vs == 0 || at_barbed_end[hd]) return;
+    if (vs == 0.0) return;
+    if (vs > 0.0 && filament_network->at_barbed_end(fp_index[hd])) return;
+    if (vs < 0.0 && filament_network->at_pointed_end(fp_index[hd])) return;
 
     //calculate motor velocity
     double vm = vs;
     if (state[pr(hd)] != motor_state::free) {
-        vec_type dir = filament_network->get_direction(f_index[hd], l_index[hd]);
+        vec_type dir = filament_network->get_attached_direction(fp_index[hd]);
         double f = pow(-1, hd) * dot(force, dir);
         double factor = 1.0 - f / stall_force;
         if (factor < 0.0) factor = 0.0;
@@ -348,46 +328,14 @@ void motor::walk(int hd)
     }
 
     // update relative position
-    update_pos_a_end(hd, pos_a_end[hd] + dt * vm);
-}
-
-// set pos_a_end relative to the start of the spring the head is bound to
-// assumes head is bound
-void motor::update_pos_a_end(int hd, double pos)
-{
-    double spring_length = filament_network->get_llength(f_index[hd],l_index[hd]);
-    if (pos >= spring_length) { // "passed" the spring
-        if (l_index[hd] == 0) { // the barbed end of the filament
-            at_barbed_end[hd] = true;
-            pos_a_end[hd] = spring_length;
-        } else {
-            // Move the motor to the next spring on the filament
-            // At the projected new position along that filament*/
-            this->set_l_index(hd, l_index[hd] - 1);
-            pos_a_end[hd] = pos - spring_length;
-        }
-    } else if (pos < 0) { //this shouldn't be possible if vm > 0
-        if (l_index[hd] == (filament_network->get_filament(f_index[hd])->get_nsprings() - 1)) {
-            // the pointed end of the filament
-            pos_a_end[hd] = 0; //move head to pointed end
-        } else {
-            // Move the motor to the previous spring on the filament
-            // At the projected new position along that filament
-            this->set_l_index(hd, l_index[hd] + 1);
-            pos_a_end[hd] = pos + filament_network->get_llength(f_index[hd],l_index[hd]);
-        }
-    } else {
-        pos_a_end[hd] = pos;
-    }
+    filament_network->add_attached_pos(fp_index[hd], vm * dt);
 }
 
 // updates head position from filament
 // assumes head is bound
 void motor::update_position_attached(int hd)
 {
-    vec_type pos = filament_network->get_end(f_index[hd], l_index[hd])
-        - pos_a_end[hd] * filament_network->get_direction(f_index[hd], l_index[hd]);
-    h[hd] = bc->pos_bc(pos);
+    h[hd] = filament_network->get_attached_pos(fp_index[hd]);
 }
 
 // add force to filament bound to head
@@ -395,9 +343,7 @@ void motor::update_position_attached(int hd)
 // Using the lever rule to propagate force as outlined in Nedelec F 2002
 void motor::filament_update_hd(int hd, vec_type f)
 {
-    double pos_ratio = pos_a_end[hd]/filament_network->get_llength(f_index[hd], l_index[hd]);
-    filament_network->update_forces(f_index[hd], l_index[hd],   f * pos_ratio);
-    filament_network->update_forces(f_index[hd], l_index[hd]+1, f * (1 - pos_ratio));
+    filament_network->add_attached_force(fp_index[hd], f);
 }
 
 // add force to filaments bound to heads
@@ -426,23 +372,22 @@ void motor::detach_head(int hd, vec_type newpos)
 void motor::detach_head_without_moving(int hd)
 {
     state[hd] = motor_state::free;
-    this->set_l_index(hd, -1);
-    f_index[hd]=-1;
-    pos_a_end[hd]=0;
+    filament_network->del_attached(fp_index[hd]);
+    fp_index[hd] = {-1, -1};
 }
 
-array<int, 2> motor::get_f_index(){
-    return f_index;
+array<int, 2> motor::get_f_index()
+{
+    array<int, 2> fl0 = filament_network->get_attached_fl(fp_index[0]);
+    array<int, 2> fl1 = filament_network->get_attached_fl(fp_index[1]);
+    return {fl0[0], fl1[0]};
 }
 
-
-array<int, 2> motor::get_l_index(){
-    return l_index;
-}
-
-
-array<double, 2> motor::get_pos_a_end(){
-    return pos_a_end;
+array<int, 2> motor::get_l_index()
+{
+    array<int, 2> fl0 = filament_network->get_attached_fl(fp_index[0]);
+    array<int, 2> fl1 = filament_network->get_attached_fl(fp_index[1]);
+    return {fl0[1], fl1[1]};
 }
 
 vec_type motor::get_force()
@@ -484,6 +429,8 @@ double motor::get_kinetic_energy_vir()
 
 string motor::to_string()
 {
+    array<int, 2> fl0 = filament_network->get_attached_fl(fp_index[0]);
+    array<int, 2> fl1 = filament_network->get_attached_fl(fp_index[1]);
     return fmt::format("\n"
             "head 0 position = ({}, {})\t "
             "head 1 position = ({}, {})\n"
@@ -505,82 +452,34 @@ string motor::to_string()
             "temp = {}\t "
             "damp = {}\n"
 
-            "distance from end of spring = ({}, {})\t "
             "tension = ({}, {})\n",
 
         h[0].x, h[0].y, h[1].x, h[1].y,
         static_cast<int>(state[0]),  static_cast<int>(state[1]),
-        f_index[0],  f_index[1], l_index[0], l_index[1],
+        fl0[0],  fl1[0], fl0[1], fl1[1],
         vs, max_bind_dist, mk, stall_force, mld,
         kon, koff, kend, dt, temperature, damp,
-        pos_a_end[0], pos_a_end[1], force.x, force.y);
+        force.x, force.y);
 }
 
 vector<double> motor::output()
 {
+    array<int, 2> fl0 = filament_network->get_attached_fl(fp_index[0]);
+    array<int, 2> fl1 = filament_network->get_attached_fl(fp_index[1]);
     return {h[0].x, h[0].y, disp.x, disp.y,
-        double(f_index[0]), double(f_index[1]),
-        double(l_index[0]), double(l_index[1])};
-}
-
-void motor::init_l_index(int hd, int idx)
-{
-    l_index[hd] = idx;
-//    if (idx != -1)
-    if (state[hd] == motor_state::bound)
-        this->add_to_spring(hd);
-}
-
-void motor::set_f_index(int hd, int idx)
-{
-    f_index[hd] = idx;
-}
-
-void motor::set_l_index(int hd, int idx)
-{
-    if (l_index[hd] == -1) {
-        // initially unbound, then binds (l_index == -1) ==> add_to_spring
-        l_index[hd] = idx;
-        this->add_to_spring(hd);
-    } else if (idx == -1) {
-        // initially bound, unbinds (idx = -1) ==> remove_from_spring
-        this->remove_from_spring(hd);
-        l_index[hd] = idx;
-    } else {
-        // initially bound, switches (otherwise) ==> both
-        this->remove_from_spring(hd);
-        l_index[hd] = idx;
-        this->add_to_spring(hd);
-    }
-}
-
-void motor::set_pos_a_end(int hd, double pos)
-{
-    pos_a_end[hd] = pos;
-}
-
-double motor::get_pos_a_end(int hd)
-{
-    return pos_a_end[hd];
-}
-
-void motor::add_to_spring(int hd)
-{
-    filament_network->get_filament(f_index[hd])->get_spring(l_index[hd])->add_mot(this, hd);
-}
-
-void motor::remove_from_spring(int hd)
-{
-    filament_network->get_filament(f_index[hd])->get_spring(l_index[hd])->remove_mot(this);
+        double(fl0[0]), double(fl1[0]),
+        double(fl0[1]), double(fl1[1])};
 }
 
 string motor::write()
 {
+    array<int, 2> fl0 = filament_network->get_attached_fl(fp_index[0]);
+    array<int, 2> fl1 = filament_network->get_attached_fl(fp_index[1]);
     return fmt::format("\n{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
             h[0].x, h[0].y,
             disp.x, disp.y,
-            f_index[0], f_index[1],
-            l_index[0], l_index[1]);
+            fl0[0], fl1[0],
+            fl0[1], fl1[1]);
 }
 
 void motor::revive_head(int hd)
@@ -593,14 +492,6 @@ void motor::update_d_strain(double g)
     array<double, 2> fov = bc->get_fov();
     h[0] = bc->pos_bc({h[0].x + g * h[0].y / fov[1], h[0].y});
     h[1] = bc->pos_bc({h[1].x + g * h[1].y / fov[1], h[1].y});
-}
-
-void motor::inc_l_index(int hd)
-{
-    // NOTE: this function DOES NOT add the motor to a different spring;
-    // it just increments the l_index of the spring
-    // in cases where the spring pointer hasn't changed
-    l_index[hd] += 1;
 }
 
 void motor::identify()

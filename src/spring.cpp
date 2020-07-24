@@ -263,36 +263,5 @@ array<int, 2> spring::get_aindex(){
 // functions for growing
 void spring::inc_aindex()
 {
-    aindex = {{aindex[0]+1, aindex[1]+1}};
+    aindex = {aindex[0] + 1, aindex[1] + 1};
 }
-
-void spring::add_mot(motor * mot, int hd)
-{
-    mots[mot] = hd;
-}
-
-void spring::remove_mot(motor * mot)
-{
-    //cout<<"\nDEBUG: trying to remove motor";
-///    cout<<"\nDEBUG: removing mot "<<mot<<" from mots on spring "<<this;
-    mots.erase(mot);
-}
-
-map<motor *, int> & spring::get_mots()
-{
-    map<motor *, int> &ptr = mots;
-    return ptr;
-}
-
-/*
-int spring::get_n_mots(){
-    return int(mots.size());
-}
-
-motor * spring::get_mot(int i){
-    return mots[i];
-}
-
-int spring::get_mot_hd(int i){
-    return mot_hds[i];
-}*/

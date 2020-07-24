@@ -91,6 +91,19 @@ class filament
 
         bool operator==(const filament& that);
 
+        // attached positions
+
+        int new_attached(motor *m, int hd, int l, vec_type pos);
+        void del_attached(int i);
+
+        int get_attached_l(int i);
+        vec_type get_attached_pos(int i);
+        void add_attached_force(int i, vec_type f);
+        void add_attached_pos(int i, double dist);
+
+        bool at_barbed_end(int i);
+        bool at_pointed_end(int i);
+
         // growing
 
         void set_l0_max(double);
@@ -110,6 +123,9 @@ class filament
         vector<vec_type> prv_rnds;
         vector<class bead *> beads;
         vector<spring *> springs;
+
+        struct attached_type { class motor *m; int hd; int l; double pos; };
+        vector<attached_type> attached;
 
         // thermo
         double ke_vir, ke_vel;

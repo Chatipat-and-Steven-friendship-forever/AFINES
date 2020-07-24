@@ -59,6 +59,17 @@ class filament_ensemble
 
         bool is_polymer_start(int f, int a);
 
+        // attached locations
+        fp_index_type new_attached(motor *m, int hd, int f_index, int l_index, vec_type pos);
+        void del_attached(fp_index_type i);
+        array<int, 2> get_attached_fl(fp_index_type i);
+        vec_type get_attached_pos(fp_index_type i);
+        void add_attached_force(fp_index_type i, vec_type f);
+        void add_attached_pos(fp_index_type i, double dist);
+        vec_type get_attached_direction(fp_index_type i);
+        bool at_pointed_end(fp_index_type i);
+        bool at_barbed_end(fp_index_type i);
+
         // thermo
         double get_stretching_energy();
         virial_type get_stretching_virial();

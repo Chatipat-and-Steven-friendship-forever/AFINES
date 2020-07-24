@@ -43,15 +43,13 @@ spacer::spacer(vector<double> mvec,
     kend2       = rend*dt;
 
     // filament and spring indices for each head
-    f_index = {int(mvec[4]), int(mvec[5])};
-    array<int, 2> mylindex = {int(mvec[6]), int(mvec[7])};
+    array<int, 2> f_index = {int(mvec[4]), int(mvec[5])};
+    array<int, 2> l_index = {int(mvec[6]), int(mvec[7])};
 
-    state[0] = (f_index[0] == -1 && mylindex[0] == -1) ? motor_state::free : motor_state::bound;
-    state[1] = (f_index[1] == -1 && mylindex[1] == -1) ? motor_state::free : motor_state::bound;
+    state[0] = (f_index[0] == -1 && l_index[0] == -1) ? motor_state::free : motor_state::bound;
+    state[1] = (f_index[1] == -1 && l_index[1] == -1) ? motor_state::free : motor_state::bound;
 
     filament_network = network;
-    init_l_index(0, mylindex[0]);
-    init_l_index(1, mylindex[1]);
     damp        =(6*pi*vis*mld);
     bd_prefactor= sqrt(temperature/(2*damp*dt));
 
@@ -69,8 +67,6 @@ spacer::spacer(vector<double> mvec,
 
     ke_vel = 0; //assume m = 1
     ke_vir = 0;
-    pos_a_end = {{0, 0}}; // pos_a_end = distance from pointy end -- by default 0
-                          // i.e., if l_index[hd] = j, then pos_a_end[hd] is the distance to the "j+1"th bead
 
     h[0] = bc->pos_bc({mvec[0], mvec[1]});
     h[1] = bc->pos_bc({mvec[0] + mvec[2], mvec[1] + mvec[3]});
@@ -79,25 +75,15 @@ spacer::spacer(vector<double> mvec,
     this->update_angle();
     this->update_force();
 
-    ldir_bind[0].zero();
-    ldir_bind[1].zero();
-    bind_disp[0].zero();
-    bind_disp[1].zero();
-
-    at_barbed_end = {{false, false}};
-
     if (state[0] == motor_state::bound){
-        pos_a_end[0] = bc->dist_bc(filament_network->get_end(f_index[0], l_index[0]) - h[0]);
+        fp_index[0] = filament_network->new_attached(this, 0, f_index[0], l_index[0], h[0]);
         ldir_bind[0] = filament_network->get_direction(f_index[0], l_index[0]);
 
     }
     if (state[1] == motor_state::bound){
-        pos_a_end[1] = bc->dist_bc(filament_network->get_end(f_index[1], l_index[1]) - h[1]);
+        fp_index[1] = filament_network->new_attached(this, 1, f_index[1], l_index[1], h[1]);
         ldir_bind[1] = filament_network->get_direction(f_index[1], l_index[1]);
     }
-
-    prv_rnd[0].zero();
-    prv_rnd[1].zero();
 }
 
 spacer::~spacer(){}
@@ -108,7 +94,7 @@ void spacer::set_bending(double force_constant, double ang){
 }
 
 void spacer::update_force()
-{ 
+{
     //cout<<"\nDEBUG: using spacer update_force()";
     if (state[0] == motor_state::bound && state[1] == motor_state::bound){
         update_bending(0);
@@ -125,31 +111,17 @@ void spacer::update_force()
     tension = mk*(len - mld);
     force = tension * direc;
 }
-  //Measure distance to FARTHER END of bead filament that the spacer is bound to
-  //
-int spacer::get_further_end(int hd, int findex, int lindex)
-{
-    return (pos_a_end[hd] > 0.5*filament_network->get_llength(findex, lindex));
-}
-
-vec_type spacer::disp_from_bead(int hd, int findex, int aindex)
-{
-    vec_type pos = filament_network->get_filament(findex)->get_bead_position(aindex);
-    return bc->rij_bc(pos - h[hd]);
-}
 
 void spacer::update_bending(int hd)
 {
-    int bead_further_end = get_further_end(hd, f_index[hd], l_index[hd]);
-
-    vec_type delr1 = disp_from_bead(hd, f_index[hd], l_index[hd] + bead_further_end);
-    vec_type delr2 = pow(-1, hd)*disp;
+    array<int, 2> fl = filament_network->get_attached_fl(fp_index[hd]);
+    vec_type delr1 = filament_network->get_filament(fl[0])->get_spring(fl[1])->get_disp();
+    vec_type delr2 = pow(-1, hd) * disp;
 
     bend_result_type result = bend_harmonic(kb, th0, delr1, delr2);
 
-    // apply force to each of 3 atoms
-    filament_network->update_forces(f_index[hd], l_index[hd] + bead_further_end, result.force1);
-    b_force[hd] -= result.force1;
+    filament_network->update_forces(fl[0], fl[1], -result.force1);
+    filament_network->update_forces(fl[0], fl[1] + 1, result.force1);
 
     b_force[pr(hd)] += result.force2;
     b_force[hd] -= result.force2;
@@ -204,9 +176,10 @@ double spacer::metropolis_prob(int hd, array<int, 2> fl_idx, vec_type newpos, do
     double delEs = 0.5 * mk * stretch * stretch - get_stretching_energy();
 
     double bend_eng = 0.0;
-    if (state[hd] == motor_state::free && state[pr(hd)] == motor_state::bound) { //it's trying to attach
-        vec_type delr1 = disp_from_bead(hd, fl_idx[0], fl_idx[1] + get_further_end(hd, fl_idx[0], fl_idx[1]));
-        vec_type delr2 = pow(-1, hd)*disp;
+    if (state[hd] == motor_state::free && state[pr(hd)] == motor_state::bound) {
+        //it's trying to attach
+        vec_type delr1 = filament_network->get_filament(fl_idx[0])->get_spring(fl_idx[1])->get_disp();
+        vec_type delr2 = pow(-1, hd) * disp;
         bend_eng = bend_harmonic_energy(kb, th0, delr1, delr2);
     }
     double delEb = bend_eng - b_eng[hd];
@@ -219,8 +192,8 @@ double spacer::metropolis_prob(int hd, array<int, 2> fl_idx, vec_type newpos, do
 
 bool spacer::allowed_bind(int hd, array<int, 2> fl_idx)
 {
-//    cout<<"\nDEBUG: using spacer allowed bind";
-    return (fl_idx[0] != f_index[pr(hd)]);
+    array<int, 2> fl = filament_network->get_attached_fl(fp_index[pr(hd)]);
+    return fl_idx[0] != fl[0];
 }
 
 array<double, 2> spacer::get_bending_energy()

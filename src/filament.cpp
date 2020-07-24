@@ -273,12 +273,10 @@ vector<filament *> filament::fracture(int node){
 
 void filament::detach_all_motors()
 {
-    for (spring *s : springs) {
-        for (auto it : s->get_mots()) {
-            motor *m = it.first;
-            int hd = it.second;
-            m->detach_head_without_moving(hd);
-        }
+    for (size_t i = 0; i < attached.size(); i++) {
+        motor *m = attached[i].m;
+        int hd = attached[i].hd;
+        m->detach_head_without_moving(hd);
     }
 }
 
@@ -453,7 +451,7 @@ double filament::get_end2end()
     }
 }
 
-// GROWING
+// begin [growing]
 
 void filament::set_l0_max(double lmax)
 {
@@ -473,53 +471,57 @@ void filament::set_l0_min(double lmin)
 void filament::grow(double dL)
 {
     double lb = springs[0]->get_l0();
-    if ( lb + dL < l0_max ){
+
+    if (lb + dL < l0_max) {
+        // make spring "0" longer
         springs[0]->set_l0(lb + dL);
         springs[0]->step();
-    }
-    else{
+
+    } else {
+        // split spring "0" into two
+
         vec_type dir = springs[0]->get_direction();
         vec_type p2 = beads[1]->get_pos();
         //add a bead
-        vec_type newpos = bc->pos_bc(p2-spring_l0*dir);
-        beads.insert(beads.begin()+1, new bead(newpos.x, newpos.y, beads[0]->get_length(), beads[0]->get_viscosity()));
-        prv_rnds.insert(prv_rnds.begin()+1, {});
-        //shift all springs from "1" onward forward
-        //move backward; otherwise i'll just keep pushing all the motors to the pointed end, i think
-        for (int i = int(springs.size()-1); i > 0; i--){
+        vec_type newpos = bc->pos_bc(p2 - spring_l0 * dir);
+        bead *b = new bead(
+                newpos.x, newpos.y,
+                beads[0]->get_length(), beads[0]->get_viscosity());
+        beads.insert(beads.begin() + 1, b);
+        prv_rnds.insert(prv_rnds.begin() + 1, {});
+
+        // shift all springs forward, except the first one
+        for (size_t i = 1; i < springs.size(); i++) {
             springs[i]->inc_aindex();
             springs[i]->step();
-            //shift all xsprings on these springs forward
-            //lmots = springs[i]->get_mots();
-            for (auto &it : springs[i]->get_mots()) {
-                it.first->inc_l_index(it.second);
-            }
-
         }
+
         //add spring "1"
-        springs.insert(springs.begin()+1, new spring(spring_l0, springs[0]->get_kl(), springs[0]->get_max_ext(), this, {{1, 2}}));
+        spring *s = new spring(
+                spring_l0, springs[0]->get_kl(), springs[0]->get_max_ext(),
+                this, {1, 2});
+        springs.insert(springs.begin() + 1, s);
         springs[1]->step();
+
         //reset l0 at barbed end
         springs[0]->set_l0(spring_l0);
         springs[0]->step();
 
-        //adjust motors and xsprings on first spring
-        map<motor *, int> mots0 = springs[0]->get_mots();
-        vector<motor *> mots1;
-        for (auto &it : mots0) {
-            motor *m = it.first;
-            int hd = it.second;
-            double pos = m->get_pos_a_end()[hd];
-            if (pos < spring_l0) {
-                mots1.push_back(m);
+        for (auto &a : attached) {
+            if (a.l > 0) {
+                // shift attachment points forward if they aren't on the first spring
+                a.l += 1;
             } else {
-                m->set_pos_a_end(hd, pos - spring_l0);
+                // adjust attachment points on the first spring
+                double pos = a.pos;
+                if (pos < spring_l0) {
+                    a.l = 1;
+                } else {
+                    a.pos = pos - spring_l0;
+                }
             }
         }
-        for (motor *m : mots1) {
-            int hd = mots0[m];
-            m->set_l_index(hd, 1);
-        }
+
     }
 }
 
@@ -537,3 +539,98 @@ void filament::set_kgrow(double k){
 void filament::set_lgrow(double dl){
     lgrow = dl;
 }
+
+// end [growing]
+
+// begin [attached]
+
+// TODO: use an in-place linked list instead
+// pos = distance from pointed end, relative to bead[l + 1]
+
+int filament::new_attached(motor *m, int hd, int l, vec_type intpoint)
+{
+    double pos = bc->dist_bc(springs[l]->get_h1() - intpoint);
+    // length of attached is usually short,
+    // so this isn't very expensive
+    for (size_t i = 0; i < attached.size(); i++) {
+        if (!attached[i].m) {
+            attached[i] = {m, hd, l, pos};
+            return int(i);
+        }
+    }
+    size_t j = attached.size();
+    attached.push_back({m, hd, l, pos});
+    return int(j);
+}
+
+void filament::del_attached(int i)
+{
+    attached[i] = {nullptr, -1, -1, NAN};
+}
+
+int filament::get_attached_l(int i)
+{
+    return attached[i].l;
+}
+
+vec_type filament::get_attached_pos(int i)
+{
+    int l = attached[i].l;
+    double pos = attached[i].pos;
+    vec_type h1 = springs[l]->get_h1();
+    vec_type dir = springs[l]->get_direction();
+    return bc->pos_bc(h1 - pos * dir);
+}
+
+void filament::add_attached_force(int i, vec_type f)
+{
+    int l = attached[i].l;
+    double pos = attached[i].pos;
+    double ratio = pos / springs[l]->get_length();
+    beads[l + 0]->update_force(f * ratio);
+    beads[l + 1]->update_force(f * (1.0 - ratio));
+}
+
+void filament::add_attached_pos(int i, double dist)
+{
+    int &l = attached[i].l;
+    double &pos = attached[i].pos;
+    pos += dist;
+
+    double len = springs[l]->get_l0();
+    if (pos >= len) {
+        // pos is after spring
+        if (l == 0) {
+            // at barbed end
+            pos = len;
+        } else {
+            // move to next spring
+            l -= 1;
+            // subtract CURRENT spring length
+            pos -= len;
+        }
+    } else if (pos < 0.0) {
+        // pos is before spring
+        if (l + 1 == springs.size()) {
+            // at pointed end
+            pos = 0.0;
+        } else {
+            // move to previous spring
+            l += 1;
+            // subtract NEW spring length
+            pos += springs[l]->get_l0();
+        }
+    }
+}
+
+bool filament::at_barbed_end(int i)
+{
+    return attached[i].l == 0 && attached[i].pos == springs[attached[i].l]->get_l0();
+}
+
+bool filament::at_pointed_end(int i)
+{
+    return attached[i].l + 1 == springs.size() && attached[i].pos == 0.0;
+}
+
+// end [attached]

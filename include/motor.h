@@ -154,9 +154,7 @@ class motor
         // unbound only
         array<vec_type, 2> prv_rnd;
         // bound only
-        array<int, 2> f_index, l_index, spring_mot_idx;
-        array<double, 2> pos_a_end;
-        array<bool, 2> at_barbed_end;
+        array<fp_index_type, 2> fp_index;
         array<vec_type, 2> ldir_bind, bind_disp;
 };
 

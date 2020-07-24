@@ -154,6 +154,59 @@ int filament_ensemble::get_nfilaments(){
     return network.size();
 }
 
+// begin [attached]
+
+fp_index_type filament_ensemble::new_attached(
+        motor *m, int hd, int f_index, int l_index, vec_type pos)
+{
+    int p_index = network[f_index]->new_attached(m, hd, l_index, pos);
+    return {f_index, p_index};
+}
+
+void filament_ensemble::del_attached(fp_index_type i)
+{
+    network[i.f_index]->del_attached(i.p_index);
+}
+
+array<int, 2> filament_ensemble::get_attached_fl(fp_index_type i)
+{
+    return {i.f_index, network[i.f_index]->get_attached_l(i.p_index)};
+}
+
+vec_type filament_ensemble::get_attached_pos(fp_index_type i)
+{
+    network[i.f_index]->get_attached_pos(i.p_index);
+}
+
+void filament_ensemble::add_attached_force(fp_index_type i, vec_type f)
+{
+    network[i.f_index]->add_attached_force(i.p_index, f);
+}
+
+void filament_ensemble::add_attached_pos(fp_index_type i, double dist)
+{
+    return network[i.f_index]->add_attached_pos(i.p_index, dist);
+}
+
+vec_type filament_ensemble::get_attached_direction(fp_index_type i)
+{
+    int f_index = i.f_index;
+    int l_index = network[f_index]->get_attached_l(i.p_index);
+    return get_direction(f_index, l_index);
+}
+
+bool filament_ensemble::at_barbed_end(fp_index_type i)
+{
+    return network[i.f_index]->at_barbed_end(i.p_index);
+}
+
+bool filament_ensemble::at_pointed_end(fp_index_type i)
+{
+    return network[i.f_index]->at_pointed_end(i.p_index);
+}
+
+// end [attached]
+
 // begin [output]
 
 vector<vector<double>> filament_ensemble::output_beads()
