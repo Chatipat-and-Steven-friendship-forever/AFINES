@@ -12,7 +12,6 @@ set(sources
     src/filament.cpp
     src/filament_ensemble.cpp
     src/motor.cpp
-    src/spacer.cpp
     src/motor_ensemble.cpp
     src/potentials.cpp
     src/exv.cpp

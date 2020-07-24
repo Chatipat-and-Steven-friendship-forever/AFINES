@@ -467,7 +467,7 @@ int main(int argc, char **argv)
     if (quad_off_flag) net->get_quads()->use_quad(false);
 
     cout<<"\nAdding active motors...";
-    xlink_ensemble *myosins = new xlink_ensemble(
+    motor_ensemble *myosins = new motor_ensemble(
             a_motor_pos_vec, dt, temperature,
             a_motor_length, net, a_motor_v, a_motor_stiffness, fene_pct, a_m_kon, a_m_koff,
             a_m_kend, a_m_stall, a_m_cut, viscosity);
@@ -477,7 +477,7 @@ int main(int argc, char **argv)
     if (use_attach_opt) myosins->use_attach_opt(true);
 
     cout<<"Adding passive motors (crosslinkers) ...\n";
-    xlink_ensemble *crosslks = new xlink_ensemble(
+    motor_ensemble *crosslks = new motor_ensemble(
             p_motor_pos_vec, dt, temperature,
             p_motor_length, net, p_motor_v, p_motor_stiffness, fene_pct, p_m_kon, p_m_koff,
             p_m_kend, p_m_stall, p_m_cut, viscosity);

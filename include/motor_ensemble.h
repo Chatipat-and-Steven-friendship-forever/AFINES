@@ -7,21 +7,11 @@
  *
  */
 
-//=====================================
-//include guard
 #ifndef AFINES_MOTOR_ENSEMBLE_H
 #define AFINES_MOTOR_ENSEMBLE_H
 
-//=====================================
-// forward declared dependencies
-//class filament_ensemble;
-
-//=====================================
-//included dependences
 #include "motor.h"
-#include "spacer.h"
 
-template <class motor_type>
 class motor_ensemble
 {
     public:
@@ -40,6 +30,7 @@ class motor_ensemble
         // settings
         void kill_heads(int i);
         void set_binding_two(double, double, double);
+        void set_bending(double kb, double th0);
 
         // thermo
         double get_potential_energy();
@@ -69,11 +60,11 @@ class motor_ensemble
         void revive_heads();
 
         // misc
-        void add_motor(motor_type *m);
+        void add_motor(motor *m);
 
     protected:
         filament_ensemble *f_network;
-        vector<motor_type *> n_motors;
+        vector<motor *> n_motors;
         double mld;
 
         // flags
@@ -82,21 +73,6 @@ class motor_ensemble
         // thermo
         double ke_vel, ke_vir, pe;
         virial_type virial;
-};
-
-class spacer_ensemble : public motor_ensemble<spacer>
-{
-    public:
-        using motor_ensemble<spacer>::motor_ensemble;
-        void set_bending(double, double);
-
-};
-
-class xlink_ensemble : public motor_ensemble<motor>
-{
-    public:
-        using motor_ensemble<motor>::motor_ensemble;
-
 };
 
 #endif

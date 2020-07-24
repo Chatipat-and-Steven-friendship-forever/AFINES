@@ -14,6 +14,7 @@
 #include "globals.h"
 #include "motor.h"
 #include "filament_ensemble.h"
+#include "potentials.h"
 
 motor::motor(vector<double> mvec,
         double mlen, filament_ensemble * network,
@@ -45,6 +46,9 @@ motor::motor(vector<double> mvec,
     koff2       = roff*dt;
     kend2       = rend*dt;
 
+    kb = 0;
+    th0 = 0;
+
 
     // filament and spring indices for each head
     array<int, 2> f_index = {int(mvec[4]), int(mvec[5])};
@@ -62,10 +66,10 @@ motor::motor(vector<double> mvec,
     eps_ext     = 0.01*max_ext;
     /********************************/
 
-    tension     = 0;
-    force.zero(); // force on the spring
+    tension = 0;
     ke_vel = 0; //assume m = 1
     ke_vir = 0;
+    b_eng = {0, 0};
 
     h[0] = bc->pos_bc({mvec[0], mvec[1]});
     h[1] = bc->pos_bc({mvec[0] + mvec[2], mvec[1] + mvec[3]});
@@ -82,6 +86,22 @@ motor::motor(vector<double> mvec,
         fp_index[1] = filament_network->new_attached(this, 1, f_index[1], l_index[1], h[1]);
         ldir_bind[1] = filament_network->get_attached_direction(fp_index[1]);
     }
+}
+
+void motor::set_bending(double kb_, double th0_)
+{
+    kb = kb_;
+    th0 = th0_;
+}
+
+double motor::get_kb()
+{
+    return kb;
+}
+
+double motor::get_th0()
+{
+    return th0;
 }
 
 //return motor state with a given head number
@@ -107,16 +127,26 @@ double motor::metropolis_prob(int hd, array<int, 2> fl_idx, vec_type newpos, dou
 {
     double prob = maxprob;
     double stretch  = bc->dist_bc(newpos - h[pr(hd)]) - mld;
-    double delE = 0.5*mk*stretch*stretch - this->get_stretching_energy();
+    double delEs = 0.5*mk*stretch*stretch - this->get_stretching_energy();
 
-    if( delE > 0 )
-        prob *= exp(-delE/temperature);
+    double bend_eng = 0.0;
+    if (kb > 0.0 && state[hd] == motor_state::free && state[pr(hd)] == motor_state::bound) {
+        // trying to attach
+        vec_type delr1 = filament_network->get_filament(fl_idx[0])->get_spring(fl_idx[1])->get_disp();
+        vec_type delr2 = pow(-1, hd) * disp;
+        bend_eng = bend_harmonic_energy(kb, th0, delr1, delr2);
+    }
+    double delEb = bend_eng - b_eng[hd];
+
+    double delE = delEs + delEb;
+    if (delE > 0.0) prob *= exp(-delE/temperature);
 
     return prob;
 }
 
 bool motor::allowed_bind(int hd, array<int, 2> fl_idx){
     array<int, 2> fl = filament_network->get_attached_fl(fp_index[pr(hd)]);
+    if (kb > 0.0) return fl_idx[0] != fl[0];
     return fl[0] != fl_idx[0] || fl[1] != fl_idx[1];
 }
 
@@ -222,8 +252,36 @@ bool motor::attach(int hd, mc_prob &p)
 
 void motor::update_force()
 {
+    if (kb > 0.0) {
+        b_force[0].zero();
+        b_force[1].zero();
+        if (state[0] == motor_state::bound && state[1] == motor_state::bound) {
+            this->update_bending(0);
+            this->update_bending(1);
+        }
+    }
+
+    this->update_angle();
+
     tension = mk*(len - mld);
     force = tension * direc;
+}
+
+void motor::update_bending(int hd)
+{
+    array<int, 2> fl = filament_network->get_attached_fl(fp_index[hd]);
+    vec_type delr1 = filament_network->get_filament(fl[0])->get_spring(fl[1])->get_disp();
+    vec_type delr2 = pow(-1, hd) * disp;
+
+    bend_result_type result = bend_harmonic(kb, th0, delr1, delr2);
+
+    filament_network->update_forces(fl[0], fl[1], -result.force1);
+    filament_network->update_forces(fl[0], fl[1] + 1, result.force1);
+
+    b_force[pr(hd)] += result.force2;
+    b_force[hd] -= result.force2;
+
+    b_eng[hd] = result.energy;
 }
 
 /* Taken from hsieh, jain, larson, jcp 2006; eqn (5)
@@ -247,9 +305,10 @@ void motor::update_force_fraenkel_fene()
 void motor::brownian_relax(int hd)
 {
     vec_type new_rnd = vec_randn();
-    vec_type v = pow(-1, hd) * force / damp + bd_prefactor * (new_rnd + prv_rnd[hd]);
+    vec_type f = pow(-1, hd) * force + b_force[hd];
+    vec_type v = f / damp + bd_prefactor * (new_rnd + prv_rnd[hd]);
     ke_vel = abs2(v);
-    ke_vir = -0.5 * pow(-1, hd) * dot(force, h[hd]);
+    ke_vir = -0.5 * pow(-1, hd) * dot(f, h[hd]);
     h[hd] = bc->pos_bc(h[hd] + v*dt);
     prv_rnd[hd] = new_rnd;
 }
@@ -350,8 +409,11 @@ void motor::filament_update_hd(int hd, vec_type f)
 // heads may be in any state
 void motor::filament_update()
 {
-    if (state[0] == motor_state::bound) this->filament_update_hd(0, force);
-    if (state[1] == motor_state::bound) this->filament_update_hd(1, -force);
+    if (state[0] == motor_state::bound) this->filament_update_hd(0, force + b_force[0]);
+    if (state[1] == motor_state::bound) this->filament_update_hd(1, -force + b_force[1]);
+
+    b_force[0].zero();
+    b_force[1].zero();
 }
 
 // detach head, and move it to the unbinding position
@@ -395,9 +457,19 @@ vec_type motor::get_force()
     return force;
 }
 
+array<vec_type, 2> motor::get_b_force()
+{
+    return b_force;
+}
+
 double motor::get_stretching_energy()
 {
     return abs2(force) / (2.0 * mk);
+}
+
+array<double, 2> motor::get_bending_energy()
+{
+    return b_eng;
 }
 
 virial_type motor::get_virial() {
@@ -492,11 +564,6 @@ void motor::update_d_strain(double g)
     array<double, 2> fov = bc->get_fov();
     h[0] = bc->pos_bc({h[0].x + g * h[0].y / fov[1], h[0].y});
     h[1] = bc->pos_bc({h[1].x + g * h[1].y / fov[1], h[1].y});
-}
-
-void motor::identify()
-{
-    cout<<"\nI am a motor";
 }
 
 void motor::set_binding_two(double ron2, double roff2, double rend2){

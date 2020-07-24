@@ -15,10 +15,8 @@
 #include "globals.h"
 #include "motor_ensemble.h"
 #include "motor.h"
-#include "spacer.h"
 
-template <class motor_type>
-motor_ensemble<motor_type>::motor_ensemble(vector<vector<double>> motors, double delta_t, double temp,
+motor_ensemble::motor_ensemble(vector<vector<double>> motors, double delta_t, double temp,
         double mlen, filament_ensemble *network, double v0, double stiffness, double max_ext_ratio,
         double ron, double roff, double rend, double fstall, double rcut, double vis)
 {
@@ -32,79 +30,69 @@ motor_ensemble<motor_type>::motor_ensemble(vector<vector<double>> motors, double
     cout << "\nDEBUG: Number of motors:" << motors.size() << "\n";
 
     for (vector<double> mvec : motors) {
-        n_motors.push_back(new motor_type(mvec, mlen, f_network, delta_t, temp,
+        n_motors.push_back(new motor(mvec, mlen, f_network, delta_t, temp,
                     v0, stiffness, max_ext_ratio, ron, roff, rend, fstall, rcut, vis));
     }
 
     this->update_energies();
 }
 
-template <class motor_type>
-motor_ensemble<motor_type>::~motor_ensemble()
+motor_ensemble::~motor_ensemble()
 {
     for (motor *m : n_motors) delete m;
 }
 
-template <class motor_type>
-void motor_ensemble<motor_type>::add_motor(motor_type *m)
+void motor_ensemble::add_motor(motor *m)
 {
     n_motors.push_back(m);
 }
 
-template <class motor_type>
-int motor_ensemble<motor_type>::get_nmotors()
+int motor_ensemble::get_nmotors()
 {
     return n_motors.size();
 }
 
-template <class motor_type>
-motor *motor_ensemble<motor_type>::get_motor(int i)
+motor *motor_ensemble::get_motor(int i)
 {
     return n_motors[i];
 }
 
 // begin [settings]
 
-template <class motor_type>
-void motor_ensemble<motor_type>::set_binding_two(double kon2, double koff2, double kend2){
+void motor_ensemble::set_binding_two(double kon2, double koff2, double kend2){
     for(unsigned int i = 0; i < n_motors.size(); i++)
         n_motors[i]->set_binding_two(kon2, koff2, kend2);
 }
 
-void spacer_ensemble::set_bending(double modulus, double ang){
+void motor_ensemble::set_bending(double modulus, double ang){
     double kb  = modulus/mld;
     for(unsigned int i = 0; i < n_motors.size(); i++)
         n_motors[i]->set_bending(kb, ang);
 }
 
-template <class motor_type>
-void motor_ensemble<motor_type>::use_attach_opt(bool flag)
+void motor_ensemble::use_attach_opt(bool flag)
 {
     attach_opt_flag = flag;
 }
 
-template <class motor_type>
-void motor_ensemble<motor_type>::use_shear(bool flag)
+void motor_ensemble::use_shear(bool flag)
 {
     shear_flag = flag;
 }
 
-template <class motor_type>
-void motor_ensemble<motor_type>::use_static(bool flag)
+void motor_ensemble::use_static(bool flag)
 {
     static_flag = flag;
 }
 
-template <class motor_type>
-void motor_ensemble<motor_type>::kill_heads(int hd)
+void motor_ensemble::kill_heads(int hd)
 {
     for (motor *m : n_motors) {
         m->kill_head(hd);
     }
 }
 
-template <class motor_type>
-void motor_ensemble<motor_type>::unbind_all_heads()
+void motor_ensemble::unbind_all_heads()
 {
     for (motor *m : n_motors) {
         m->detach_head(0);
@@ -114,8 +102,7 @@ void motor_ensemble<motor_type>::unbind_all_heads()
     }
 }
 
-template <class motor_type>
-void motor_ensemble<motor_type>::revive_heads()
+void motor_ensemble::revive_heads()
 {
     for (motor *m : n_motors) {
         m->revive_head(0);
@@ -127,8 +114,7 @@ void motor_ensemble<motor_type>::revive_heads()
 
 // begin [dynamics]
 
-template <class motor_type>
-void motor_ensemble<motor_type>::montecarlo()
+void motor_ensemble::montecarlo()
 {
     for (motor *m : n_motors) {
         array<motor_state, 2> s = m->get_states();
@@ -149,8 +135,7 @@ void motor_ensemble<motor_type>::montecarlo()
     }
 }
 
-template <class motor_type>
-void motor_ensemble<motor_type>::integrate()
+void motor_ensemble::integrate()
 {
     for (motor *m : n_motors) {
         array<motor_state, 2> s = m->get_states();
@@ -170,8 +155,7 @@ void motor_ensemble<motor_type>::integrate()
     }
 }
 
-template <class motor_type>
-void motor_ensemble<motor_type>::update_d_strain(double g)
+void motor_ensemble::update_d_strain(double g)
 {
     if (shear_flag) {
         for (motor *m : n_motors) {
@@ -180,8 +164,7 @@ void motor_ensemble<motor_type>::update_d_strain(double g)
     }
 }
 
-template <class motor_type>
-void motor_ensemble<motor_type>::compute_forces()
+void motor_ensemble::compute_forces()
 {
     for (motor *m : n_motors) {
         m->update_force();
@@ -190,8 +173,7 @@ void motor_ensemble<motor_type>::compute_forces()
     update_energies();
 }
 
-template <class motor_type>
-void motor_ensemble<motor_type>::update_energies()
+void motor_ensemble::update_energies()
 {
     ke_vel = 0.0;
     ke_vir = 0.0;
@@ -210,14 +192,12 @@ void motor_ensemble<motor_type>::update_energies()
 
 // begin [thermo]
 
-template <class motor_type>
-double motor_ensemble<motor_type>::get_potential_energy()
+double motor_ensemble::get_potential_energy()
 {
     return pe;
 }
 
-template <class motor_type>
-virial_type motor_ensemble<motor_type>::get_virial()
+virial_type motor_ensemble::get_virial()
 {
     return virial;
 }
@@ -226,8 +206,7 @@ virial_type motor_ensemble<motor_type>::get_virial()
 
 // begin [output]
 
-template <class motor_type>
-void motor_ensemble<motor_type>::print_ensemble_thermo()
+void motor_ensemble::print_ensemble_thermo()
 {
     fmt::print(
             "\n"
@@ -240,8 +219,7 @@ void motor_ensemble<motor_type>::print_ensemble_thermo()
             ke_vel, ke_vir, pe, 0, ke_vel + pe);
 }
 
-template <class motor_type>
-vector<vector<double>> motor_ensemble<motor_type>::output()
+vector<vector<double>> motor_ensemble::output()
 {
     vector<vector<double>> out;
     for (motor *m : n_motors) {
@@ -250,16 +228,14 @@ vector<vector<double>> motor_ensemble<motor_type>::output()
     return out;
 }
 
-template <class motor_type>
-void motor_ensemble<motor_type>::motor_write(ostream& fout)
+void motor_ensemble::motor_write(ostream& fout)
 {
     for (motor *m : n_motors) {
         fout << m->write();
     }
 }
 
-template <class motor_type>
-void motor_ensemble<motor_type>::motor_write_doubly_bound(ostream& fout)
+void motor_ensemble::motor_write_doubly_bound(ostream& fout)
 {
     array<motor_state, 2> doubly_bound = {motor_state::bound, motor_state::bound};
     for (size_t i = 0; i < n_motors.size(); i++) {
@@ -270,6 +246,3 @@ void motor_ensemble<motor_type>::motor_write_doubly_bound(ostream& fout)
 }
 
 // end [output]
-
-template class motor_ensemble<motor>;
-template class motor_ensemble<spacer>;

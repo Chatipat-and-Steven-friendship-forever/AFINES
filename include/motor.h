@@ -42,6 +42,10 @@ class motor
 
         void set_binding_two(double ron2, double roff2, double rend2);
 
+        void set_bending(double kb, double th0);
+        double get_kb();
+        double get_th0();
+
         // get state
         array<motor_state, 2> get_states();
         vec_type get_h0();
@@ -49,11 +53,10 @@ class motor
         array<int, 2> get_f_index();
         array<int, 2> get_l_index();
         vec_type get_force();
-        array<double,2> get_pos_a_end();
-        double get_pos_a_end(int hd);
+        array<vec_type, 2> get_b_force();
 
         // attach/detach
-        virtual bool allowed_bind( int hd, array<int, 2> fl_idx);
+        bool allowed_bind( int hd, array<int, 2> fl_idx);
         bool try_attach(int head, bool opt, mc_prob &p);
         bool attach(int hd, mc_prob &p);
         bool attach_opt(int hd, mc_prob &p);
@@ -69,7 +72,7 @@ class motor
         void update_angle();
         void walk(int hd);
         void update_pos_a_end(int hd, double pos);
-        virtual void brownian_relax(int hd);
+        void brownian_relax(int hd);
         void set_pos_a_end(int hd, double pos);
 
         // from filament
@@ -80,8 +83,9 @@ class motor
         void filament_update();
 
         // potential
-        virtual void update_force();
-        virtual void update_force_fraenkel_fene();
+        void update_force();
+        void update_force_fraenkel_fene();
+        void update_bending(int hd);
 
         // stress
         void update_d_strain(double g);
@@ -98,11 +102,11 @@ class motor
         double get_stretching_energy();
         virial_type get_virial();
         double get_stretching_energy_fene();
+        array<double, 2> get_bending_energy();
         double get_kinetic_energy_vel();
         double get_kinetic_energy_vir();
 
         // output
-        void identify();
         string to_string();
         vector<double> output();
         string write();
@@ -127,11 +131,13 @@ class motor
 
         // thermo
         double ke_vel, ke_vir;
+        array<double, 2> b_eng;
 
         // potential parameters
         double mk, mld;
         double max_ext, eps_ext;
         double max_bind_dist;
+        double kb, th0;
 
         // walking parameters
         double vs, stall_force;
@@ -147,6 +153,7 @@ class motor
         // forces
         double tension;
         vec_type force;
+        array<vec_type, 2> b_force;
 
         // head state
         array<motor_state, 2> state;
