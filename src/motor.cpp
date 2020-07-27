@@ -150,6 +150,9 @@ bool motor::allowed_bind(int hd, array<int, 2> fl_idx){
     return fl[0] != fl_idx[0] || fl[1] != fl_idx[1];
 }
 
+// attaches head to spring {f, l} at intpoint
+// saves information for detachment
+// assumes that intpoint is on the spring
 void motor::attach_head(int hd, vec_type intpoint, array<int, 2> fl)
 {
     // update state
@@ -165,16 +168,10 @@ void motor::attach_head(int hd, vec_type intpoint, array<int, 2> fl)
     h[hd] = intpoint;
 }
 
-bool motor::try_attach(int hd, bool opt, mc_prob &p)
-{
-    if (opt)
-        return attach_opt(hd, p);
-    else
-        return attach(hd, p);
-}
-
-// does the same thing as motor::attach, but faster
-bool motor::attach_opt(int hd, mc_prob &p)
+// attempt to attach unbound head to a filament
+// does NOT check that the head in unbound
+//check for attachment of unbound heads given head index (0 for head 1, and 1 for head 2)
+bool motor::try_attach(int hd, mc_prob &p)
 {
     double onrate = (state[pr(hd)] == motor_state::bound) ? kon2 : kon;
     vector<array<int, 2>> *attach_list = filament_network->get_attach_list(h[hd]);
@@ -213,40 +210,6 @@ bool motor::attach_opt(int hd, mc_prob &p)
         }
     }
 
-    return false;
-}
-
-// attempt to attach unbound head to a filament
-// does NOT check that the head in unbound
-//check for attachment of unbound heads given head index (0 for head 1, and 1 for head 2)
-bool motor::attach(int hd, mc_prob &p)
-{
-    set<tuple<double, array<int, 2>, vec_type>> dist_sq_sorted;
-    for (array<int, 2> fl : *filament_network->get_attach_list(h[hd])) {
-        filament *f = filament_network->get_filament(fl[0]);
-        spring *s = f->get_spring(fl[1]);
-        vec_type intpoint = s->intpoint(h[hd]);
-        vec_type dr = bc->rij_bc(intpoint - h[hd]);
-        double dist_sq = abs2(dr);
-        dist_sq_sorted.insert(tuple<double, array<int, 2>, vec_type>(dist_sq, fl, intpoint));
-    }
-
-    double onrate = (state[pr(hd)] == motor_state::bound) ? kon2 : kon;
-    for (auto it : dist_sq_sorted) {
-        double dist_sq; array<int, 2> fl; vec_type intpoint;
-        std::tie(dist_sq, fl, intpoint) = it;
-        if (dist_sq > max_bind_dist_sq) //since it's sorted, all the others will be farther than max_bind_dist too
-            break;
-
-        //head can't bind to the same filament spring the other head is bound to
-        else if (allowed_bind(hd, fl)) {
-            double needprob = metropolis_prob(hd, fl, intpoint, onrate);
-            if (p(needprob)) {
-                attach_head(hd, intpoint, fl);
-                return true;
-            }
-        }
-    }
     return false;
 }
 
@@ -352,6 +315,10 @@ vec_type motor::generate_off_pos(int hd)
     return bc->pos_bc(h[hd] - bind_disp_rot);
 }
 
+// attempts to detach hd with maximum rate offrate
+// the detachment position is determined by generate_off_pos
+// returns true if detachment succeeds, and false otherwise
+// assumes that the head is bound
 bool motor::try_detach(int hd, mc_prob &p)
 {
     vec_type hpos_new = generate_off_pos(hd);
@@ -359,11 +326,13 @@ bool motor::try_detach(int hd, mc_prob &p)
     if (state[pr(hd)] == motor_state::bound)
         offrate = filament_network->at_barbed_end(fp_index[hd]) ? kend2 : koff2;
 
-    double needprob = metropolis_prob(hd, {}, hpos_new, offrate);
-
-    if (p(needprob)) {
-        detach_head(hd, hpos_new);
-        return true;
+    boost::optional<double> opt_p = p(offrate);
+    if (opt_p) {
+        double prob = metropolis_prob(hd, {}, hpos_new, offrate);
+        if (*opt_p < prob) {
+            detach_head(hd, hpos_new);
+            return true;
+        }
     }
     return false;
 }

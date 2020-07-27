@@ -57,15 +57,13 @@ class motor
 
         // attach/detach
         bool allowed_bind( int hd, array<int, 2> fl_idx);
-        bool try_attach(int head, bool opt, mc_prob &p);
-        bool attach(int hd, mc_prob &p);
-        bool attach_opt(int hd, mc_prob &p);
+        bool try_attach(int head, mc_prob &p);
         void attach_head(int hd, vec_type intpoint, array<int, 2> fl);
         bool try_detach(int head, mc_prob &p);
         void detach_head(int hd);
         void detach_head(int hd, vec_type pos);
         void detach_head_without_moving(int hd);
-        virtual double metropolis_prob(int hd, array<int, 2> fl_idx, vec_type newpos, double maxprob);
+        double metropolis_prob(int hd, array<int, 2> fl_idx, vec_type newpos, double maxprob);
         vec_type generate_off_pos(int hd);
 
         // step/walk

@@ -68,7 +68,7 @@ class motor_ensemble
         double mld;
 
         // flags
-        bool attach_opt_flag, shear_flag, static_flag;
+        bool shear_flag, static_flag;
 
         // thermo
         double ke_vel, ke_vir, pe;

@@ -61,9 +61,6 @@ int main(int argc, char **argv)
     double grid_factor;
     bool quad_off_flag;
     int quad_update_period;
-    bool check_dup_in_quad;
-
-    bool use_attach_opt;
 
     bool circle_flag; double circle_radius, circle_spring_constant;
 
@@ -96,9 +93,6 @@ int main(int argc, char **argv)
         ("grid_factor", po::value<double>(&grid_factor)->default_value(2), "number of grid boxes per um^2")
         ("quad_off_flag", po::value<bool>(&quad_off_flag)->default_value(false), "flag to turn off neighbor list updating")
         ("quad_update_period", po::value<int>(&quad_update_period)->default_value(1), "number of timesteps between actin/link/motor position updates to update quadrants")
-        ("check_dup_in_quad", po::value<bool>(&check_dup_in_quad)->default_value(true), "flag to check for duplicates in quadrants")
-
-        ("use_attach_opt", po::value<bool>(&use_attach_opt)->default_value(false), "flag to use optimized attachment point search")
 
         // circular confinement
         ("circle_flag", po::value<bool>(&circle_flag)->default_value(false), "flag to add a circular wall")
@@ -474,7 +468,6 @@ int main(int argc, char **argv)
 
     if (dead_head_flag) myosins->kill_heads(dead_head);
     if (shear_motor_flag) myosins->use_shear(true);
-    if (use_attach_opt) myosins->use_attach_opt(true);
 
     cout<<"Adding passive motors (crosslinkers) ...\n";
     motor_ensemble *crosslks = new motor_ensemble(
@@ -484,7 +477,6 @@ int main(int argc, char **argv)
 
     if (p_dead_head_flag) crosslks->kill_heads(p_dead_head);
     if (shear_motor_flag) crosslks->use_shear(true);
-    if (use_attach_opt) crosslks->use_attach_opt(true);
     if (static_cl_flag) crosslks->use_static(true);
 
     // END CREATE NETWORK OBJECTS
@@ -631,10 +623,6 @@ int main(int argc, char **argv)
         } else if (count % quad_update_period == 0) {
             // when quadrants are on, this actually builds quadrants
             net->quad_update_serial();
-
-            if (check_dup_in_quad) {
-                net->get_quads()->check_duplicates();
-            }
 
         }
 

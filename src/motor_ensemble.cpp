@@ -20,7 +20,6 @@ motor_ensemble::motor_ensemble(vector<vector<double>> motors, double delta_t, do
         double mlen, filament_ensemble *network, double v0, double stiffness, double max_ext_ratio,
         double ron, double roff, double rend, double fstall, double rcut, double vis)
 {
-    attach_opt_flag = false;
     shear_flag = false;
     static_flag = false;
     f_network = network;
@@ -70,11 +69,6 @@ void motor_ensemble::set_bending(double modulus, double ang){
         n_motors[i]->set_bending(kb, ang);
 }
 
-void motor_ensemble::use_attach_opt(bool flag)
-{
-    attach_opt_flag = flag;
-}
-
 void motor_ensemble::use_shear(bool flag)
 {
     shear_flag = flag;
@@ -122,13 +116,13 @@ void motor_ensemble::montecarlo()
         mc_prob p;
 
         if (s[0] == motor_state::free) {
-            m->try_attach(0, attach_opt_flag, p);
+            m->try_attach(0, p);
         } else if (s[0] != motor_state::inactive) {
             m->try_detach(0, p);
         }
 
         if (s[1] == motor_state::free) {
-            m->try_attach(1, attach_opt_flag, p);
+            m->try_attach(1, p);
         } else if (s[1] != motor_state::inactive) {
             m->try_detach(1, p);
         }
