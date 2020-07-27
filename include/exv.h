@@ -16,7 +16,7 @@ class excluded_volume
         }
 
         void update_spring_forces(vector<filament *> &network, int f);
-        void update_spring_forces_from_quads(quadrants *quads, vector<filament *> &network, int nsprings_per_fil_max);
+        void update_spring_forces_from_quads(quadrants *quads, vector<filament *> &network);
         void update_force_between_filaments(
                 vector<filament *> &network, int n1, int l1, int n2, int l2);
         void update_excluded_volume(vector<filament *> &network, int f);

@@ -33,6 +33,42 @@ void quadrants::add_spring(spring *s, array<int, 2> fl)
         add_spring_nonperiodic(s, fl);
 }
 
+void quadrants::build_pairs()
+{
+    // TODO: build a Verlet list on top of this
+    pairs.clear();
+    if (!quad_flag) {
+        for (size_t i = 0; i < all_springs.size(); i++) {
+            for (size_t j = i + 1; i < all_springs.size(); i++) {
+                pairs.push_back({all_springs[i], all_springs[j]});
+            }
+        }
+
+    } else {
+        for (int ix = 0; ix < nq[0]; ix++) {
+            for (int iy = 0; iy < nq[1]; iy++) {
+                vector<array<int, 2>> &q = quads[ix][iy];
+                for (size_t i = 0; i < q.size(); i++) {
+                    for (size_t j = i + 1; j < q.size(); j++) {
+                        // insertion order is preserved in each quadrant,
+                        // so we don't risk double counting
+                        // TODO: add check for double counting, just in case
+                        pairset.insert({q[i], q[j]});
+                    }
+                }
+            }
+        }
+        pairs.assign(begin(pairset), end(pairset));
+        pairset.clear();
+
+    }
+}
+
+vector<array<array<int, 2>, 2>> *quadrants::get_pairs()
+{
+    return &pairs;
+}
+
 vector<array<int, 2>> *quadrants::get_attach_list(vec_type pos)
 {
     if (!quad_flag) {

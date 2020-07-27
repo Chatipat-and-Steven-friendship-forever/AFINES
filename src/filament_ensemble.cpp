@@ -25,13 +25,11 @@ filament_ensemble::filament_ensemble(box *bc_, vector<vector<double> > beads, ar
     int fil_idx = 0;
     vector<vector<double>> avec;
 
-    nsprings_per_fil_max = 0;
     for (int i=0; i < int(beads.size()); i++){
 
         if (beads[i][3] != fil_idx && avec.size() > 0){
 
             network.push_back(new filament(this, avec, spring_len, stretching, ext, bending, delta_t, temp, frac_force));
-            nsprings_per_fil_max = max(nsprings_per_fil_max, int(avec.size() - 1));
             avec.clear();
             fil_idx = beads[i][3];
         }
@@ -347,7 +345,6 @@ double filament_ensemble::get_ext_energy()
 
 void filament_ensemble::set_growing(double kgrow, double lgrow, double l0min, double l0max, int nsprings_max)
 {
-    nsprings_per_fil_max = nsprings_max;
     for (int i = 0; i < int(network.size()); i++){
         network[i]->set_kgrow(kgrow);
         network[i]->set_lgrow(lgrow);
@@ -443,7 +440,7 @@ void filament_ensemble::update_excluded_volume()
 {
     pe_exv = 0.0;
     if (exv) {
-        exv->update_spring_forces_from_quads(quads, network, nsprings_per_fil_max);
+        exv->update_spring_forces_from_quads(quads, network);
         pe_exv = exv->get_pe_exv();
     }
 }

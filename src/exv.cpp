@@ -1,51 +1,17 @@
 #include "exv.h"
 
-void excluded_volume::update_spring_forces_from_quads(quadrants *quads, vector<filament *> &network, int nsprings_per_fil_max)
+void excluded_volume::update_spring_forces_from_quads(quadrants *quads, vector<filament *> &network)
 {
-    //This function loops through the quads of the systems and then loops through the filaments and springs described by the neighbor list in every quad.
-    //Upon this looping, the pair interactions will be calculated according to the neighbor list.
-    //The loop will go through thee values of spring_per_quad() [x][y][i], where x: 0-nq[0], y: 0-nq[1], i: 0-m_springs_per_quad
-    //The pairs found in he nieghbor list are then saved in a vector array.
-    //On subsequent loops, this value will be searched for in order to ensure no repeats in the force calculation.
+    for (array<array<int, 2>, 2> pair : *quads->get_pairs()) {
+        int f1 = pair[0][0];
+        int l1 = pair[0][1];
+        int f2 = pair[1][0];
+        int l2 = pair[1][1];
 
-    int max_nsprings = network.size()*nsprings_per_fil_max;
+        // adjacent springs would yield excluded volume interactions between the same bead
+        if (f1 == f2 && abs(l1 - l2) < 2) continue;
 
-    // track which excluded volume forces have already been calculated
-    vector<vector<int>> int_lks(max_nsprings, vector<int>(max_nsprings, 0));
-
-    // for each quadrant
-    array<int, 2> nq = quads->get_nq();
-    for (int x = 0; x < nq[0]; x++) {
-        for (int y = 0; y < nq[1]; y++) {
-            vector<array<int, 2>> *q = quads->get_quad({x, y});
-
-            // for each pair of springs in the quadrant
-            int nsprings_at_quad = q->size();
-            for (int i = 0; i < nsprings_at_quad; i++) {
-                array<int, 2> spring_1 = q->at(i);
-                int f1 = spring_1[0];
-                int l1 = spring_1[1];
-                for (int j = i+1; j < nsprings_at_quad; j++) {
-                    array<int, 2> spring_2 = q->at(j);
-                    int f2 = spring_2[0];
-                    int l2 = spring_2[1];
-
-                    // adjacent springs would yield excluded volume interactions between the same bead
-                    if (f1 == f2 && abs(l1 - l2) < 2) continue;
-
-                    // flattened index of springs
-                    int par1 = f1*nsprings_per_fil_max + l1;
-                    int par2 = f2*nsprings_per_fil_max + l2;
-
-                    // only compute excluded volume forces if it hasn't been computed already
-                    if (!int_lks[par1][par2]) {
-                        int_lks[par1][par2] = 1;
-                        int_lks[par2][par1] = 1;
-                        update_force_between_filaments(network, f1, l1, f2, l2);
-                    }
-                }
-            }
-        }
+        update_force_between_filaments(network, f1, l2, f2, l2);
     }
 }
 

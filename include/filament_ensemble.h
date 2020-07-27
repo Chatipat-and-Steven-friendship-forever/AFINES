@@ -123,10 +123,6 @@ class filament_ensemble
         excluded_volume *exv;
         vector<filament *> network;
 
-        // excluded volume
-        // TODO: make quads handle this
-        int nsprings_per_fil_max;
-
         // thermo
         double pe_stretch, pe_bend, pe_exv, pe_ext, ke_vel, ke_vir;
         virial_type vir_stretch, vir_bend;

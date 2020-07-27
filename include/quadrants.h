@@ -13,6 +13,8 @@ class quadrants {
 
         void add_spring(spring *s, array<int, 2> fl);
         vector<array<int, 2>> *get_attach_list(vec_type pos);
+        void build_pairs();
+        vector<array<array<int, 2>, 2>> *get_pairs();
         void clear();
 
         array<int, 2> get_nq() { return nq; }
@@ -29,6 +31,8 @@ class quadrants {
         bool quad_flag;
         vector<array<int, 2>> all_springs;
         vector<array<int, 2>> **quads;
+        vector<array<array<int, 2>, 2>> pairs;
+        unordered_set<array<array<int, 2>, 2>, boost::hash<array<array<int, 2>, 2>>> pairset;
 };
 
 #endif
