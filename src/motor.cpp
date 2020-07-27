@@ -49,6 +49,8 @@ motor::motor(vector<double> mvec,
     kb = 0;
     th0 = 0;
 
+    kalign = 0;
+    par_flag = true;
 
     // filament and spring indices for each head
     array<int, 2> f_index = {int(mvec[4]), int(mvec[5])};
@@ -104,6 +106,18 @@ double motor::get_th0()
     return th0;
 }
 
+void motor::set_par(double k)
+{
+    kalign = k;
+    par_flag = true;
+}
+
+void motor::set_antipar(double k)
+{
+    kalign = k;
+    par_flag = false;
+}
+
 //return motor state with a given head number
 array<motor_state, 2> motor::get_states()
 {
@@ -121,27 +135,99 @@ vec_type motor::get_h1()
     return h[1];
 }
 
-//metropolis algorithm with rate constant
-//NOTE: while fl_idx doesn't matter for this xlink implementation, it does for "spacers"
-double motor::metropolis_prob(int hd, array<int, 2> fl_idx, vec_type newpos, double maxprob)
+// metropolis algorithm
+// probability is in range [0, 1]
+double motor::metropolis_prob(int hd, array<int, 2> fl_idx, vec_type newpos)
 {
-    double prob = maxprob;
-    double stretch  = bc->dist_bc(newpos - h[pr(hd)]) - mld;
-    double delEs = 0.5*mk*stretch*stretch - this->get_stretching_energy();
+    double len_old = bc->dist_bc(h[hd] - h[pr(hd)]) - mld;
+    double len_new = bc->dist_bc(newpos - h[pr(hd)]) - mld;
+    double dE = 0.5 * mk * (len_new * len_new - len_old * len_old);
 
-    double bend_eng = 0.0;
-    if (kb > 0.0 && state[hd] == motor_state::free && state[pr(hd)] == motor_state::bound) {
-        // trying to attach
-        vec_type delr1 = filament_network->get_filament(fl_idx[0])->get_spring(fl_idx[1])->get_disp();
-        vec_type delr2 = pow(-1, hd) * disp;
-        bend_eng = bend_harmonic_energy(kb, th0, delr1, delr2);
+    if (kb > 0.0 && state[pr(hd)] == motor_state::bound) {
+        array<int, 2> fl;
+        vec_type delr1, delr2;
+        if (state[hd] == motor_state::free) {
+            // attach: singly bound -> doubly bound
+
+            // new bending energy of attaching head
+            fl = fl_idx;
+            delr1 = filament_network->get_filament(fl[0])->get_spring(fl[1])->get_disp();
+            delr2 = pow(-1, hd) * disp;
+            dE += bend_harmonic_energy(kb, th0, delr1, delr2);
+
+            // new bending energy of other head
+            fl = filament_network->get_attached_fl(fp_index[pr(hd)]);
+            delr1 = filament_network->get_filament(fl[0])->get_spring(fl[1])->get_disp();
+            delr2 = pow(-1, pr(hd)) * disp;
+            dE += bend_harmonic_energy(kb, th0, delr1, delr2);
+
+        }
+        if (state[hd] == motor_state::bound) {
+            // detach: doubly bound -> singly bound
+
+            // old bending energy of detaching head
+            fl = filament_network->get_attached_fl(fp_index[hd]);
+            delr1 = filament_network->get_filament(fl[0])->get_spring(fl[1])->get_disp();
+            delr2 = pow(-1, hd) * disp;
+            dE -= bend_harmonic_energy(kb, th0, delr1, delr2);
+
+            // old bending energy of other head
+            fl = filament_network->get_attached_fl(fp_index[pr(hd)]);
+            delr1 = filament_network->get_filament(fl[0])->get_spring(fl[1])->get_disp();
+            delr2 = pow(-1, pr(hd)) * disp;
+            dE -= bend_harmonic_energy(kb, th0, delr1, delr2);
+
+        }
     }
-    double delEb = bend_eng - b_eng[hd];
 
-    double delE = delEs + delEb;
-    if (delE > 0.0) prob *= exp(-delE/temperature);
+    if (kalign != 0.0 && state[pr(hd)] == motor_state::bound) {
+        array<int, 2> fl;
+        if (state[hd] == motor_state::free) {
+            // attach: singly bound -> doubly bound
 
-    return prob;
+            // spring to be attached
+            fl = fl_idx;
+            vec_type delr1 = filament_network->get_filament(fl[0])->get_spring(fl[1])->get_disp();
+
+            // other attached spring
+            fl = filament_network->get_attached_fl(fp_index[pr(hd)]);
+            vec_type delr2 = filament_network->get_filament(fl[0])->get_spring(fl[1])->get_disp();
+
+            dE += alignment_penalty(delr1, delr2);
+        }
+        if (state[hd] == motor_state::bound) {
+            // detach: doubly bound -> singly bound
+
+            // spring to be detached
+            fl = filament_network->get_attached_fl(fp_index[hd]);
+            vec_type delr1 = filament_network->get_filament(fl[0])->get_spring(fl[1])->get_disp();
+
+            // other attached spring
+            fl = filament_network->get_attached_fl(fp_index[pr(hd)]);
+            vec_type delr2 = filament_network->get_filament(fl[0])->get_spring(fl[1])->get_disp();
+
+            dE -= alignment_penalty(delr1, delr2);
+        }
+    }
+
+    return (dE <= 0.0) ? 1.0 : exp(-dE / temperature);
+}
+
+// compute the alignment penalty for doubly bound heads
+// values are in range [0, kalign], where
+// 0 is for parallel/antiparallel and kalign is for antiparallel/parallel
+double motor::alignment_penalty(vec_type delr1, vec_type delr2)
+{
+    // cosine of angle between vectors
+    // if parallel, 1; if antiparallel, -1
+    double c = dot(delr1, delr2) / (abs(delr1) * abs(delr2));
+
+    // penalize NOT being parallel/antiparallel by at most kalign
+    if (par_flag) {
+        return kalign * 0.5 * (1.0 - c);
+    } else {
+        return kalign * 0.5 * (1.0 + c);
+    }
 }
 
 bool motor::allowed_bind(int hd, array<int, 2> fl_idx){
@@ -202,7 +288,7 @@ bool motor::try_attach(int hd, mc_prob &p)
             return false;
         }
 
-        double prob = metropolis_prob(hd, fl, intpoint, onrate);
+        double prob = onrate * metropolis_prob(hd, fl, intpoint);
 
         if (remprob < prob) {
             attach_head(hd, intpoint, fl);
@@ -328,7 +414,7 @@ bool motor::try_detach(int hd, mc_prob &p)
 
     boost::optional<double> opt_p = p(offrate);
     if (opt_p) {
-        double prob = metropolis_prob(hd, {}, hpos_new, offrate);
+        double prob = offrate * metropolis_prob(hd, {-1, -1}, hpos_new);
         if (*opt_p < prob) {
             detach_head(hd, hpos_new);
             return true;

@@ -46,6 +46,9 @@ class motor
         double get_kb();
         double get_th0();
 
+        void set_par(double k);
+        void set_antipar(double k);
+
         // get state
         array<motor_state, 2> get_states();
         vec_type get_h0();
@@ -57,13 +60,14 @@ class motor
 
         // attach/detach
         bool allowed_bind( int hd, array<int, 2> fl_idx);
+        double alignment_penalty(vec_type a, vec_type b);
         bool try_attach(int head, mc_prob &p);
         void attach_head(int hd, vec_type intpoint, array<int, 2> fl);
         bool try_detach(int head, mc_prob &p);
         void detach_head(int hd);
         void detach_head(int hd, vec_type pos);
         void detach_head_without_moving(int hd);
-        double metropolis_prob(int hd, array<int, 2> fl_idx, vec_type newpos, double maxprob);
+        double metropolis_prob(int hd, array<int, 2> fl_idx, vec_type newpos);
         vec_type generate_off_pos(int hd);
 
         // step/walk
@@ -136,6 +140,8 @@ class motor
         double max_ext, eps_ext;
         double max_bind_dist;
         double kb, th0;
+        double kalign;
+        bool par_flag;
 
         // walking parameters
         double vs, stall_force;

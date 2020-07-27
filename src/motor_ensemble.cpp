@@ -79,6 +79,18 @@ void motor_ensemble::use_static(bool flag)
     static_flag = flag;
 }
 
+void motor_ensemble::set_par(double k)
+{
+    for (motor *m : n_motors)
+        m->set_par(k);
+}
+
+void motor_ensemble::set_antipar(double k)
+{
+    for (motor *m : n_motors)
+        m->set_antipar(k);
+}
+
 void motor_ensemble::kill_heads(int hd)
 {
     for (motor *m : n_motors) {

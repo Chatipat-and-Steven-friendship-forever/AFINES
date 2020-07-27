@@ -31,6 +31,8 @@ class motor_ensemble
         void kill_heads(int i);
         void set_binding_two(double, double, double);
         void set_bending(double kb, double th0);
+        void set_par(double k);
+        void set_antipar(double k);
 
         // thermo
         double get_potential_energy();
