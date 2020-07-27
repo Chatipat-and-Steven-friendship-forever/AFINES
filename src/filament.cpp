@@ -128,9 +128,6 @@ void filament::update_d_strain(double g)
         vec_type pos = b->get_pos();
         b->set_pos({pos.x + g * pos.y / bc->get_ybox(), pos.y});
     }
-    for (spring *s : springs) {
-        s->step();
-    }
 }
 
 box *filament::get_box()

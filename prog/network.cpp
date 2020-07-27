@@ -494,8 +494,6 @@ int main(int argc, char **argv)
     cout<<"\nUpdating motors, filaments and crosslinks in the network..";
     string time_str;
 
-    double prev_d_strain = restart_strain;
-
     // open output files
     // for restarts, append instead of writing from the start
     // files are automatically closed by RAII
@@ -537,7 +535,7 @@ int main(int argc, char **argv)
                     net->get_bending_energy(),
                     myosins->get_potential_energy(),
                     crosslks->get_potential_energy(),
-                    prev_d_strain,
+                    bc->get_delrx(),
                     net->get_stretching_virial(),
                     net->get_bending_virial(),
                     myosins->get_virial(),
@@ -559,11 +557,6 @@ int main(int argc, char **argv)
             crosslks->print_ensemble_thermo();
             myosins->print_ensemble_thermo();
         }
-
-        // Brownian dynamics and motor walking
-        net->integrate();
-        crosslks->integrate();
-        myosins->integrate();
 
         // shear
         if (t >= time_of_dstrain && count % n_bw_shear == 0) {
@@ -606,7 +599,7 @@ int main(int argc, char **argv)
                 stress_tensor[0][1] = total_virial.xy / area;
                 stress_tensor[1][0] = total_virial.yx / area;
                 stress_tensor[1][1] = total_virial.yy / area;
-                d_strain += prev_d_strain + stress_rate * (stress - stress_tensor[1][0]) * fov[1] * dt;
+                d_strain += bc->get_delrx() + stress_rate * (stress - stress_tensor[1][0]) * fov[1] * dt;
             }
             if (osc_strain_flag) {
                 //d_strain += d_strain_amp * sin(2*pi*d_strain_freq * ( t - time_of_dstrain) );
@@ -615,11 +608,16 @@ int main(int argc, char **argv)
             if (diff_strain_flag) {
                 d_strain += restart_strain + d_strain_amp*d_strain_freq*(t - time_of_dstrain);
             }
-            bc->update_d_strain(d_strain - prev_d_strain);
+            double delta = d_strain - bc->get_delrx();
+            bc->update_d_strain(delta);
             fmt::print("\nDEBUG: t = {}; adding d_strain of {} um here; total strain = {}",
-                    t, d_strain - prev_d_strain, d_strain);
-            prev_d_strain = d_strain;
+                    t, delta, d_strain);
         }
+
+        // Brownian dynamics and motor walking
+        net->integrate();
+        crosslks->integrate();
+        myosins->integrate();
 
         // filament growth and fracturing
         // also unbinds motors
