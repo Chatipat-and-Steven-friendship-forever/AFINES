@@ -32,6 +32,7 @@ filament::filament(filament_ensemble *net, vector<vector<double>> beadvec, doubl
 
     ke_vel = 0.0;
     ke_vir = 0.0;
+    ubend = 0.0;
 
     spring_l0 = spring_length;
 
@@ -41,12 +42,13 @@ filament::filament(filament_ensemble *net, vector<vector<double>> beadvec, doubl
     kgrow = 0.0;
     lgrow = 0.0;
 
+    damp = infty;
     if (beadvec.size() > 0)
     {
         vector<double> &entry = beadvec[0];
         if (entry.size() != 4) throw runtime_error("Wrong number of arguments in beadvec.");
         beads.push_back(new bead(entry[0], entry[1], entry[2], entry[3]));
-        prv_rnds.push_back({});
+        prv_rnds.push_back(vec_randn());
         damp = beads[0]->get_friction();
     }
 
@@ -60,14 +62,11 @@ filament::filament(filament_ensemble *net, vector<vector<double>> beadvec, doubl
             springs.push_back(new spring(spring_length, stretching_stiffness, max_ext_ratio, this, {(int)j-1, (int)j}));
             springs[j-1]->step();
             springs[j-1]->update_force();
-            prv_rnds.push_back({});
-
+            prv_rnds.push_back(vec_randn());
         }
     }
 
     bd_prefactor = sqrt(temperature/(2*dt*damp));
-
-    this->init_ubend();
 }
 
 filament::~filament()
@@ -79,14 +78,16 @@ filament::~filament()
 void filament::add_bead(vector<double> a, double spring_length, double stretching_stiffness, double max_ext_ratio){
     if (a.size() != 4) throw runtime_error("Wrong number of arguments in bead.");
     beads.push_back(new bead({a[0], a[1], a[2], a[3]}));
-    prv_rnds.push_back({});
+    prv_rnds.push_back(vec_randn());
     if (beads.size() > 1){
         int j = (int) beads.size() - 1;
         springs.push_back(new spring(spring_length, stretching_stiffness, max_ext_ratio, this, {j-1,  j}));
         springs[j-1]->step();
     }
-    if (damp == infty)
+    if (damp == infty) {
         damp = beads[0]->get_friction();
+        bd_prefactor = sqrt(temperature/(2*dt*damp));
+    }
 }
 
 void filament::update_positions()
@@ -495,7 +496,7 @@ void filament::grow(double dL)
                 newpos.x, newpos.y,
                 beads[0]->get_length(), beads[0]->get_viscosity());
         beads.insert(beads.begin() + 1, b);
-        prv_rnds.insert(prv_rnds.begin() + 1, {});
+        prv_rnds.insert(prv_rnds.begin() + 1, vec_randn());
 
         // shift all springs forward, except the first one
         for (size_t i = 1; i < springs.size(); i++) {
