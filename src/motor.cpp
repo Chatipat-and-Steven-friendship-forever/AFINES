@@ -147,10 +147,12 @@ vec_type motor::get_h1()
 // probability is in range [0, 1]
 double motor::metropolis_prob(int hd, array<int, 2> fl_idx, vec_type newpos)
 {
+    // stretching
     double len_old = bc->dist_bc(h[hd] - h[pr(hd)]) - mld;
     double len_new = bc->dist_bc(newpos - h[pr(hd)]) - mld;
     double dE = 0.5 * mk * (len_new * len_new - len_old * len_old);
 
+    // bending
     if (kb > 0.0 && state[pr(hd)] == motor_state::bound) {
         array<int, 2> fl;
         vec_type delr1, delr2;
@@ -188,6 +190,7 @@ double motor::metropolis_prob(int hd, array<int, 2> fl_idx, vec_type newpos)
         }
     }
 
+    // alignment
     if (kalign != 0.0 && state[pr(hd)] == motor_state::bound) {
         array<int, 2> fl;
         if (state[hd] == motor_state::free) {
@@ -216,6 +219,11 @@ double motor::metropolis_prob(int hd, array<int, 2> fl_idx, vec_type newpos)
 
             dE -= alignment_penalty(delr1, delr2);
         }
+    }
+
+    // external
+    if (ext) {
+        dE += ext->compute(newpos).energy - ext->compute(h[hd]).energy;
     }
 
     return (dE <= 0.0) ? 1.0 : exp(-dE / temperature);
@@ -312,6 +320,7 @@ bool motor::try_attach(int hd, mc_prob &p)
 void motor::update_force()
 {
     // bending forces
+    // partially applied to filaments
     if (kb > 0.0) {
         b_force[0].zero();
         b_force[1].zero();
@@ -325,6 +334,12 @@ void motor::update_force()
     if (ext) {
         this->update_external(0);
         this->update_external(1);
+    }
+
+    // alignment forces
+    // applied to filaments
+    if (kalign != 0.0) {
+        update_alignment();
     }
 
     // spring forces
@@ -377,15 +392,9 @@ void motor::update_force_fraenkel_fene()
 // update external forces and energies
 void motor::update_external(int hd)
 {
-    ext_eng[hd] = 0;
-    ext_force[hd].zero();
-
-    // for bound motors, filaments already have external forces applied
-    if (state[hd] == motor_state::free) {
-        ext_result_type result0 = ext->compute(h[hd]);
-        ext_eng[hd] = result0.energy;
-        ext_force[hd] = result0.force;
-    }
+    ext_result_type result0 = ext->compute(h[hd]);
+    ext_eng[hd] = result0.energy;
+    ext_force[hd] = result0.force;
 }
 
 // update projected force for walking
@@ -395,8 +404,49 @@ void motor::update_force_proj(int hd)
     f_proj[hd] = 0;
     if (state[pr(hd)] != motor_state::free) {
         vec_type dir = filament_network->get_attached_direction(fp_index[hd]);
-        f_proj[hd] = dot(pow(-1, hd) * force + b_force[hd], dir);
+        f_proj[hd] = dot(pow(-1, hd) * force + b_force[hd] + ext_force[hd], dir);
     }
+}
+
+// update forces and energies for alignment
+void motor::update_alignment()
+{
+    array<int, 2> fl0 = filament_network->get_attached_fl(fp_index[0]);
+    vec_type delr0 = filament_network->get_filament(fl0[0])->get_spring(fl0[1])->get_disp();
+    double rsq0 = abs2(delr0);
+    double r0 = sqrt(rsq0);
+
+    array<int, 2> fl1 = filament_network->get_attached_fl(fp_index[1]);
+    vec_type delr1 = filament_network->get_filament(fl1[0])->get_spring(fl1[1])->get_disp();
+    double rsq1 = abs2(delr1);
+    double r1 = sqrt(rsq1);
+
+    // cosine of angle between vectors
+    // if parallel, 1; if antiparallel, -1
+    double c = dot(delr0, delr1) / (r0 * r1);
+
+    // penalize NOT being parallel/antiparallel by at most kalign
+    double a;
+    if (par_flag) {
+        a = -0.5 * kalign;
+        align_eng = kalign * 0.5 * (1.0 - c);
+    } else {
+        a = 0.5 * kalign;
+        align_eng = kalign * 0.5 * (1.0 + c);
+    }
+
+    double a00 = a * c / rsq0;
+    double a01 = -a / (r0 * r1);
+    double a11 = a * c / rsq1;
+
+    vec_type f0 = a00 * delr0 + a01 * delr1;
+    vec_type f1 = a11 * delr1 + a01 * delr0;
+
+    filament_network->update_forces(fl0[0], fl0[1], -f0);
+    filament_network->update_forces(fl0[0], fl0[1] + 1, f0);
+
+    filament_network->update_forces(fl1[0], fl1[1], -f1);
+    filament_network->update_forces(fl1[0], fl1[1] + 1, f1);
 }
 
 // end [forces]
@@ -406,7 +456,7 @@ void motor::update_force_proj(int hd)
 void motor::brownian_relax(int hd)
 {
     vec_type new_rnd = vec_randn();
-    vec_type f = pow(-1, hd) * force + b_force[hd];
+    vec_type f = pow(-1, hd) * force + b_force[hd] + ext_force[hd];
     vec_type v = f / damp + bd_prefactor * (new_rnd + prv_rnd[hd]);
     ke_vel = abs2(v);
     ke_vir = -0.5 * pow(-1, hd) * dot(f, h[hd]);
@@ -514,12 +564,8 @@ void motor::filament_update_hd(int hd, vec_type f)
 // heads may be in any state
 void motor::filament_update()
 {
-    // external forces are always zero for bound heads
-    if (state[0] == motor_state::bound) this->filament_update_hd(0, force + b_force[0]);
-    if (state[1] == motor_state::bound) this->filament_update_hd(1, -force + b_force[1]);
-
-    b_force[0].zero();
-    b_force[1].zero();
+    if (state[0] == motor_state::bound) this->filament_update_hd(0, force + b_force[0] + ext_force[0]);
+    if (state[1] == motor_state::bound) this->filament_update_hd(1, -force + b_force[1] + ext_force[1]);
 }
 
 // detach head, and move it to the unbinding position

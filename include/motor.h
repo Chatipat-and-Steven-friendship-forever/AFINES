@@ -91,6 +91,7 @@ class motor
         void update_force();
         void update_force_fraenkel_fene();
         void update_bending(int hd);
+        void update_alignment();
         void update_external(int hd);
         void update_force_proj(int hd);
 
@@ -140,6 +141,7 @@ class motor
         // thermo
         double ke_vel, ke_vir;
         array<double, 2> b_eng, ext_eng;
+        double align_eng;
 
         // potential parameters
         double mk, mld;
