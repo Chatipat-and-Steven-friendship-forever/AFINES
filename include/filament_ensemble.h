@@ -14,12 +14,7 @@
 #include "box.h"
 #include "quadrants.h"
 #include "exv.h"
-
-enum class external_force_type
-{
-    none,
-    circle
-};
+#include "ext.h"
 
 class filament_ensemble
 {
@@ -31,7 +26,7 @@ class filament_ensemble
         ~filament_ensemble();
 
         // settings
-        void set_circle_wall(double radius, double spring_constant);
+        void set_external(external *);
         void set_fene_dist_pct(double);
 
         // quadrants
@@ -98,7 +93,6 @@ class filament_ensemble
         void update_bending();
         void update_excluded_volume();
         void update_external();
-        vec_type external_force(vec_type pos);  // helper
         void update_energies();
 
         void update_forces(int fil, int bead, vec_type f);
@@ -121,15 +115,12 @@ class filament_ensemble
         box *bc;
         quadrants *quads;
         excluded_volume *exv;
+        external *ext;
         vector<filament *> network;
 
         // thermo
         double pe_stretch, pe_bend, pe_exv, pe_ext, ke_vel, ke_vir;
         virial_type vir_stretch, vir_bend;
-
-        // external forces
-        external_force_type external_force_flag;
-        double circle_wall_radius, circle_wall_spring_constant;
 };
 
 #endif

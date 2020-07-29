@@ -38,6 +38,7 @@ motor_ensemble::motor_ensemble(vector<vector<double>> motors, double delta_t, do
 
 motor_ensemble::~motor_ensemble()
 {
+    delete ext;
     for (motor *m : n_motors) delete m;
 }
 
@@ -113,6 +114,14 @@ void motor_ensemble::revive_heads()
     for (motor *m : n_motors) {
         m->revive_head(0);
         m->revive_head(1);
+    }
+}
+
+void motor_ensemble::set_external(external *ext_)
+{
+    ext = ext_;
+    for (motor *m : n_motors) {
+        m->set_external(ext);
     }
 }
 

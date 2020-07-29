@@ -457,7 +457,6 @@ int main(int argc, char **argv)
 
     // additional options
     net->set_growing(kgrow, lgrow, l0min, l0max, nlink_max);
-    if (circle_flag) net->set_circle_wall(circle_radius, circle_spring_constant);
     if (quad_off_flag) net->get_quads()->use_quad(false);
 
     cout<<"\nAdding active motors...";
@@ -478,6 +477,12 @@ int main(int argc, char **argv)
     if (p_dead_head_flag) crosslks->kill_heads(p_dead_head);
     if (shear_motor_flag) crosslks->use_shear(true);
     if (static_cl_flag) crosslks->use_static(true);
+
+    if (circle_flag) {
+        net->set_external(new ext_circle(circle_spring_constant, circle_radius));
+        myosins->set_external(new ext_circle(circle_spring_constant, circle_radius));
+        crosslks->set_external(new ext_circle(circle_spring_constant, circle_radius));
+    }
 
     // END CREATE NETWORK OBJECTS
 

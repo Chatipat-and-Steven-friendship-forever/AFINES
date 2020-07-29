@@ -72,6 +72,9 @@ motor::motor(vector<double> mvec,
     ke_vel = 0; //assume m = 1
     ke_vir = 0;
     b_eng = {0, 0};
+    ext_eng = {0, 0};
+
+    ext = nullptr;
 
     h[0] = bc->pos_bc({mvec[0], mvec[1]});
     h[1] = bc->pos_bc({mvec[0] + mvec[2], mvec[1] + mvec[3]});
@@ -88,6 +91,11 @@ motor::motor(vector<double> mvec,
         fp_index[1] = filament_network->new_attached(this, 1, f_index[1], l_index[1], h[1]);
         ldir_bind[1] = filament_network->get_attached_direction(fp_index[1]);
     }
+}
+
+void motor::set_external(external *ext_)
+{
+    ext = ext_;
 }
 
 void motor::set_bending(double kb_, double th0_)
@@ -299,8 +307,11 @@ bool motor::try_attach(int hd, mc_prob &p)
     return false;
 }
 
+// begin [forces]
+
 void motor::update_force()
 {
+    // bending forces
     if (kb > 0.0) {
         b_force[0].zero();
         b_force[1].zero();
@@ -310,12 +321,26 @@ void motor::update_force()
         }
     }
 
-    this->update_angle();
+    // external forces
+    if (ext) {
+        this->update_external(0);
+        this->update_external(1);
+    }
 
+    // spring forces
     tension = mk*(len - mld);
     force = tension * direc;
+
+    // update projected force for walking
+    // computed from other forces, so should be called last
+    if (vs != 0.0) {
+        this->update_force_proj(0);
+        this->update_force_proj(1);
+    }
 }
 
+// updates bending forces
+// applies part of the force to filaments (the other part is in filament_update)
 void motor::update_bending(int hd)
 {
     array<int, 2> fl = filament_network->get_attached_fl(fp_index[hd]);
@@ -348,6 +373,33 @@ void motor::update_force_fraenkel_fene()
     double mkp = mk/(1-scaled_ext*scaled_ext)*(len-mld);
     force = mkp * direc;
 }
+
+// update external forces and energies
+void motor::update_external(int hd)
+{
+    ext_eng[hd] = 0;
+    ext_force[hd].zero();
+
+    // for bound motors, filaments already have external forces applied
+    if (state[hd] == motor_state::free) {
+        ext_result_type result0 = ext->compute(h[hd]);
+        ext_eng[hd] = result0.energy;
+        ext_force[hd] = result0.force;
+    }
+}
+
+// update projected force for walking
+void motor::update_force_proj(int hd)
+{
+    // external forces should be zero for bound heads
+    f_proj[hd] = 0;
+    if (state[pr(hd)] != motor_state::free) {
+        vec_type dir = filament_network->get_attached_direction(fp_index[hd]);
+        f_proj[hd] = dot(pow(-1, hd) * force + b_force[hd], dir);
+    }
+}
+
+// end [forces]
 
 // Brownian dynamics for unbound particles
 // does NOT check that particles are unbound
@@ -433,9 +485,7 @@ void motor::walk(int hd)
     //calculate motor velocity
     double vm = vs;
     if (state[pr(hd)] != motor_state::free) {
-        vec_type dir = filament_network->get_attached_direction(fp_index[hd]);
-        double f = pow(-1, hd) * dot(force, dir);
-        double factor = 1.0 - f / stall_force;
+        double factor = 1.0 - f_proj[hd] / stall_force;
         if (factor < 0.0) factor = 0.0;
         if (factor > 2.0) factor = 2.0;
         vm = factor * vs;
@@ -464,6 +514,7 @@ void motor::filament_update_hd(int hd, vec_type f)
 // heads may be in any state
 void motor::filament_update()
 {
+    // external forces are always zero for bound heads
     if (state[0] == motor_state::bound) this->filament_update_hd(0, force + b_force[0]);
     if (state[1] == motor_state::bound) this->filament_update_hd(1, -force + b_force[1]);
 
@@ -554,6 +605,8 @@ double motor::get_kinetic_energy_vir()
     return ke_vir;
 }
 
+// begin [output]
+
 string motor::to_string()
 {
     array<int, 2> fl0 = filament_network->get_attached_fl(fp_index[0]);
@@ -608,6 +661,8 @@ string motor::write()
             fl0[0], fl1[0],
             fl0[1], fl1[1]);
 }
+
+// end [output]
 
 void motor::revive_head(int hd)
 {

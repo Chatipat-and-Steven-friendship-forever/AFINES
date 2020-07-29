@@ -33,6 +33,7 @@ class motor_ensemble
         void set_bending(double kb, double th0);
         void set_par(double k);
         void set_antipar(double k);
+        void set_external(external *ext);
 
         // thermo
         double get_potential_energy();
@@ -68,6 +69,7 @@ class motor_ensemble
         filament_ensemble *f_network;
         vector<motor *> n_motors;
         double mld;
+        external *ext;
 
         // flags
         bool shear_flag, static_flag;

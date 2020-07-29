@@ -15,9 +15,8 @@
 #include "filament_ensemble.h"
 
 filament_ensemble::filament_ensemble(box *bc_, vector<vector<double> > beads, array<int,2> mynq, double delta_t, double temp,
-        double vis, double spring_len, double stretching, double ext, double bending, double frac_force, double RMAX, double A)
+        double vis, double spring_len, double stretching, double fene_ext, double bending, double frac_force, double RMAX, double A)
 {
-    external_force_flag = external_force_type::none;
     bc = bc_;
 
     bc->add_callback([this](double g) { this->update_d_strain(g); });
@@ -29,7 +28,7 @@ filament_ensemble::filament_ensemble(box *bc_, vector<vector<double> > beads, ar
 
         if (beads[i][3] != fil_idx && avec.size() > 0){
 
-            network.push_back(new filament(this, avec, spring_len, stretching, ext, bending, delta_t, temp, frac_force));
+            network.push_back(new filament(this, avec, spring_len, stretching, fene_ext, bending, delta_t, temp, frac_force));
             avec.clear();
             fil_idx = beads[i][3];
         }
@@ -37,9 +36,11 @@ filament_ensemble::filament_ensemble(box *bc_, vector<vector<double> > beads, ar
     }
 
     if (avec.size() > 0)
-      network.push_back(new filament(this, avec, spring_len, stretching, ext, bending, delta_t, temp, frac_force));
+        network.push_back(new filament(this, avec, spring_len, stretching, fene_ext, bending, delta_t, temp, frac_force));
 
     avec.clear();
+
+    ext = nullptr;
 
     exv = nullptr;
     if (A > 0) {
@@ -59,10 +60,14 @@ filament_ensemble::filament_ensemble(box *bc_, vector<vector<double> > beads, ar
 filament_ensemble::~filament_ensemble()
 {
     delete quads;
-    if (!exv) {
-        delete exv;
-    }
+    if (!exv) delete exv;
+    if (!ext) delete ext;
     for (filament *f : network) delete f;
+}
+
+void filament_ensemble::set_external(external *ext_)
+{
+    ext = ext_;
 }
 
 // begin [quadrants]
@@ -81,6 +86,7 @@ void filament_ensemble::quad_update_serial()
             quads->add_spring(s, {f, l});
         }
     }
+    if (exv) quads->build_pairs();
 }
 
 vector<array<int, 2>> *filament_ensemble::get_attach_list(vec_type pos)
@@ -445,45 +451,19 @@ void filament_ensemble::update_excluded_volume()
     }
 }
 
-// end [forces]
-
-// begin [external force]
-
 void filament_ensemble::update_external()
 {
     pe_ext = 0.0;
-    if (external_force_flag == external_force_type::none) return;
-    for (size_t f = 0; f < network.size(); f++) {
-        for (int i = 0; i < network[f]->get_nbeads(); i++) {
-            vec_type pos = network[f]->get_bead_position(i);
-            vec_type force = this->external_force(pos);
-            this->update_forces(f, i, force);
+    if (ext) {
+        for (size_t f = 0; f < network.size(); f++) {
+            for (int i = 0; i < network[f]->get_nbeads(); i++) {
+                vec_type pos = network[f]->get_bead_position(i);
+                ext_result_type result = ext->compute(pos);
+                pe_ext += result.energy;
+                this->update_forces(f, i, result.force);
+            }
         }
     }
 }
 
-vec_type filament_ensemble::external_force(vec_type pos)
-{
-    if (external_force_flag == external_force_type::circle) {
-        double rsq = abs2(pos);
-        if (rsq < circle_wall_radius * circle_wall_radius) {
-            return {};
-        }
-        double r = sqrt(rsq);
-        double dr = r - circle_wall_radius;
-        pe_ext += 0.5 * circle_wall_spring_constant * dr * dr;
-        double k = -circle_wall_spring_constant * dr / r;
-        return k * pos;
-    } else {
-        throw std::logic_error("External force flag not recognized.");
-    }
-}
-
-void filament_ensemble::set_circle_wall(double radius, double spring_constant)
-{
-    external_force_flag = external_force_type::circle;
-    circle_wall_radius = radius;
-    circle_wall_spring_constant = spring_constant;
-}
-
-// end [external force]
+// end [forces]

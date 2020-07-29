@@ -20,6 +20,7 @@ class filament_ensemble;
 //included dependences
 #include "globals.h"
 #include "box.h"
+#include "ext.h"
 
 enum class motor_state {
     free = 0,
@@ -48,6 +49,8 @@ class motor
 
         void set_par(double k);
         void set_antipar(double k);
+
+        void set_external(external *ext);
 
         // get state
         array<motor_state, 2> get_states();
@@ -88,6 +91,8 @@ class motor
         void update_force();
         void update_force_fraenkel_fene();
         void update_bending(int hd);
+        void update_external(int hd);
+        void update_force_proj(int hd);
 
         // stress
         void update_d_strain(double g);
@@ -122,7 +127,8 @@ class motor
     protected:
 
         box *bc;
-        filament_ensemble* filament_network;
+        filament_ensemble *filament_network;
+        external *ext;
 
         // parameters
         double dt, temperature, damp;
@@ -133,7 +139,7 @@ class motor
 
         // thermo
         double ke_vel, ke_vir;
-        array<double, 2> b_eng;
+        array<double, 2> b_eng, ext_eng;
 
         // potential parameters
         double mk, mld;
@@ -158,6 +164,7 @@ class motor
         double tension;
         vec_type force;
         array<vec_type, 2> b_force;
+        array<vec_type, 2> ext_force;
 
         // head state
         array<motor_state, 2> state;
@@ -167,6 +174,7 @@ class motor
         // bound only
         array<fp_index_type, 2> fp_index;
         array<vec_type, 2> ldir_bind, bind_disp;
+        array<double, 2> f_proj;
 };
 
 #endif
