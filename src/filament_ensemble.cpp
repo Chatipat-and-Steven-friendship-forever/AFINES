@@ -173,6 +173,7 @@ void filament_ensemble::del_attached(fp_index_type i)
 
 array<int, 2> filament_ensemble::get_attached_fl(fp_index_type i)
 {
+    if (i.f_index == -1 || i.p_index == -1) return {-1, -1};
     return {i.f_index, network[i.f_index]->get_attached_l(i.p_index)};
 }
 
