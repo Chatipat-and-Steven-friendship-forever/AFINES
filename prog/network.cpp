@@ -151,8 +151,10 @@ int main(int argc, char **argv)
     double a_linkage_prob;
 
     double a_m_kon, a_m_kend, a_m_koff, a_m_cut;
+    double a_m_kon2, a_m_kend2, a_m_koff2;
     double a_motor_length, a_motor_stiffness;
     double a_motor_v, a_m_stall;
+    double a_m_bend, a_m_ang, a_m_kalign;
 
     bool dead_head_flag; int dead_head;
 
@@ -170,9 +172,15 @@ int main(int argc, char **argv)
         ("a_m_koff", po::value<double>(&a_m_koff)->default_value(0.1),"active motor off rate")
         ("a_m_kend", po::value<double>(&a_m_kend)->default_value(0.1),"active motor off rate at filament end")
         ("a_m_cut", po::value<double>(&a_m_cut)->default_value(0.063),"cutoff distance for binding (um)")
+        ("a_m_kon2", po::value<double>(), "active motor on rate when both heads bound")
+        ("a_m_koff2", po::value<double>(), "active motor off rate when both heads bound")
+        ("a_m_kend2", po::value<double>(), "active motor off rate at filament end when both heads bound")
 
         ("a_motor_length", po::value<double>(&a_motor_length)->default_value(0.4),"active motor rest length (um)")
         ("a_motor_stiffness", po::value<double>(&a_motor_stiffness)->default_value(1),"active motor spring stiffness (pN/um)")
+        ("a_m_bend", po::value<double>(&a_m_bend)->default_value(0.04),"bending force constant of active motors (pN) (10kT/um by default)")
+        ("a_m_ang", po::value<double>(&a_m_ang)->default_value(pi/2),"equilibrium angle of active motor-filament system")
+        ("a_m_kalign", po::value<double>(&a_m_kalign)->default_value(0.0), "active motor alignment penalty")
 
         // walking
         ("a_motor_v", po::value<double>(&a_motor_v)->default_value(1),"active motor velocity (um/s)")
@@ -191,8 +199,10 @@ int main(int argc, char **argv)
     bool link_intersect_flag; double p_linkage_prob;
 
     double p_m_kon, p_m_kend, p_m_koff, p_m_cut;
+    double p_m_kon2, p_m_kend2, p_m_koff2;
     double p_motor_length, p_motor_stiffness;
     double p_motor_v, p_m_stall;
+    double p_m_bend, p_m_ang, p_m_kalign;
 
     bool p_dead_head_flag; int p_dead_head;
     bool static_cl_flag;
@@ -211,9 +221,15 @@ int main(int argc, char **argv)
         ("p_m_koff", po::value<double>(&p_m_koff)->default_value(0.1),"passive motor off rate")
         ("p_m_kend", po::value<double>(&p_m_kend)->default_value(0.1),"passive motor off rate at filament end")
         ("p_m_cut", po::value<double>(&p_m_cut)->default_value(0.063),"cutoff distance for binding (um)")
+        ("p_m_kon2", po::value<double>(), "passive motor on rate when both heads bound")
+        ("p_m_koff2", po::value<double>(), "passive motor off rate when both heads bound")
+        ("p_m_kend2", po::value<double>(), "passive motor off rate at filament end when both heads bound")
 
         ("p_motor_length", po::value<double>(&p_motor_length)->default_value(0.150),"passive motor rest length (um) (default: filamin)")
         ("p_motor_stiffness", po::value<double>(&p_motor_stiffness)->default_value(1),"passive motor spring stiffness (pN/um)")
+        ("p_m_bend", po::value<double>(&p_m_bend)->default_value(0.04),"bending force constant of passive motors (pN) (10kT/um by default)")
+        ("p_m_ang", po::value<double>(&p_m_ang)->default_value(pi/2),"equilibrium angle of passive motor-filament system")
+        ("p_m_kalign", po::value<double>(&p_m_kalign)->default_value(0.0), "passive motor alignment penalty")
 
         // walking
         ("p_motor_v", po::value<double>(&p_motor_v)->default_value(0),"passive motor velocity (um/s)")
@@ -314,6 +330,14 @@ int main(int argc, char **argv)
                 o_file << it.first <<"="<< boost::any_cast<string>(val) <<endl;
         }
     }
+
+    a_m_kon2 = (vm.count("a_m_kon2")) ? vm["a_m_kon2"].as<double>() : a_m_kon;
+    a_m_koff2 = (vm.count("a_m_koff2")) ? vm["a_m_koff2"].as<double>() : a_m_koff;
+    a_m_kend2 = (vm.count("a_m_kend2")) ? vm["a_m_kend2"].as<double>() : a_m_kend;
+
+    p_m_kon2 = (vm.count("p_m_kon2")) ? vm["p_m_kon2"].as<double>() : p_m_kon;
+    p_m_koff2 = (vm.count("p_m_koff2")) ? vm["p_m_koff2"].as<double>() : p_m_koff;
+    p_m_kend2 = (vm.count("p_m_kend2")) ? vm["p_m_kend2"].as<double>() : p_m_kend;
 
     // END PROGRAM OPTIONS
 
@@ -465,8 +489,12 @@ int main(int argc, char **argv)
             a_motor_length, net, a_motor_v, a_motor_stiffness, fene_pct, a_m_kon, a_m_koff,
             a_m_kend, a_m_stall, a_m_cut, viscosity);
 
+    myosins->set_binding_two(a_m_kon2, a_m_koff2, a_m_kend2);
+    myosins->set_bending(a_m_bend, a_m_ang);
     if (dead_head_flag) myosins->kill_heads(dead_head);
     if (shear_motor_flag) myosins->use_shear(true);
+    if (a_m_kalign > 0.0) myosins->set_par(a_m_kalign);
+    if (a_m_kalign < 0.0) myosins->set_antipar(-a_m_kalign);
 
     cout<<"Adding passive motors (crosslinkers) ...\n";
     motor_ensemble *crosslks = new motor_ensemble(
@@ -474,15 +502,24 @@ int main(int argc, char **argv)
             p_motor_length, net, p_motor_v, p_motor_stiffness, fene_pct, p_m_kon, p_m_koff,
             p_m_kend, p_m_stall, p_m_cut, viscosity);
 
+    crosslks->set_binding_two(p_m_kon2, p_m_koff2, p_m_kend2);
+    crosslks->set_bending(p_m_bend, p_m_ang);
     if (p_dead_head_flag) crosslks->kill_heads(p_dead_head);
     if (shear_motor_flag) crosslks->use_shear(true);
     if (static_cl_flag) crosslks->use_static(true);
+    if (p_m_kalign > 0.0) myosins->set_par(p_m_kalign);
+    if (p_m_kalign < 0.0) myosins->set_antipar(-p_m_kalign);
 
     if (circle_flag) {
         net->set_external(new ext_circle(circle_spring_constant, circle_radius));
         myosins->set_external(new ext_circle(circle_spring_constant, circle_radius));
         crosslks->set_external(new ext_circle(circle_spring_constant, circle_radius));
     }
+
+    // compute forces and energies
+    net->compute_forces();
+    crosslks->compute_forces();
+    myosins->compute_forces();
 
     // END CREATE NETWORK OBJECTS
 
