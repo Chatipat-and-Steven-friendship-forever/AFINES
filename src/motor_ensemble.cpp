@@ -102,8 +102,8 @@ void motor_ensemble::kill_heads(int hd)
 void motor_ensemble::unbind_all_heads()
 {
     for (motor *m : n_motors) {
-        m->detach_head(0);
-        m->detach_head(1);
+        m->detach_head(0, m->generate_off_pos(0));
+        m->detach_head(1, m->generate_off_pos(1));
         m->deactivate_head(0);
         m->deactivate_head(1);
     }
@@ -156,17 +156,15 @@ void motor_ensemble::integrate()
         array<motor_state, 2> s = m->get_states();
         if (s[0] == motor_state::free || s[0] == motor_state::inactive) {
             m->brownian_relax(0);
-        } else if (s[0] == motor_state::bound) {
-            if (!static_flag) m->walk(0);
-            m->update_position_attached(0);
+        } else if (!static_flag && s[0] == motor_state::bound) {
+            m->walk(0);
         }
         if (s[1] == motor_state::free || s[1] == motor_state::inactive) {
             m->brownian_relax(1);
-        } else if (s[1] == motor_state::bound) {
-            if (!static_flag) m->walk(1);
-            m->update_position_attached(1);
+        } else if (!static_flag && s[1] == motor_state::bound) {
+            m->walk(1);
         }
-        m->update_angle();
+        m->step();
     }
 }
 
@@ -183,7 +181,6 @@ void motor_ensemble::compute_forces()
 {
     for (motor *m : n_motors) {
         m->update_force();
-        m->filament_update();
     }
     update_energies();
 }
@@ -192,6 +189,8 @@ void motor_ensemble::update_energies()
 {
     ke_vel = 0.0;
     ke_vir = 0.0;
+
+    // stretching only
     pe = 0.0;
     virial.zero();
 
@@ -207,11 +206,13 @@ void motor_ensemble::update_energies()
 
 // begin [thermo]
 
+// get stretching energy
 double motor_ensemble::get_potential_energy()
 {
     return pe;
 }
 
+// get stretching virial
 virial_type motor_ensemble::get_virial()
 {
     return virial;
