@@ -46,6 +46,8 @@ class motor
         void set_par(double k);
         void set_antipar(double k);
         void set_align(double k);
+        int get_align();
+        double get_kalign();
 
         void set_external(external *ext);
 
@@ -62,11 +64,15 @@ class motor
         array<int, 2> get_l_index();
 
         // calculations done by update_force
-        vec_type get_force();  // spring forces
+        array<vec_type, 2> get_force();
+        array<vec_type, 2> get_s_force();  // spring forces
         array<vec_type, 2> get_b_force();  // bending forces
+        array<vec_type, 2> get_ext_force();  // external forces
+        array<double, 2> get_force_proj();  // projected forces for walking
 
         // update [forces]
         void update_force();  // updates all forces
+        void clear_forces();
 
         // helper functions, used by update_force
         void update_force_fraenkel_fene();
@@ -95,13 +101,18 @@ class motor
         void detach_head_without_moving(int hd);
         void detach_head(int hd, vec_type pos);
 
-        // thermo
+        // [thermo]
+
         double get_stretching_energy();
         array<double, 2> get_bending_energy();
-        virial_type get_virial();
+        double get_alignment_energy();
+        array<double, 2> get_external_energy();
+
         double get_stretching_energy_fene();
         double get_kinetic_energy_vel();
         double get_kinetic_energy_vir();
+
+        virial_type get_virial();
 
         // output
         string to_string();
@@ -157,13 +168,15 @@ class motor
 
         // [forces] computed from state and derived
         double tension;
-        vec_type force;
+        array<vec_type, 2> force;
+        array<vec_type, 2> s_force;
         array<vec_type, 2> b_force;
         array<vec_type, 2> ext_force;
         array<double, 2> f_proj;
 
         // [thermo] computed along with forces
         double ke_vel, ke_vir;
+        double s_eng;
         array<double, 2> b_eng, ext_eng;
         double align_eng;
 };

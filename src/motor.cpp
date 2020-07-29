@@ -82,23 +82,25 @@ motor::motor(vector<double> mvec,
     array<int, 2> f_index = {int(mvec[4]), int(mvec[5])};
     array<int, 2> l_index = {int(mvec[6]), int(mvec[7])};
 
-    state[0] = (f_index[0] == -1 && l_index[0] == -1) ? motor_state::free : motor_state::bound;
-    state[1] = (f_index[1] == -1 && l_index[1] == -1) ? motor_state::free : motor_state::bound;
-
-    fp_index[0] = {-1, -1};
-    fp_index[1] = {-1, -1};
-
     // for bound heads,
     // set up attachment location with filaments
     // set detachment location as don't move
     // assumes that head positions are on filaments
-    if (state[0] == motor_state::bound){
-        fp_index[0] = filament_network->new_attached(this, 0, f_index[0], l_index[0], h[0]);
-        ldir_bind[0] = filament_network->get_attached_direction(fp_index[0]);
+
+    // for unbound heads,
+    // set in same state as after detachment
+
+    if (f_index[0] == -1 && l_index[0] == -1) {
+        state[0] = motor_state::free;
+        fp_index[0] = {-1, -1};
+    } else {
+        this->attach_head(0, h[0], {f_index[0], l_index[0]});
     }
-    if (state[1] == motor_state::bound){
-        fp_index[1] = filament_network->new_attached(this, 1, f_index[1], l_index[1], h[1]);
-        ldir_bind[1] = filament_network->get_attached_direction(fp_index[1]);
+    if (f_index[1] == -1 && l_index[1] == -1) {
+        state[1] = motor_state::free;
+        fp_index[1] = {-1, -1};
+    } else {
+        this->attach_head(1, h[1], {f_index[1], l_index[1]});
     }
 
     // set to N(0, 1) to prevent cooling
@@ -110,13 +112,9 @@ motor::motor(vector<double> mvec,
 
     // [forces] and [thermo]
     // clear everything since setup isn't done yet
-    tension = 0.0;
-    f_proj = {0.0, 0.0};
     ke_vel = 0.0;  // assume m = 1
     ke_vir = 0.0;
-    b_eng = {0.0, 0.0};
-    ext_eng = {0.0, 0.0};
-    align_eng = 0.0;
+    this->clear_forces();
 }
 
 // begin [settings]
@@ -159,6 +157,16 @@ void motor::set_antipar(double k)
 {
     kalign = k;
     par_flag = -1;
+}
+
+double motor::get_kalign()
+{
+    return kalign;
+}
+
+int motor::get_align()
+{
+    return par_flag;
 }
 
 void motor::set_external(external *ext_)
@@ -223,9 +231,16 @@ array<int, 2> motor::get_l_index()
     return {fl0[1], fl1[1]};
 }
 
-vec_type motor::get_force()
+// get total force
+array<vec_type, 2> motor::get_force()
 {
     return force;
+}
+
+// get spring force
+array<vec_type, 2> motor::get_s_force()
+{
+    return s_force;
 }
 
 // get bending forces on motor heads
@@ -235,10 +250,48 @@ array<vec_type, 2> motor::get_b_force()
     return b_force;
 }
 
+// get external force
+array<vec_type, 2> motor::get_ext_force()
+{
+    return ext_force;
+}
+
+// get projected force
+array<double, 2> motor::get_force_proj()
+{
+    return f_proj;
+}
+
 // end [state]
 
 // begin [forces]
 // assume that derived state is computed
+
+void motor::clear_forces()
+{
+    force[0].zero();
+    force[1].zero();
+
+    tension = 0.0;
+    s_force[0].zero();
+    s_force[1].zero();
+    s_eng = 0.0;
+
+    b_force[0].zero();
+    b_force[1].zero();
+    b_eng[0] = 0.0;
+    b_eng[1] = 0.0;
+
+    ext_force[0].zero();
+    ext_force[1].zero();
+    ext_eng[0] = 0.0;
+    ext_eng[1] = 0.0;
+
+    align_eng = 0.0;
+
+    f_proj[0] = 0.0;
+    f_proj[1] = 0.0;
+}
 
 // update all forces
 // adds them to filaments if needed
@@ -247,7 +300,9 @@ void motor::update_force()
 {
     // spring forces
     tension = mk * (len - mld);
-    force = tension * direc;
+    s_force[0] = tension * direc;
+    s_force[1] = -s_force[0];
+    s_eng = 0.5 * mk * (len - mld) * (len - mld);
 
     // bending forces
     // partially applied to filaments
@@ -285,6 +340,9 @@ void motor::update_force()
         this->update_external(1);
     }
 
+    force[0] = s_force[0] + b_force[0] + ext_force[0];
+    force[1] = s_force[1] + b_force[1] + ext_force[1];
+
     // update projected force for walking
     // computed from other forces, so should be called last
     if (vs != 0.0) {
@@ -308,7 +366,8 @@ void motor::update_force_fraenkel_fene()
         scaled_ext = (max_ext - eps_ext)/max_ext;
 
     double mkp = mk/(1-scaled_ext*scaled_ext)*(len-mld);
-    force = mkp * direc;
+    s_force[0] = mkp * direc;
+    s_force[1] = -s_force[0];
 }
 
 // updates bending forces
@@ -387,7 +446,7 @@ void motor::update_force_proj(int hd)
     f_proj[hd] = 0.0;  // zero if unbound
     if (state[pr(hd)] != motor_state::free) {
         vec_type dir = filament_network->get_attached_direction(fp_index[hd]);
-        f_proj[hd] = dot(pow(-1, hd) * force + b_force[hd] + ext_force[hd], dir);
+        f_proj[hd] = dot(force[hd], dir);
     }
 }
 
@@ -397,9 +456,9 @@ void motor::update_force_proj(int hd)
 void motor::filament_update()
 {
     if (state[0] == motor_state::bound)
-        filament_network->add_attached_force(fp_index[0], force + b_force[0] + ext_force[0]);
+        filament_network->add_attached_force(fp_index[0], force[0]);
     if (state[1] == motor_state::bound)
-        filament_network->add_attached_force(fp_index[1], -force + b_force[1] + ext_force[1]);
+        filament_network->add_attached_force(fp_index[1], force[1]);
 }
 
 // end [forces]
@@ -423,10 +482,9 @@ void motor::update_d_strain(double g)
 void motor::brownian_relax(int hd)
 {
     vec_type new_rnd = vec_randn();
-    vec_type f = pow(-1, hd) * force + b_force[hd] + ext_force[hd];
-    vec_type v = f / damp + bd_prefactor * (new_rnd + prv_rnd[hd]);
+    vec_type v = force[hd] / damp + bd_prefactor * (new_rnd + prv_rnd[hd]);
     ke_vel = abs2(v);
-    ke_vir = -0.5 * pow(-1, hd) * dot(f, h[hd]);
+    ke_vir = -0.5 * pow(-1, hd) * dot(force[hd], h[hd]);
     h[hd] = bc->pos_bc(h[hd] + v*dt);
     prv_rnd[hd] = new_rnd;
 }
@@ -713,12 +771,22 @@ void motor::detach_head(int hd, vec_type newpos)
 
 double motor::get_stretching_energy()
 {
-    return abs2(force) / (2.0 * mk);
+    return s_eng;
 }
 
 array<double, 2> motor::get_bending_energy()
 {
     return b_eng;
+}
+
+array<double, 2> motor::get_external_energy()
+{
+    return ext_eng;
+}
+
+double motor::get_alignment_energy()
+{
+    return align_eng;
 }
 
 // get stretching virial
@@ -752,41 +820,6 @@ double motor::get_kinetic_energy_vir()
 // end [thermo]
 
 // begin [output]
-
-string motor::to_string()
-{
-    array<int, 2> fl0 = filament_network->get_attached_fl(fp_index[0]);
-    array<int, 2> fl1 = filament_network->get_attached_fl(fp_index[1]);
-    return fmt::format("\n"
-            "head 0 position = ({}, {})\t "
-            "head 1 position = ({}, {})\n"
-
-            "state = ({}, {})\t "
-            "f_index = ({}, {})\t "
-            "l_index = ({}, {})\n"
-
-            "viscosity = {}\t "
-            "max binding distance = {}\t "
-            "stiffness = {}\t "
-            "stall force = {}\t "
-            "length = {}\n"
-
-            "kon = {}\t "
-            "koff = {}\t "
-            "kend = {}\t "
-            "dt = {}\t "
-            "temp = {}\t "
-            "damp = {}\n"
-
-            "tension = ({}, {})\n",
-
-        h[0].x, h[0].y, h[1].x, h[1].y,
-        static_cast<int>(state[0]),  static_cast<int>(state[1]),
-        fl0[0],  fl1[0], fl0[1], fl1[1],
-        vs, max_bind_dist, mk, stall_force, mld,
-        kon, koff, kend, dt, temperature, damp,
-        force.x, force.y);
-}
 
 vector<double> motor::output()
 {
