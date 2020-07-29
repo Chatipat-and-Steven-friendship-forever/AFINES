@@ -45,6 +45,7 @@ class motor
 
         void set_par(double k);
         void set_antipar(double k);
+        void set_align(double k);
 
         void set_external(external *ext);
 

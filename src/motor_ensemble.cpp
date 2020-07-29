@@ -92,6 +92,12 @@ void motor_ensemble::set_antipar(double k)
         m->set_antipar(k);
 }
 
+void motor_ensemble::set_align(double k)
+{
+    for (motor *m : n_motors)
+        m->set_align(k);
+}
+
 void motor_ensemble::kill_heads(int hd)
 {
     for (motor *m : n_motors) {

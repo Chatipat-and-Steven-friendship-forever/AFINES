@@ -67,7 +67,7 @@ motor::motor(vector<double> mvec,
 
     // align
     kalign = 0.0;  // deactivated
-    par_flag = true;
+    par_flag = 0;
 
     // external
     ext = nullptr;  // deactivated
@@ -146,13 +146,19 @@ double motor::get_th0()
 void motor::set_par(double k)
 {
     kalign = k;
-    par_flag = true;
+    par_flag = 1;
+}
+
+void motor::set_align(double k)
+{
+    kalign = k;
+    par_flag = 0;
 }
 
 void motor::set_antipar(double k)
 {
     kalign = k;
-    par_flag = false;
+    par_flag = -1;
 }
 
 void motor::set_external(external *ext_)
@@ -329,34 +335,36 @@ void motor::update_alignment()
 {
     array<int, 2> fl0 = filament_network->get_attached_fl(fp_index[0]);
     vec_type delr0 = filament_network->get_filament(fl0[0])->get_spring(fl0[1])->get_disp();
-    double rsq0 = abs2(delr0);
-    double r0 = sqrt(rsq0);
 
     array<int, 2> fl1 = filament_network->get_attached_fl(fp_index[1]);
     vec_type delr1 = filament_network->get_filament(fl1[0])->get_spring(fl1[1])->get_disp();
-    double rsq1 = abs2(delr1);
-    double r1 = sqrt(rsq1);
+
+    bend_result_type result = bend_angle(delr0, delr1);
 
     // cosine of angle between vectors
     // if parallel, 1; if antiparallel, -1
-    double c = dot(delr0, delr1) / (r0 * r1);
+    double c = result.energy;
 
     // penalize NOT being parallel/antiparallel by at most kalign
     double a;
-    if (par_flag) {
-        a = -0.5 * kalign;
-        align_eng = kalign * 0.5 * (1.0 - c);
+    if (par_flag == 1) {
+        a = -kalign;
+        align_eng = kalign * (1.0 - c);
+    } else if (par_flag == -1) {
+        a = kalign;
+        align_eng = kalign * (1.0 + c);
     } else {
-        a = 0.5 * kalign;
-        align_eng = kalign * 0.5 * (1.0 + c);
+        if (c > 0.0) {
+            a = -kalign;
+            align_eng = kalign * (1.0 - c);
+        } else {
+            a = kalign;
+            align_eng = kalign * (1.0 + c);
+        }
     }
 
-    double a00 = a * c / rsq0;
-    double a01 = -a / (r0 * r1);
-    double a11 = a * c / rsq1;
-
-    vec_type f0 = a00 * delr0 + a01 * delr1;
-    vec_type f1 = a11 * delr1 + a01 * delr0;
+    vec_type f0 = a * result.force1;
+    vec_type f1 = a * result.force2;
 
     filament_network->update_forces(fl0[0], fl0[1], -f0);
     filament_network->update_forces(fl0[0], fl0[1] + 1, f0);
@@ -555,13 +563,19 @@ double motor::alignment_penalty(vec_type delr1, vec_type delr2)
 {
     // cosine of angle between vectors
     // if parallel, 1; if antiparallel, -1
-    double c = dot(delr1, delr2) / (abs(delr1) * abs(delr2));
+    double c = angle(delr1, delr2);
 
     // penalize NOT being parallel/antiparallel by at most kalign
-    if (par_flag) {
-        return kalign * 0.5 * (1.0 - c);
+    if (par_flag == 1) {
+        return kalign * (1.0 - c);
+    } else if (par_flag == -1) {
+        return kalign * (1.0 + c);
     } else {
-        return kalign * 0.5 * (1.0 + c);
+        if (c > 0.0) {
+            return kalign * (1.0 - c);
+        } else {
+            return kalign * (1.0 + c);
+        }
     }
 }
 

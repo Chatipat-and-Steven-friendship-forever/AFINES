@@ -10,6 +10,10 @@ struct bend_result_type {
     vec_type force2;
 };
 
+bend_result_type bend_angle(vec_type delr1, vec_type delr2);
+
+double angle(vec_type delr1, vec_type delr2);
+
 bend_result_type bend_harmonic(
         double kb, double theta0,
         vec_type delr1, vec_type delr2);

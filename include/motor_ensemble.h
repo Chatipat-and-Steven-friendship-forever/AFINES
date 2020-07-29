@@ -33,6 +33,7 @@ class motor_ensemble
         void set_bending(double kb, double th0);
         void set_par(double k);
         void set_antipar(double k);
+        void set_align(double k);
         void set_external(external *ext);
 
         // thermo

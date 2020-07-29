@@ -155,6 +155,7 @@ int main(int argc, char **argv)
     double a_motor_length, a_motor_stiffness;
     double a_motor_v, a_m_stall;
     double a_m_bend, a_m_ang, a_m_kalign;
+    int a_m_align;
 
     bool dead_head_flag; int dead_head;
 
@@ -180,6 +181,7 @@ int main(int argc, char **argv)
         ("a_motor_stiffness", po::value<double>(&a_motor_stiffness)->default_value(1),"active motor spring stiffness (pN/um)")
         ("a_m_bend", po::value<double>(&a_m_bend)->default_value(0.04),"bending force constant of active motors (pN) (10kT/um by default)")
         ("a_m_ang", po::value<double>(&a_m_ang)->default_value(pi/2),"equilibrium angle of active motor-filament system")
+        ("a_m_align", po::value<int>(&a_m_align)->default_value(0), "active motor alignment type")
         ("a_m_kalign", po::value<double>(&a_m_kalign)->default_value(0.0), "active motor alignment penalty")
 
         // walking
@@ -203,6 +205,7 @@ int main(int argc, char **argv)
     double p_motor_length, p_motor_stiffness;
     double p_motor_v, p_m_stall;
     double p_m_bend, p_m_ang, p_m_kalign;
+    int p_m_align;
 
     bool p_dead_head_flag; int p_dead_head;
     bool static_cl_flag;
@@ -229,6 +232,7 @@ int main(int argc, char **argv)
         ("p_motor_stiffness", po::value<double>(&p_motor_stiffness)->default_value(1),"passive motor spring stiffness (pN/um)")
         ("p_m_bend", po::value<double>(&p_m_bend)->default_value(0.04),"bending force constant of passive motors (pN) (10kT/um by default)")
         ("p_m_ang", po::value<double>(&p_m_ang)->default_value(pi/2),"equilibrium angle of passive motor-filament system")
+        ("p_m_align", po::value<int>(&p_m_align)->default_value(0), "passive motor alignment type")
         ("p_m_kalign", po::value<double>(&p_m_kalign)->default_value(0.0), "passive motor alignment penalty")
 
         // walking
@@ -493,8 +497,11 @@ int main(int argc, char **argv)
     myosins->set_bending(a_m_bend, a_m_ang);
     if (dead_head_flag) myosins->kill_heads(dead_head);
     if (shear_motor_flag) myosins->use_shear(true);
-    if (a_m_kalign > 0.0) myosins->set_par(a_m_kalign);
-    if (a_m_kalign < 0.0) myosins->set_antipar(-a_m_kalign);
+    if (a_m_kalign != 0.0) {
+        if (a_m_align == 1) myosins->set_par(a_m_kalign);
+        if (a_m_align == 0) myosins->set_align(a_m_kalign);
+        if (a_m_align == -1) myosins->set_antipar(-a_m_kalign);
+    }
 
     cout<<"Adding passive motors (crosslinkers) ...\n";
     motor_ensemble *crosslks = new motor_ensemble(
@@ -507,8 +514,11 @@ int main(int argc, char **argv)
     if (p_dead_head_flag) crosslks->kill_heads(p_dead_head);
     if (shear_motor_flag) crosslks->use_shear(true);
     if (static_cl_flag) crosslks->use_static(true);
-    if (p_m_kalign > 0.0) myosins->set_par(p_m_kalign);
-    if (p_m_kalign < 0.0) myosins->set_antipar(-p_m_kalign);
+    if (p_m_kalign != 0.0) {
+        if (p_m_align == 1) crosslks->set_par(p_m_kalign);
+        if (p_m_align == 0) crosslks->set_align(p_m_kalign);
+        if (p_m_align == -1) crosslks->set_antipar(-p_m_kalign);
+    }
 
     if (circle_flag) {
         net->set_external(new ext_circle(circle_spring_constant, circle_radius));
