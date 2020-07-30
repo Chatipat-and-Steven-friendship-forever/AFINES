@@ -26,6 +26,8 @@ motor_ensemble::motor_ensemble(vector<vector<double>> motors, double delta_t, do
     network->get_box()->add_callback([this](double g) { this->update_d_strain(g); });
     mld = mlen;
 
+    ext = nullptr;
+
     cout << "\nDEBUG: Number of motors:" << motors.size() << "\n";
 
     for (vector<double> mvec : motors) {
@@ -38,7 +40,7 @@ motor_ensemble::motor_ensemble(vector<vector<double>> motors, double delta_t, do
 
 motor_ensemble::~motor_ensemble()
 {
-    delete ext;
+    if (!ext) delete ext;
     for (motor *m : n_motors) delete m;
 }
 
