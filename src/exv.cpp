@@ -89,7 +89,8 @@ void excluded_volume::update_force_between_filaments(
 
         if (intersect) throw runtime_error("Intersecting filaments with excluded volume!");
 
-        double length, len1;
+        double length = 0.0;
+        double len1 = 0.0;
         vec_type dist;
         if (index == 0) {
             r = r_c[0];

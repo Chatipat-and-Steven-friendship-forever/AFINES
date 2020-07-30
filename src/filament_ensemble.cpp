@@ -177,7 +177,7 @@ array<int, 2> filament_ensemble::get_attached_fl(fp_index_type i)
 
 vec_type filament_ensemble::get_attached_pos(fp_index_type i)
 {
-    network[i.f_index]->get_attached_pos(i.p_index);
+    return network[i.f_index]->get_attached_pos(i.p_index);
 }
 
 void filament_ensemble::add_attached_force(fp_index_type i, vec_type f)

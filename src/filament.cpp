@@ -568,7 +568,7 @@ void filament::add_attached_pos(int i, double dist)
         }
     } else if (pos < 0.0) {
         // pos is before spring
-        if (l + 1 == springs.size()) {
+        if (l + 1 == int(springs.size())) {
             // at pointed end
             pos = 0.0;
         } else {
@@ -587,7 +587,7 @@ bool filament::at_barbed_end(int i)
 
 bool filament::at_pointed_end(int i)
 {
-    return attached[i].l + 1 == springs.size() && attached[i].pos == 0.0;
+    return attached[i].l + 1 == int(springs.size()) && attached[i].pos == 0.0;
 }
 
 // end [attached]

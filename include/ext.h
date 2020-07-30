@@ -16,6 +16,7 @@ class external
 {
     public:
         external() {}
+        virtual ~external() {}
         virtual ext_result_type compute(vec_type pos) = 0;
 };
 

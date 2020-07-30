@@ -142,7 +142,7 @@ class motor
 
         // align
         double kalign;
-        bool par_flag;
+        int par_flag;
 
         // external
         external *ext;
