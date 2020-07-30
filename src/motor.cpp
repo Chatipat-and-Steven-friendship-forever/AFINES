@@ -39,7 +39,7 @@ motor::motor(vector<double> mvec,
     // [parameters]
     dt = delta_t;
     temperature = temp;
-    damp = 6 * pi * vis * mld;
+    damp = 6 * pi * vis * mlen;
     bd_prefactor = sqrt(temperature / (2 * damp * dt));
 
     // attach/detach
