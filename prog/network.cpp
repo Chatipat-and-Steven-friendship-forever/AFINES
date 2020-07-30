@@ -108,7 +108,7 @@ int main(int argc, char **argv)
     double actin_length;
     string actin_pos_str;
 
-    double link_length, polymer_bending_modulus, link_stretching_stiffness, fene_pct, fracture_force;
+    double link_length, polymer_bending_modulus, link_stretching_stiffness, fracture_force;
     double rmax, kexv;
     double kgrow, lgrow, l0min, l0max; int nlink_max;
 
@@ -127,7 +127,6 @@ int main(int argc, char **argv)
         ("polymer_bending_modulus", po::value<double>(&polymer_bending_modulus)->default_value(0.068), "Bending modulus of a filament")
         ("fracture_force", po::value<double>(&fracture_force)->default_value(100000000), "pN-- filament breaking point")
         ("link_stretching_stiffness,ks", po::value<double>(&link_stretching_stiffness)->default_value(1), "stiffness of link, pN/um")
-        ("fene_pct", po::value<double>(&fene_pct)->default_value(0.5), "pct of rest length of filament to allow outstretched until fene blowup")
 
         // excluded volume
         ("rmax", po::value<double>(&rmax)->default_value(0.25), "cutoff distance for interactions between actins beads and filaments")
@@ -311,7 +310,6 @@ int main(int argc, char **argv)
     string pmfile = tdir + "/pmotors.txt";
     string thfile = ddir + "/filament_e.txt";
     string pefile = ddir + "/pe.txt";
-    string kefile = ddir + "/ke.txt";
 
     if (fs::create_directory(fs::path(dir))) cerr << "Directory Created: " << dir << endl;
     if (fs::create_directory(fs::path(tdir))) cerr << "Directory Created: " << tdir << endl;
@@ -394,7 +392,6 @@ int main(int argc, char **argv)
 
         write_first_tsteps(thfile, restart_time);
         write_first_nlines(pefile, (int) nprinted);
-        write_first_nlines(kefile, (int) nprinted);
 
         // additional outputs below
 
@@ -480,7 +477,7 @@ int main(int argc, char **argv)
     filament_ensemble *net = new filament_ensemble(
             bc, actin_pos_vec, {xgrid, ygrid}, dt,
             temperature, viscosity, link_length,
-            link_stretching_stiffness, fene_pct, link_bending_stiffness,
+            link_stretching_stiffness, link_bending_stiffness,
             fracture_force, rmax, kexv);
 
     // additional options
@@ -490,7 +487,7 @@ int main(int argc, char **argv)
     cout<<"\nAdding active motors...";
     motor_ensemble *myosins = new motor_ensemble(
             a_motor_pos_vec, dt, temperature,
-            a_motor_length, net, a_motor_v, a_motor_stiffness, fene_pct, a_m_kon, a_m_koff,
+            a_motor_length, net, a_motor_v, a_motor_stiffness, a_m_kon, a_m_koff,
             a_m_kend, a_m_stall, a_m_cut, viscosity);
 
     myosins->set_binding_two(a_m_kon2, a_m_koff2, a_m_kend2);
@@ -506,7 +503,7 @@ int main(int argc, char **argv)
     cout<<"Adding passive motors (crosslinkers) ...\n";
     motor_ensemble *crosslks = new motor_ensemble(
             p_motor_pos_vec, dt, temperature,
-            p_motor_length, net, p_motor_v, p_motor_stiffness, fene_pct, p_m_kon, p_m_koff,
+            p_motor_length, net, p_motor_v, p_motor_stiffness, p_m_kon, p_m_koff,
             p_m_kend, p_m_stall, p_m_cut, viscosity);
 
     crosslks->set_binding_two(p_m_kon2, p_m_koff2, p_m_kend2);
@@ -548,7 +545,6 @@ int main(int argc, char **argv)
     ofstream file_pm(pmfile, write_mode);
     ofstream file_th(thfile, write_mode);
     ofstream file_pe(pefile, write_mode);
-    ofstream file_ke(kefile, write_mode);
 
     int count; double t;
     for (count = 0, t = tinit; t <= tfinal; count++, t += dt) {
@@ -574,16 +570,48 @@ int main(int argc, char **argv)
             fmt::print(file_th, "{}\tN = {}", time_str, net->get_nfilaments());
             net->write_thermo(file_th);
 
-            fmt::print(file_pe, "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
+            fmt::print(file_pe,
+                    "{}\t{}\t{}\t{}\t"
+
+                    "{}\t{}\t{}\t{}\t"
+                    "{}\t{}\t{}\t{}\t"
+                    "{}\t{}\t{}\t{}\t"
+
+                    "{}\t{}\t{}\t{}\t"
+                    "{}\t{}\t{}\t{}\t"
+                    "{}\t{}\t{}\t{}\n",
+
+                    t, bc->get_xbox(), bc->get_ybox(), bc->get_delrx(),
+
                     net->get_stretching_energy(),
                     net->get_bending_energy(),
-                    myosins->get_potential_energy(),
-                    crosslks->get_potential_energy(),
-                    bc->get_delrx(),
+                    net->get_excluded_energy(),
+                    net->get_external_energy(),
+
+                    myosins->get_stretching_energy(),
+                    myosins->get_bending_energy(),
+                    myosins->get_alignment_energy(),
+                    myosins->get_external_energy(),
+
+                    crosslks->get_stretching_energy(),
+                    crosslks->get_bending_energy(),
+                    crosslks->get_alignment_energy(),
+                    crosslks->get_external_energy(),
+
                     net->get_stretching_virial(),
                     net->get_bending_virial(),
-                    myosins->get_virial(),
-                    crosslks->get_virial());
+                    net->get_excluded_virial(),
+                    net->get_external_virial(),
+
+                    myosins->get_stretching_virial(),
+                    myosins->get_bending_virial(),
+                    myosins->get_alignment_virial(),
+                    myosins->get_external_virial(),
+
+                    crosslks->get_stretching_virial(),
+                    crosslks->get_bending_virial(),
+                    crosslks->get_alignment_virial(),
+                    crosslks->get_external_virial());
 
             file_a<<std::flush;
             file_l<<std::flush;
@@ -615,34 +643,18 @@ int main(int argc, char **argv)
                     stress_rate = stress_rate2;
                 }
 
-                virial_type total_virial, virial;
-                total_virial.zero();
-
-                cout << "\nDEBUG: t = " << t;
-
-                virial = net->get_stretching_virial();
-                cout << "\nfilament stretch virial:\t" << virial;
-                total_virial += virial;
-
-                virial = net->get_bending_virial();
-                cout << "\nfilament bend virial:\t" << virial;
-                total_virial += virial;
-
-                virial = myosins->get_virial();
-                cout << "\nmotor stretch virial:\t" << virial;
-                total_virial += virial;
-
-                virial = crosslks->get_virial();
-                cout << "\ncrosslinker stretch virial:\t" << virial;
-                total_virial += virial;
+                virial_type virial
+                    = net->get_potential_virial()
+                    + myosins->get_potential_virial()
+                    + crosslks->get_potential_virial();
 
                 array<double, 2> fov = net->get_box()->get_fov();
                 double area = fov[0] * fov[1];
                 array<array<double, 2>, 2> stress_tensor;
-                stress_tensor[0][0] = total_virial.xx / area;
-                stress_tensor[0][1] = total_virial.xy / area;
-                stress_tensor[1][0] = total_virial.yx / area;
-                stress_tensor[1][1] = total_virial.yy / area;
+                stress_tensor[0][0] = virial.xx / area;
+                stress_tensor[0][1] = virial.xy / area;
+                stress_tensor[1][0] = virial.yx / area;
+                stress_tensor[1][1] = virial.yy / area;
                 d_strain += bc->get_delrx() + stress_rate * (stress - stress_tensor[1][0]) * fov[1] * dt;
             }
             if (osc_strain_flag) {

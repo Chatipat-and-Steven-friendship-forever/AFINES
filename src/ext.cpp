@@ -17,7 +17,7 @@ ext_result_type ext_circle::compute(vec_type pos)
     double dl = l - r;
     result.energy = 0.5 * k * dl * dl;
     result.force = (-k * dl / l) * pos;
-    result.virial = outer(pos, result.force);
+    result.virial = -0.5 * outer(pos, result.force);
     return result;
 }
 
@@ -51,7 +51,7 @@ ext_result_type ext_rectangle::compute(vec_type pos)
         result.energy += 0.5 * k * dy * dy;
         result.force.y -= k * dy;
     }
-    result.virial = outer(pos, result.force);
+    result.virial = -0.5 * outer(pos, result.force);
     return result;
 }
 
@@ -75,6 +75,6 @@ ext_result_type ext_xperiodic::compute(vec_type pos)
         result.energy += 0.5 * k * dy * dy;
         result.force.y -= k * dy;
     }
-    result.virial.yy = pos.y * result.force.y;
+    result.virial.yy = -0.5 * pos.y * result.force.y;
     return result;
 }

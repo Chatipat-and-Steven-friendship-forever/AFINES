@@ -2,6 +2,9 @@
 
 void excluded_volume::update_spring_forces_from_quads(quadrants *quads, vector<filament *> &network)
 {
+    pe_exv = 0.0;
+    vir_exv.zero();
+
     for (array<array<int, 2>, 2> pair : *quads->get_pairs()) {
         int f1 = pair[0][0];
         int l1 = pair[0][1];
@@ -82,77 +85,61 @@ void excluded_volume::update_force_between_filaments(
 
     bool intersect = s1->get_line_intersect(s2);
 
-    // assume spring length l0 < 2 rmax ?
     if (r < rmax) {
 
-        if (!intersect) {
-            // doesn't intersect
+        if (intersect) throw runtime_error("Intersecting filaments with excluded volume!");
 
-            double length=0, len1=0;
-            vec_type dist;
-            if (index == 0) {
-                r = r_c[0];
-                len1 = bc->dist_bc(h0_1 - p1);
-                length = len[0];
-                dist = bc->rij_bc(p1 - h0_2);
-            } else if (index == 1) {
-                r = r_c[1];
-                len1 = bc->dist_bc(h0_1 - p2);
-                length = len[0];
-                dist = bc->rij_bc(p2 - h1_2);
-            } else if (index == 2) {
-                r = r_c[2];
-                len1 = bc->dist_bc(h0_2 - p3);
-                length = len[1];
-                dist = bc->rij_bc(p3 - h0_1);
-            } else if (index == 3) {
-                r = r_c[3];
-                len1 = bc->dist_bc(h0_2 - p4);
-                length = len[1];
-                dist = bc->rij_bc(p4 - h1_1);
-            }
-
-            double len2 = length - len1;
-            double r_1 = len2/length;
-            double r_2 = len1/length;
-
-            vec_type F = 2*kexv*dist*b*((1/r) - b);
-
-            pe_exv += kexv*pow((1-r*b),2);
-
-            if (index == 0) {
-                network[n1]->update_forces(l1, F*r_1);
-                network[n1]->update_forces(l1+1, F*r_2);
-                network[n2]->update_forces(l2, -F);
-            } else if (index == 1) {
-                network[n1]->update_forces(l1, F*r_1);
-                network[n1]->update_forces(l1+1, F*r_2);
-                network[n2]->update_forces(l2+1, -F);
-            } else if (index == 2) {
-                network[n2]->update_forces(l2, F*r_1);
-                network[n2]->update_forces(l2+1, F*r_2);
-                network[n1]->update_forces(l1, -F);
-            } else if (index == 3) {
-                network[n2]->update_forces(l2, F*r_1);
-                network[n2]->update_forces(l2+1, F*r_2);
-                network[n1]->update_forces(l1+1, -F);
-            }
-
-        } else {
-            // intersects
-
-            // apply constant force?
-            // this doesn't look right
-            vec_type F = {2*kexv/(rmax*sqrt(2)), 2*kexv/(rmax*sqrt(2))};
-
-            pe_exv += kexv*pow((1-r*b),2);
-
-            network[n1]->update_forces(l1, F);
-            network[n1]->update_forces(l1+1, F);
-            network[n2]->update_forces(l2, -F);
-            network[n2]->update_forces(l2+1, -F);
-
+        double length, len1;
+        vec_type dist;
+        if (index == 0) {
+            r = r_c[0];
+            len1 = bc->dist_bc(h0_1 - p1);
+            length = len[0];
+            dist = bc->rij_bc(p1 - h0_2);
+        } else if (index == 1) {
+            r = r_c[1];
+            len1 = bc->dist_bc(h0_1 - p2);
+            length = len[0];
+            dist = bc->rij_bc(p2 - h1_2);
+        } else if (index == 2) {
+            r = r_c[2];
+            len1 = bc->dist_bc(h0_2 - p3);
+            length = len[1];
+            dist = bc->rij_bc(p3 - h0_1);
+        } else if (index == 3) {
+            r = r_c[3];
+            len1 = bc->dist_bc(h0_2 - p4);
+            length = len[1];
+            dist = bc->rij_bc(p4 - h1_1);
         }
+
+        double len2 = length - len1;
+        double r_1 = len2/length;
+        double r_2 = len1/length;
+
+        vec_type F = 2*kexv*dist*b*((1/r) - b);
+
+        pe_exv += kexv*pow((1-r*b),2);
+        vir_exv += -0.5 * outer(dist, F);
+
+        if (index == 0) {
+            network[n1]->update_forces(l1, F*r_1);
+            network[n1]->update_forces(l1+1, F*r_2);
+            network[n2]->update_forces(l2, -F);
+        } else if (index == 1) {
+            network[n1]->update_forces(l1, F*r_1);
+            network[n1]->update_forces(l1+1, F*r_2);
+            network[n2]->update_forces(l2+1, -F);
+        } else if (index == 2) {
+            network[n2]->update_forces(l2, F*r_1);
+            network[n2]->update_forces(l2+1, F*r_2);
+            network[n1]->update_forces(l1, -F);
+        } else if (index == 3) {
+            network[n2]->update_forces(l2, F*r_1);
+            network[n2]->update_forces(l2+1, F*r_2);
+            network[n1]->update_forces(l1+1, -F);
+        }
+
     }
 }
 

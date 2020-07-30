@@ -18,7 +18,7 @@
 #include "potentials.h"
 
 filament::filament(filament_ensemble *net, vector<vector<double>> beadvec, double spring_length,
-        double stretching_stiffness, double max_ext_ratio, double bending_stiffness,
+        double stretching_stiffness, double bending_stiffness,
         double deltat, double temp, double frac_force)
 {
     filament_network = net;
@@ -30,8 +30,6 @@ filament::filament(filament_ensemble *net, vector<vector<double>> beadvec, doubl
     fracture_force_sq = fracture_force*fracture_force;
     kb = bending_stiffness;
 
-    ke_vel = 0.0;
-    ke_vir = 0.0;
     ubend = 0.0;
 
     spring_l0 = spring_length;
@@ -59,7 +57,7 @@ filament::filament(filament_ensemble *net, vector<vector<double>> beadvec, doubl
             vector<double> &entry = beadvec[j];
             if (entry.size() != 4) throw runtime_error("Wrong number of arguments in beadvec.");
             beads.push_back(new bead(entry[0], entry[1], entry[2], entry[3]));
-            springs.push_back(new spring(spring_length, stretching_stiffness, max_ext_ratio, this, {(int)j-1, (int)j}));
+            springs.push_back(new spring(spring_length, stretching_stiffness, this, {(int)j-1, (int)j}));
             springs[j-1]->step();
             springs[j-1]->update_force();
             prv_rnds.push_back(vec_randn());
@@ -75,13 +73,14 @@ filament::~filament()
     for (spring *s : springs) delete s;
 }
 
-void filament::add_bead(vector<double> a, double spring_length, double stretching_stiffness, double max_ext_ratio){
+void filament::add_bead(vector<double> a, double spring_length, double stretching_stiffness)
+{
     if (a.size() != 4) throw runtime_error("Wrong number of arguments in bead.");
     beads.push_back(new bead({a[0], a[1], a[2], a[3]}));
     prv_rnds.push_back(vec_randn());
     if (beads.size() > 1){
         int j = (int) beads.size() - 1;
-        springs.push_back(new spring(spring_length, stretching_stiffness, max_ext_ratio, this, {j-1,  j}));
+        springs.push_back(new spring(spring_length, stretching_stiffness, this, {j-1,  j}));
         springs[j-1]->step();
     }
     if (damp == infty) {
@@ -92,18 +91,13 @@ void filament::add_bead(vector<double> a, double spring_length, double stretchin
 
 void filament::update_positions()
 {
-    ke_vel = 0.0;
-    ke_vir = 0.0;
     size_t sa = beads.size();
     for (size_t i = 0; i < sa; i++) {
         vec_type new_rnds = vec_randn();
-        vec_type f = beads[i]->get_force() + bd_prefactor*damp*(new_rnds + prv_rnds[i]);
-        vec_type v = f / damp;
+        vec_type v = beads[i]->get_force() / damp + bd_prefactor * (new_rnds + prv_rnds[i]);
         vec_type pos = beads[i]->get_pos();
         prv_rnds[i] = new_rnds;
-        ke_vel += abs2(v);
-        ke_vir += -0.5 * dot(f, pos);
-        vec_type new_pos = bc->pos_bc(pos + v*dt);
+        vec_type new_pos = bc->pos_bc(pos + v * dt);
         beads[i]->set_pos(new_pos);
         beads[i]->reset_force();
     }
@@ -146,6 +140,7 @@ void filament::update_forces(int index, vec_type f)
     beads[index]->update_force(f);
 }
 
+// TODO: energy, virial
 void filament::pull_on_ends(double f)
 {
     if (beads.size() < 2) return;
@@ -157,6 +152,7 @@ void filament::pull_on_ends(double f)
     beads[last]->update_force( 0.5*f*dr/len);
 }
 
+// TODO: energy, virial
 void filament::affine_pull(double f)
 {
     if (beads.size() < 2) return;
@@ -194,10 +190,8 @@ vector<vector<double>> filament::output_springs(int fil)
 vector<double> filament::output_thermo(int fil)
 {
     return {
-        this->get_kinetic_energy_vel(),
-        this->get_kinetic_energy_vir(),
-        this->get_potential_energy(),
-        this->get_total_energy(),
+        this->get_stretching_energy(),
+        this->get_bending_energy(),
         double(fil)
     };
 }
@@ -223,9 +217,8 @@ string filament::write_springs(int fil)
 string filament::write_thermo(int fil)
 {
     return fmt::format(
-            "\n{}\t{}\t{}\t{}",
-            this->get_kinetic_energy_vel(), this->get_kinetic_energy_vir(),
-            this->get_potential_energy(), this->get_total_energy());
+            "\n{}\t{}",
+            this->get_stretching_energy(), this->get_bending_energy());
 }
 
 vector<vector<double>> filament::get_beads(size_t first, size_t last)
@@ -246,6 +239,7 @@ vector<vector<double>> filament::get_beads(size_t first, size_t last)
 vector<filament *> filament::try_fracture()
 {
     for (size_t i = 0; i < springs.size(); i++) {
+        springs[i]->update_force();
         vec_type f = springs[i]->get_force();
         if (abs2(f) > fracture_force_sq) {
             return fracture(i);
@@ -267,11 +261,13 @@ vector<filament *> filament::fracture(int node){
 
     if (lower_half.size() > 0)
         newfilaments.push_back(
-                new filament(filament_network, lower_half, springs[0]->get_l0(), springs[0]->get_kl(), springs[0]->get_fene_ext(), kb,
+                new filament(filament_network, lower_half,
+                    springs[0]->get_l0(), springs[0]->get_kl(), kb,
                     dt, temperature, fracture_force));
     if (upper_half.size() > 0)
         newfilaments.push_back(
-                new filament(filament_network, upper_half, springs[0]->get_l0(), springs[0]->get_kl(), springs[0]->get_fene_ext(), kb,
+                new filament(filament_network, upper_half,
+                    springs[0]->get_l0(), springs[0]->get_kl(), kb,
                     dt, temperature, fracture_force));
 
     return newfilaments;
@@ -323,25 +319,6 @@ string filament::to_string()
     return out;
 }
 
-inline double filament::angle_between_springs(int i, int j){
-
-    // 1st bond
-    vec_type delr1 = springs[i]->get_disp();
-    double r1 = springs[i]->get_length();
-
-    // 2nd bond
-    vec_type delr2 = springs[j]->get_disp();
-    double r2 = springs[j]->get_length();
-
-    // cos angle
-    double c = dot(delr1, delr2) / (r1 * r2);
-    if (c > 1.0) c = 1.0;
-    if (c < -1.0) c = -1.0;
-
-    return acos(c);
-}
-
-
 void filament::update_bending()
 {
     if (springs.size() <= 1 || kb == 0) return;
@@ -364,8 +341,8 @@ void filament::update_bending()
         beads[n+1]->update_force(-result.force2);
         beads[n+2]->update_force(result.force2);
 
-        bending_virial += outer(delr1, result.force1);
-        bending_virial += outer(delr2, result.force2);
+        bending_virial += -0.5 * outer(delr1, result.force1);
+        bending_virial += -0.5 * outer(delr2, result.force2);
     }
 }
 
@@ -389,15 +366,6 @@ virial_type filament::get_bending_virial()
     return bending_virial;
 }
 
-void filament::init_ubend()
-{
-    ubend = 0.0;
-    for (int i = 0; i < int(springs.size()) - 1; i++) {
-        double theta = angle_between_springs(i + 1, i);
-        ubend += 0.5 * kb * theta * theta;
-    }
-}
-
 double filament::get_stretching_energy()
 {
     double u = 0.0;
@@ -405,16 +373,6 @@ double filament::get_stretching_energy()
         u += s ->get_stretching_energy();
     }
     return u;
-}
-
-double filament::get_kinetic_energy_vel()
-{
-    return ke_vel;
-}
-
-double filament::get_kinetic_energy_vir()
-{
-    return ke_vir;
 }
 
 virial_type filament::get_stretching_virial()
@@ -426,16 +384,6 @@ virial_type filament::get_stretching_virial()
     return vir;
 }
 
-double filament::get_potential_energy()
-{
-    return this->get_stretching_energy() + this->get_bending_energy();
-}
-
-double filament::get_total_energy()
-{
-    return this->get_potential_energy() + this->get_kinetic_energy_vel();
-}
-
 vec_type filament::get_bead_position(int n)
 {
     return beads[n]->get_pos();
@@ -443,9 +391,9 @@ vec_type filament::get_bead_position(int n)
 
 void filament::print_thermo()
 {
-    fmt::print("\tKEvel = {}\tKEvir = {}\tPE = {}\tTE = {}",
-            this->get_kinetic_energy_vel(), this->get_kinetic_energy_vir(),
-            this->get_potential_energy(), this->get_total_energy());
+    fmt::print("\tPEs = {}\tPEb = {}",
+            this->get_stretching_energy(),
+            this->get_bending_energy());
 }
 
 double filament::get_end2end()
@@ -504,9 +452,7 @@ void filament::grow(double dL)
         }
 
         // add new spring "1" with length l0
-        spring *s = new spring(
-                spring_l0, springs[0]->get_kl(), springs[0]->get_max_ext(),
-                this, {1, 2});
+        spring *s = new spring(spring_l0, springs[0]->get_kl(), this, {1, 2});
         springs.insert(springs.begin() + 1, s);
 
         // set spring at barbed end to remaining length

@@ -28,8 +28,8 @@ class motor
     public:
         motor() {}
         motor(vector<double> mvec,
-                double mlen, filament_ensemble *network,
-                double delta_t, double v0, double temp, double stiffness, double max_ext_ratio,
+                double l0, filament_ensemble *network,
+                double delta_t, double v0, double temp, double kl,
                 double ron, double roff, double rend,
                 double fstall, double rcut,
                 double vis);
@@ -44,10 +44,10 @@ class motor
         double get_th0();
 
         void set_par(double k);
-        void set_antipar(double k);
         void set_align(double k);
-        int get_align();
+        void set_antipar(double k);
         double get_kalign();
+        int get_align();
 
         void set_external(external *ext);
 
@@ -64,29 +64,28 @@ class motor
         array<int, 2> get_l_index();
 
         // calculations done by update_force
-        array<vec_type, 2> get_force();
+        array<vec_type, 2> get_force();  // total forces
         array<vec_type, 2> get_s_force();  // spring forces
         array<vec_type, 2> get_b_force();  // bending forces
         array<vec_type, 2> get_ext_force();  // external forces
         array<double, 2> get_force_proj();  // projected forces for walking
 
         // update [forces]
-        void update_force();  // updates all forces
         void clear_forces();
+        void update_force();  // updates all forces
 
         // helper functions, used by update_force
-        void update_force_fraenkel_fene();
-        void update_bending(int hd);
-        void update_alignment();
-        void update_external(int hd);
-        void update_force_proj(int hd);
-        void filament_update();
+        void update_bending(int hd);  // compute and partially apply bending forces
+        void update_alignment();  // compute and apply alignment forces
+        void update_external(int hd);  // compute external forces
+        void update_force_proj(int hd);  // compute projected forces for walking
+        void filament_update();  // apply remaining forces to filaments
 
         // [dynamics]
-        void update_d_strain(double g);  // stress
-        void brownian_relax(int hd);
-        void walk(int hd);
-        void step();  // update derived state
+        void update_d_strain(double g);  // apply shear (called automatically by box)
+        void brownian_relax(int hd);  // Brownian dynamics for free heads
+        void walk(int hd);  // walking for bound heads
+        void step();  // compute derived state (incl. bound head positions)
 
         // [attach/detach]
         double metropolis_prob(int hd, array<int, 2> fl_idx, vec_type newpos);
@@ -108,14 +107,12 @@ class motor
         double get_alignment_energy();
         array<double, 2> get_external_energy();
 
-        double get_stretching_energy_fene();
-        double get_kinetic_energy_vel();
-        double get_kinetic_energy_vir();
-
-        virial_type get_virial();
+        virial_type get_stretching_virial();
+        virial_type get_bending_virial();
+        virial_type get_alignment_virial();
+        virial_type get_external_virial();
 
         // output
-        string to_string();
         vector<double> output();
         string write();
 
@@ -139,7 +136,6 @@ class motor
 
         // stretch
         double mk, mld;
-        double max_ext, eps_ext; // fene
 
         // bend
         double kb, th0;
@@ -175,10 +171,11 @@ class motor
         array<double, 2> f_proj;
 
         // [thermo] computed along with forces
-        double ke_vel, ke_vir;
         double s_eng;
-        array<double, 2> b_eng, ext_eng;
+        array<double, 2> b_eng;
         double align_eng;
+        array<double, 2> ext_eng;
+        virial_type vir_stretch, vir_bend, vir_align, vir_ext;
 };
 
 #endif

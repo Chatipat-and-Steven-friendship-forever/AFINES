@@ -467,7 +467,7 @@ double get_restart_strain(string path, int tf)
   boost::trim_right(str);
   boost::split(coords, str, boost::is_any_of("\t "));
 
-  restart_strain = (double) atof(coords[4].data());
+  restart_strain = (double) atof(coords[3].data());
 
   pe_file.close();
 

@@ -20,14 +20,14 @@ class filament_ensemble
 {
     public:
 
-        filament_ensemble(box *bc, vector< vector<double> > beads, array<int, 2> mynq, double delta_t, double temp,
-                double vis, double spring_len, double stretching, double ext, double bending, double frac_force, double RMAX, double A);
+        filament_ensemble(box *bc, vector<vector<double>> beads, array<int, 2> nq,
+                double dt, double temp, double visc, double l0, double kl, double kb,
+                double frac_force, double rmax, double kexv);
 
         ~filament_ensemble();
 
         // settings
         void set_external(external *);
-        void set_fene_dist_pct(double);
 
         // quadrants
         quadrants *get_quads();
@@ -66,14 +66,17 @@ class filament_ensemble
         bool at_barbed_end(fp_index_type i);
 
         // thermo
+        double get_potential_energy();
         double get_stretching_energy();
-        virial_type get_stretching_virial();
         double get_bending_energy();
+        double get_excluded_energy();
+        double get_external_energy();
+
+        virial_type get_potential_virial();
+        virial_type get_stretching_virial();
         virial_type get_bending_virial();
-        double get_exv_energy();
-        double get_ext_energy();
-        double get_kinetic_energy_vel();
-        double get_kinetic_energy_vir();
+        virial_type get_excluded_virial();
+        virial_type get_external_virial();
 
         // monte carlo
         void montecarlo();
@@ -119,8 +122,8 @@ class filament_ensemble
         vector<filament *> network;
 
         // thermo
-        double pe_stretch, pe_bend, pe_exv, pe_ext, ke_vel, ke_vir;
-        virial_type vir_stretch, vir_bend;
+        double pe_stretch, pe_bend, pe_exv, pe_ext;
+        virial_type vir_stretch, vir_bend, vir_exv, vir_ext;
 };
 
 #endif

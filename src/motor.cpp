@@ -29,7 +29,6 @@ motor::motor(vector<double> mvec,
         double temp,
         double v0,
         double stiffness,
-        double max_ext_ratio,
         double ron, double roff, double rend,
         double fstall, double rcut,
         double vis)
@@ -57,9 +56,6 @@ motor::motor(vector<double> mvec,
     // stretch
     mk = stiffness;
     mld = mlen;
-    // fene
-    max_ext = max_ext_ratio * mlen;
-    eps_ext = 0.01 * max_ext;
 
     // bend
     kb = 0.0;  // deactivated
@@ -112,8 +108,6 @@ motor::motor(vector<double> mvec,
 
     // [forces] and [thermo]
     // clear everything since setup isn't done yet
-    ke_vel = 0.0;  // assume m = 1
-    ke_vir = 0.0;
     this->clear_forces();
 }
 
@@ -267,6 +261,7 @@ array<double, 2> motor::get_force_proj()
 // begin [forces]
 // assume that derived state is computed
 
+// clear forces/energies/virials
 void motor::clear_forces()
 {
     force[0].zero();
@@ -276,33 +271,39 @@ void motor::clear_forces()
     s_force[0].zero();
     s_force[1].zero();
     s_eng = 0.0;
+    vir_stretch.zero();
 
     b_force[0].zero();
     b_force[1].zero();
     b_eng[0] = 0.0;
     b_eng[1] = 0.0;
+    vir_bend.zero();
+
+    align_eng = 0.0;
+    vir_align.zero();
 
     ext_force[0].zero();
     ext_force[1].zero();
     ext_eng[0] = 0.0;
     ext_eng[1] = 0.0;
-
-    align_eng = 0.0;
+    vir_ext.zero();
 
     f_proj[0] = 0.0;
     f_proj[1] = 0.0;
 }
 
-// update all forces
+// update all forces/energies/virials
 // adds them to filaments if needed
 // (call this ONCE)
 void motor::update_force()
 {
     // spring forces
     tension = mk * (len - mld);
-    s_force[0] = tension * direc;
-    s_force[1] = -s_force[0];
+    vec_type sf = -tension * direc;
+    s_force[0] = -sf;
+    s_force[1] = sf;
     s_eng = 0.5 * mk * (len - mld) * (len - mld);
+    vir_stretch = -0.5 * outer(disp, sf);
 
     // bending forces
     // partially applied to filaments
@@ -313,6 +314,7 @@ void motor::update_force()
         b_eng[0] = b_eng[1] = 0.0;
         b_force[0].zero();
         b_force[1].zero();
+        vir_bend.zero();
 
         // bending forces are activated only when both heads are bound
         if (state[0] == motor_state::bound && state[1] == motor_state::bound) {
@@ -327,6 +329,7 @@ void motor::update_force()
 
         // in case alignment isn't activated
         align_eng = 0.0;
+        vir_align.zero();
 
         // alignment is activated only when both heads are bound
         if (state[0] == motor_state::bound && state[1] == motor_state::bound) {
@@ -353,23 +356,6 @@ void motor::update_force()
     this->filament_update();
 }
 
-/* Taken from hsieh, jain, larson, jcp 2006; eqn (5)
- * Adapted by placing a cutoff, similar to how it's done in LAMMPS src/bond_fene.cpp*/
-void motor::update_force_fraenkel_fene()
-{
-    double ext = abs(mld - len);
-
-    double scaled_ext;
-    if (max_ext - ext > eps_ext )
-        scaled_ext = ext/max_ext;
-    else
-        scaled_ext = (max_ext - eps_ext)/max_ext;
-
-    double mkp = mk/(1-scaled_ext*scaled_ext)*(len-mld);
-    s_force[0] = mkp * direc;
-    s_force[1] = -s_force[0];
-}
-
 // updates bending forces
 // applies part of the force to filaments (the other part is in filament_update)
 void motor::update_bending(int hd)
@@ -387,6 +373,9 @@ void motor::update_bending(int hd)
     b_force[hd] -= result.force2;
 
     b_eng[hd] += result.energy;
+
+    vir_bend += -0.5 * outer(delr1, result.force1);
+    vir_bend += -0.5 * outer(delr2, result.force2);
 }
 
 // update forces and energies for alignment
@@ -430,14 +419,18 @@ void motor::update_alignment()
 
     filament_network->update_forces(fl1[0], fl1[1], -f1);
     filament_network->update_forces(fl1[0], fl1[1] + 1, f1);
+
+    vir_align += -0.5 * outer(delr0, f0);
+    vir_align += -0.5 * outer(delr1, f1);
 }
 
 // update external forces and energies
 void motor::update_external(int hd)
 {
-    ext_result_type result0 = ext->compute(h[hd]);
-    ext_eng[hd] = result0.energy;
-    ext_force[hd] = result0.force;
+    ext_result_type result = ext->compute(h[hd]);
+    ext_eng[hd] = result.energy;
+    ext_force[hd] = result.force;
+    vir_ext = result.virial;
 }
 
 // update projected force for walking
@@ -483,8 +476,6 @@ void motor::brownian_relax(int hd)
 {
     vec_type new_rnd = vec_randn();
     vec_type v = force[hd] / damp + bd_prefactor * (new_rnd + prv_rnd[hd]);
-    ke_vel = abs2(v);
-    ke_vir = -0.5 * pow(-1, hd) * dot(force[hd], h[hd]);
     h[hd] = bc->pos_bc(h[hd] + v*dt);
     prv_rnd[hd] = new_rnd;
 }
@@ -769,6 +760,8 @@ void motor::detach_head(int hd, vec_type newpos)
 // begin [thermo]
 // assume that derived state and forces/etc are computed
 
+// energy
+
 double motor::get_stretching_energy()
 {
     return s_eng;
@@ -779,42 +772,36 @@ array<double, 2> motor::get_bending_energy()
     return b_eng;
 }
 
-array<double, 2> motor::get_external_energy()
-{
-    return ext_eng;
-}
-
 double motor::get_alignment_energy()
 {
     return align_eng;
 }
 
-// get stretching virial
-virial_type motor::get_virial() {
-    double k = tension / len;
-    return {k * disp.x * disp.x, k * disp.x * disp.y,
-            k * disp.x * disp.y, k * disp.y * disp.y};
+array<double, 2> motor::get_external_energy()
+{
+    return ext_eng;
 }
 
-double motor::get_stretching_energy_fene()
+// virial
+
+virial_type motor::get_stretching_virial()
 {
-    double ext = abs(mld - len);
-
-    if (max_ext - ext > eps_ext )
-        return -0.5*mk*max_ext*max_ext*log(1-(ext/max_ext)*(ext/max_ext));
-    else
-        return 0.25*mk*ext*ext*(max_ext/eps_ext);
-
+    return vir_stretch;
 }
 
-double motor::get_kinetic_energy_vel()
+virial_type motor::get_bending_virial()
 {
-    return ke_vel;
+    return vir_bend;
 }
 
-double motor::get_kinetic_energy_vir()
+virial_type motor::get_alignment_virial()
 {
-    return ke_vir;
+    return vir_align;
+}
+
+virial_type motor::get_external_virial()
+{
+    return vir_ext;
 }
 
 // end [thermo]

@@ -13,6 +13,7 @@ class excluded_volume
             bc = bc_;
             rmax = rmax_;
             kexv = kexv_;
+            pe_exv = 0.0;
         }
 
         void update_spring_forces(vector<filament *> &network, int f);
@@ -22,11 +23,13 @@ class excluded_volume
         void update_excluded_volume(vector<filament *> &network, int f);
 
         double get_pe_exv() { return pe_exv; }
+        virial_type get_vir_exv() { return vir_exv; }
 
     protected:
         box *bc;
         double rmax, kexv;
         double pe_exv;
+        virial_type vir_exv;
 };
 
 #endif

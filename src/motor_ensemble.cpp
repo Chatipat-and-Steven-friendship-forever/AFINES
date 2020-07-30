@@ -17,7 +17,7 @@
 #include "motor.h"
 
 motor_ensemble::motor_ensemble(vector<vector<double>> motors, double delta_t, double temp,
-        double mlen, filament_ensemble *network, double v0, double stiffness, double max_ext_ratio,
+        double mlen, filament_ensemble *network, double v0, double stiffness,
         double ron, double roff, double rend, double fstall, double rcut, double vis)
 {
     shear_flag = false;
@@ -30,7 +30,7 @@ motor_ensemble::motor_ensemble(vector<vector<double>> motors, double delta_t, do
 
     for (vector<double> mvec : motors) {
         n_motors.push_back(new motor(mvec, mlen, f_network, delta_t, temp,
-                    v0, stiffness, max_ext_ratio, ron, roff, rend, fstall, rcut, vis));
+                    v0, stiffness, ron, roff, rend, fstall, rcut, vis));
     }
 
     this->update_energies();
@@ -193,18 +193,28 @@ void motor_ensemble::compute_forces()
 
 void motor_ensemble::update_energies()
 {
-    ke_vel = 0.0;
-    ke_vir = 0.0;
+    pe_stretch = 0.0;
+    pe_bend = 0.0;
+    pe_align = 0.0;
+    pe_ext = 0.0;
 
-    // stretching only
-    pe = 0.0;
-    virial.zero();
+    vir_stretch.zero();
+    vir_bend.zero();
+    vir_align.zero();
+    vir_ext.zero();
 
     for (motor *m : n_motors) {
-        ke_vel += m->get_kinetic_energy_vel();
-        ke_vir += m->get_kinetic_energy_vir();
-        pe += m->get_stretching_energy();
-        virial += m->get_virial();
+        pe_stretch += m->get_stretching_energy();
+        array<double, 2> m_pe_bend = m->get_bending_energy();
+        pe_bend += m_pe_bend[0] + m_pe_bend[1];
+        pe_align += m->get_alignment_energy();
+        array<double, 2> m_pe_ext = m->get_external_energy();
+        pe_ext += m_pe_ext[0] + m_pe_ext[1];
+
+        vir_stretch += m->get_stretching_virial();
+        vir_bend += m->get_bending_virial();
+        vir_align += m->get_alignment_virial();
+        vir_ext += m->get_external_virial();
     }
 }
 
@@ -212,16 +222,58 @@ void motor_ensemble::update_energies()
 
 // begin [thermo]
 
-// get stretching energy
+// energy
+
 double motor_ensemble::get_potential_energy()
 {
-    return pe;
+    return pe_stretch + pe_bend + pe_align + pe_ext;
 }
 
-// get stretching virial
-virial_type motor_ensemble::get_virial()
+double motor_ensemble::get_stretching_energy()
 {
-    return virial;
+    return pe_stretch;
+}
+
+double motor_ensemble::get_bending_energy()
+{
+    return pe_bend;
+}
+
+double motor_ensemble::get_alignment_energy()
+{
+    return pe_align;
+}
+
+double motor_ensemble::get_external_energy()
+{
+    return pe_ext;
+}
+
+// virial
+
+virial_type motor_ensemble::get_potential_virial()
+{
+    return vir_stretch + vir_bend + vir_align + vir_ext;
+}
+
+virial_type motor_ensemble::get_stretching_virial()
+{
+    return vir_stretch;
+}
+
+virial_type motor_ensemble::get_bending_virial()
+{
+    return vir_bend;
+}
+
+virial_type motor_ensemble::get_alignment_virial()
+{
+    return vir_align;
+}
+
+virial_type motor_ensemble::get_external_virial()
+{
+    return vir_ext;
 }
 
 // end [thermo]
@@ -233,12 +285,13 @@ void motor_ensemble::print_ensemble_thermo()
     fmt::print(
             "\n"
             "All Motors\t:\t"
-            "KEvel = {}\t"
-            "KEvir = {}\t"
             "PEs = {}\t"
             "PEb = {}\t"
-            "TE = {}",
-            ke_vel, ke_vir, pe, 0, ke_vel + pe);
+            "PEa = {}\t"
+            "PEe = {}\t"
+            "PE = {}",
+            pe_stretch, pe_bend, pe_align, pe_ext,
+            pe_stretch + pe_bend + pe_align + pe_ext);
 }
 
 vector<vector<double>> motor_ensemble::output()

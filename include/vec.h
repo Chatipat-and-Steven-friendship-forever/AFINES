@@ -67,7 +67,32 @@ struct virial_type {
         return *this;
     }
 
+    virial_type &operator*=(double other)
+    {
+        xx *= other; xy *= other;
+        yx *= other; yy *= other;
+        return *this;
+    }
+
 };
+
+inline virial_type operator+(virial_type a, virial_type b)
+{
+    a += b;
+    return a;
+}
+
+inline virial_type operator*(virial_type a, double b)
+{
+    a *= b;
+    return a;
+}
+
+inline virial_type operator*(double a, virial_type b)
+{
+    b *= a;
+    return b;
+}
 
 inline virial_type outer(vec_type a, vec_type b)
 {

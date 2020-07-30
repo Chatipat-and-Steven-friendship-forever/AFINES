@@ -16,68 +16,72 @@ class motor_ensemble
 {
     public:
 
-        motor_ensemble(vector<vector<double>> motors, double delta_t, double temp,
-                double mlen, filament_ensemble * network, double v0, double stiffness, double max_ext_ratio,
-                double ron, double roff, double rend, double fstall, double rcut, double vis);
-
+        motor_ensemble(vector<vector<double>> motors, double dt, double temp,
+                double l0, filament_ensemble *network, double v0, double kl,
+                double ron, double roff, double rend,
+                double fstall, double rcut, double vis);
         ~motor_ensemble();
 
-        // flags
-        void use_attach_opt(bool flag);
-        void use_static(bool flag);
-        void use_shear(bool flag);
-
-        // settings
-        void kill_heads(int i);
-        void set_binding_two(double, double, double);
-        void set_bending(double kb, double th0);
-        void set_par(double k);
-        void set_antipar(double k);
-        void set_align(double k);
-        void set_external(external *ext);
-
-        // thermo
-        double get_potential_energy();
-        double get_kinetic_energy(); 
-        virial_type get_virial();
-
-        // output
-        vector<vector<double>> output();
-        void motor_write(ostream& fout);
-        void motor_write_doubly_bound(ostream& fout);
-        void print_ensemble_thermo();
-        void motor_tension(ofstream& fout);
-
-        // state
+        void add_motor(motor *m);
         int get_nmotors();
         motor *get_motor(int);
 
-        // shear
-        void update_d_strain(double g);
-
-        // update
-        void integrate();
-        void montecarlo();
-        void update_energies();
-        void compute_forces();
+        // [settings]
+        void set_binding_two(double, double, double);
+        void set_bending(double kb, double th0);
+        void use_shear(bool flag);
+        void use_static(bool flag);
+        void set_par(double k);
+        void set_antipar(double k);
+        void set_align(double k);
+        void kill_heads(int i);
         void unbind_all_heads();
         void revive_heads();
+        void set_external(external *ext);
 
-        // misc
-        void add_motor(motor *m);
+        // [dynamics]
+        void montecarlo();  // attach/detach
+        void integrate();  // brownian/walk
+        void update_d_strain(double g);  // shear
+        void compute_forces();  // compute force/energy/virial
+        void update_energies();  // compute energy/virial
+
+        // [thermo]
+        // calculated by update_energies
+
+        double get_potential_energy();
+        double get_stretching_energy();
+        double get_bending_energy();
+        double get_alignment_energy();
+        double get_external_energy();
+        double get_binding_energy();
+
+        virial_type get_potential_virial();
+        virial_type get_stretching_virial();
+        virial_type get_bending_virial();
+        virial_type get_alignment_virial();
+        virial_type get_external_virial();
+
+        // [output]
+        void print_ensemble_thermo();
+        vector<vector<double>> output();
+        void motor_write(ostream &fout);
+        void motor_write_doubly_bound(ostream &fout);
+        // void motor_tension(ofstream& fout);
 
     protected:
         filament_ensemble *f_network;
         vector<motor *> n_motors;
-        double mld;
-        external *ext;
+
+        double mld;  // saved for set_bending
+        external *ext;  // saved for deletion in destructor
 
         // flags
         bool shear_flag, static_flag;
 
         // thermo
-        double ke_vel, ke_vir, pe;
-        virial_type virial;
+        double pe_stretch, pe_bend, pe_align, pe_ext, pe_bind;
+        virial_type vir_stretch, vir_bend, vir_align, vir_ext;
 };
 
 #endif

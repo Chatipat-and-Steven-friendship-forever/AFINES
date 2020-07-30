@@ -18,8 +18,7 @@ class filament;
 class spring {
     public:
         spring() {}
-        spring(double len, double stiffness, double max_ext,
-                filament* f, array<int, 2> aindex);
+        spring(double l0, double kl, filament* f, array<int, 2> aindex);
         virtual ~spring() {}
 
         // [dynamics]
@@ -30,7 +29,6 @@ class spring {
 
         // updates force
         void update_force();
-        void update_force_fraenkel_fene();
 
         // applies force to filament
         void filament_update();
@@ -49,8 +47,6 @@ class spring {
         // [parameters]
 
         double get_kl();
-        double get_fene_ext();
-        double get_max_ext();
 
         double get_l0();
         void set_l0(double myl0);
@@ -62,7 +58,6 @@ class spring {
         // [thermo]
 
         double get_stretching_energy();
-        double get_stretching_energy_fene();
 
         virial_type get_virial();
 
@@ -94,7 +89,6 @@ class spring {
         // parameters
         array<int, 2> aindex;  // bead indices
         double kl, l0;
-        double max_ext, eps_ext;  // fene
         box *bc;
         filament *fil;
 };

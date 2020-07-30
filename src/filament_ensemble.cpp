@@ -15,7 +15,7 @@
 #include "filament_ensemble.h"
 
 filament_ensemble::filament_ensemble(box *bc_, vector<vector<double> > beads, array<int,2> mynq, double delta_t, double temp,
-        double vis, double spring_len, double stretching, double fene_ext, double bending, double frac_force, double RMAX, double A)
+        double vis, double spring_len, double stretching, double bending, double frac_force, double RMAX, double A)
 {
     bc = bc_;
 
@@ -28,7 +28,7 @@ filament_ensemble::filament_ensemble(box *bc_, vector<vector<double> > beads, ar
 
         if (beads[i][3] != fil_idx && avec.size() > 0){
 
-            network.push_back(new filament(this, avec, spring_len, stretching, fene_ext, bending, delta_t, temp, frac_force));
+            network.push_back(new filament(this, avec, spring_len, stretching, bending, delta_t, temp, frac_force));
             avec.clear();
             fil_idx = beads[i][3];
         }
@@ -36,7 +36,7 @@ filament_ensemble::filament_ensemble(box *bc_, vector<vector<double> > beads, ar
     }
 
     if (avec.size() > 0)
-        network.push_back(new filament(this, avec, spring_len, stretching, fene_ext, bending, delta_t, temp, frac_force));
+        network.push_back(new filament(this, avec, spring_len, stretching, bending, delta_t, temp, frac_force));
 
     avec.clear();
 
@@ -53,8 +53,6 @@ filament_ensemble::filament_ensemble(box *bc_, vector<vector<double> > beads, ar
     pe_bend = 0;
     pe_exv = 0;
     pe_ext = 0;
-    ke_vel = 0;
-    ke_vir = 0;
 }
 
 filament_ensemble::~filament_ensemble()
@@ -274,13 +272,10 @@ void filament_ensemble::print_network_thermo()
 {
     fmt::print(
             "\nAll Fs\t:\t"
-            "KEvel = {}\t"
-            "KEvir = {}\t"
             "PEs = {}\t"
             "PEb = {}\t"
             "PEexv = {}\t"
             "PEext = {}\t",
-            ke_vel, ke_vir,
             pe_stretch, pe_bend, pe_exv, pe_ext);
 }
 
@@ -295,20 +290,16 @@ void filament_ensemble::print_filament_lengths()
 
 // begin [thermo]
 
-// update kinetic, stretching, and bending energies
-// Note: excluded volume and external energies
+// update stretching and bending energies/virials
+// Note: excluded volume and external energies/virials
 // are already updated along with their forces
 void filament_ensemble::update_energies()
 {
     pe_stretch = 0.0;
     pe_bend = 0.0;
-    ke_vel = 0.0;
-    ke_vir = 0.0;
     vir_stretch.zero();
     vir_bend.zero();
     for (filament *f : network) {
-        ke_vel += f->get_kinetic_energy_vel();
-        ke_vir += f->get_kinetic_energy_vir();
         pe_bend += f->get_bending_energy();
         pe_stretch += f->get_stretching_energy();
         vir_stretch += f->get_stretching_virial();
@@ -316,34 +307,54 @@ void filament_ensemble::update_energies()
     }
 }
 
-double filament_ensemble::get_stretching_energy(){
+double filament_ensemble::get_potential_energy()
+{
+    return pe_stretch + pe_bend + pe_exv + pe_ext;
+}
+
+double filament_ensemble::get_stretching_energy()
+{
     return pe_stretch;
 }
 
-double filament_ensemble::get_bending_energy(){
+double filament_ensemble::get_bending_energy()
+{
     return pe_bend;
 }
 
-virial_type filament_ensemble::get_stretching_virial() {
-    return vir_stretch;
-}
-
-virial_type filament_ensemble::get_bending_virial() {
-    return vir_bend;
-}
-
-double filament_ensemble::get_kinetic_energy_vir(){
-    return ke_vir;
-}
-
-double filament_ensemble::get_exv_energy()
+double filament_ensemble::get_excluded_energy()
 {
     return pe_exv;
 }
 
-double filament_ensemble::get_ext_energy()
+double filament_ensemble::get_external_energy()
 {
     return pe_ext;
+}
+
+virial_type filament_ensemble::get_potential_virial()
+{
+    return vir_stretch + vir_bend + vir_exv + vir_ext;
+}
+
+virial_type filament_ensemble::get_stretching_virial()
+{
+    return vir_stretch;
+}
+
+virial_type filament_ensemble::get_bending_virial()
+{
+    return vir_bend;
+}
+
+virial_type filament_ensemble::get_excluded_virial()
+{
+    return vir_exv;
+}
+
+virial_type filament_ensemble::get_external_virial()
+{
+    return vir_ext;
 }
 
 // end [thermo]
@@ -446,21 +457,25 @@ void filament_ensemble::update_forces(int f_index, int a_index, vec_type f)
 void filament_ensemble::update_excluded_volume()
 {
     pe_exv = 0.0;
+    vir_ext.zero();
     if (exv) {
         exv->update_spring_forces_from_quads(quads, network);
         pe_exv = exv->get_pe_exv();
+        vir_exv = exv->get_vir_exv();
     }
 }
 
 void filament_ensemble::update_external()
 {
     pe_ext = 0.0;
+    vir_ext.zero();
     if (ext) {
         for (size_t f = 0; f < network.size(); f++) {
             for (int i = 0; i < network[f]->get_nbeads(); i++) {
                 vec_type pos = network[f]->get_bead_position(i);
                 ext_result_type result = ext->compute(pos);
                 pe_ext += result.energy;
+                vir_ext += result.virial;
                 this->update_forces(f, i, result.force);
             }
         }

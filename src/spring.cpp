@@ -16,17 +16,13 @@
 #include "globals.h"
 #include "filament.h"
 
-spring::spring(double len, double stretching_stiffness, double max_ext_ratio, filament* f,
-        array<int, 2> myaindex)
+spring::spring(double len, double stretching_stiffness, filament *f, array<int, 2> myaindex)
 {
     bc = f->get_box();
     kl      = stretching_stiffness;
     l0      = len;
     fil     = f;
     aindex  = myaindex;
-
-    max_ext = max_ext_ratio * l0;
-    eps_ext = 0.01*max_ext;
 
     llen = l0;
 }
@@ -57,26 +53,8 @@ void spring::step()
 
 void spring::update_force()
 {
-    double kf = kl*(llen-l0);
+    double kf = kl * (llen-l0);
     force = kf * direc;
-}
-
-/* Taken from hsieh, jain, larson, jcp 2006; eqn (5)
- * Adapted by placing a cutoff, similar to how it's done in LAMMPS src/bond_fene.cpp*/
-void spring::update_force_fraenkel_fene()
-{
-    double ext = abs(l0 - llen);
-    double scaled_ext, klp;
-    if (max_ext - ext > eps_ext ){
-        scaled_ext = ext/max_ext;
-    }
-    else{
-        scaled_ext = (max_ext - eps_ext)/max_ext;
-    }
-
-    klp = kl/(1-scaled_ext*scaled_ext)*(llen-l0);
-    force = klp * direc;
-
 }
 
 vec_type spring::get_force()
@@ -105,10 +83,6 @@ void spring::set_l0(double myl0){
 
 double spring::get_l0(){
     return l0;
-}
-
-double spring::get_fene_ext(){
-    return max_ext/l0;
 }
 
 double spring::get_length(){
@@ -208,24 +182,15 @@ vec_type spring::get_direction()
     return direc;
 }
 
-double spring::get_stretching_energy(){
-    return abs2(force) / (2.0 * kl);
-}
-
-virial_type spring::get_virial() {
-    double k = kl*(llen-l0)/llen;
-    return outer(disp, k * disp);
-}
-
-double spring::get_stretching_energy_fene()
+double spring::get_stretching_energy()
 {
-    double ext = abs(l0 - llen);
+    return 0.5 * kl * (llen - l0) * (llen - l0);
+}
 
-    if (max_ext - ext > eps_ext )
-        return -0.5*kl*max_ext*max_ext*log(1-(ext/max_ext)*(ext/max_ext));
-    else
-        return 0.25*kl*ext*ext*(max_ext/eps_ext);
-
+virial_type spring::get_virial()
+{
+    double k = kl * (llen-l0) / llen;
+    return 0.5 * outer(disp, k * disp);
 }
 
 void spring::set_aindex(array<int,2> aidx)
@@ -233,12 +198,8 @@ void spring::set_aindex(array<int,2> aidx)
     aindex = aidx;
 }
 
-double spring::get_max_ext()
+array<int, 2> spring::get_aindex()
 {
-    return max_ext;
-}
-
-array<int, 2> spring::get_aindex(){
     return aindex;
 }
 

@@ -18,9 +18,8 @@ class filament_ensemble;
 class filament
 {
     public:
-        filament(filament_ensemble *net, vector<vector<double>> beadvec, double spring_length,
-                double stretching_stiffnes, double ext, double bending_stiffness,
-                double deltat, double temp, double fracture);
+        filament(filament_ensemble *net, vector<vector<double>> beadvec,
+                double l0, double kl, double kb, double dt, double temp, double fracture);
         ~filament();
 
         // [output]
@@ -40,10 +39,6 @@ class filament
 
         double get_stretching_energy();
         double get_bending_energy();
-        double get_potential_energy();
-        double get_kinetic_energy_vir();
-        double get_kinetic_energy_vel();
-        double get_total_energy();
 
         virial_type get_stretching_virial();
         virial_type get_bending_virial();
@@ -58,8 +53,6 @@ class filament
         spring *get_spring(int i);
 
         double get_end2end();
-
-        inline double angle_between_springs(int i, int j);
 
         // [dynamics]
 
@@ -104,10 +97,7 @@ class filament
 
         box *get_box();
 
-        void add_bead(vector<double> a, double l0, double kl, double me);
-
-        void init_ubend(); // computes bending energies only
-
+        void add_bead(vector<double> a, double l0, double kl);
 
         bool operator==(const filament& that);
 
@@ -144,7 +134,6 @@ class filament
         vector<attached_type> attached;
 
         // thermo
-        double ke_vir, ke_vel;
         double ubend;
         virial_type bending_virial;
 

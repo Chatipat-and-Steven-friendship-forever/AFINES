@@ -1,7 +1,39 @@
 #include "potentials.h"
 #include "globals.h"
 
-// modified from LAMMPS
+// most of these methods are modified from LAMMPS
+
+// from hsieh, jain, larson, jcp 2006; eqn 5
+// adapted by placing a cutoff, analogous to LAMMPS src/bond_fene.cpp
+stretch_fene::stretch_fene(double kl_, double l0_, double max_ext_ratio)
+{
+    kl = kl_;
+    l0 = l0_;
+    max_ext = max_ext_ratio * l0;
+    eps_ext = 0.01 * max_ext;
+}
+
+// multiply by direction to get the force
+double stretch_fene::tension(double len)
+{
+    double ext = abs(len - l0);
+    double scaled_ext;
+    if (max_ext - ext > eps_ext)
+        scaled_ext = ext / max_ext;
+    else
+        scaled_ext = (max_ext - eps_ext) / max_ext;
+    return kl / (1.0 - scaled_ext * scaled_ext) * (len - l0);
+}
+
+double stretch_fene::energy(double len)
+{
+    double ext = abs(len - l0);
+    if (max_ext - ext > eps_ext)
+        return -0.5 * kl * max_ext * max_ext * log(1.0 - (ext / max_ext) * (ext / max_ext));
+    else
+        return 0.25 * kl * ext * ext * (max_ext / eps_ext);
+}
+
 
 bend_result_type bend_angle(
         vec_type delr1,

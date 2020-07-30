@@ -4,6 +4,14 @@
 #include "globals.h"
 #include "vec.h"
 
+struct stretch_fene {
+    double kl, l0, max_ext, eps_ext;
+
+    stretch_fene(double kl, double l0, double max_ext_ratio);
+    double tension(double len);
+    double energy(double len);
+};
+
 struct bend_result_type {
     double energy;
     vec_type force1;
