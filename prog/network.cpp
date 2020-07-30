@@ -623,7 +623,7 @@ int main(int argc, char **argv)
 
         // print to stdout
         if (count%n_bw_stdout==0) {
-            fmt::print("\nTime counts: {}", count);
+            fmt::print("\nCount: {}\tTime: {} s\tCount: {}\tShear: {} um", count, t, bc->get_delrx());
             //net->print_filament_thermo();
             net->print_network_thermo();
             crosslks->print_ensemble_thermo();
@@ -648,26 +648,23 @@ int main(int argc, char **argv)
                     + myosins->get_potential_virial()
                     + crosslks->get_potential_virial();
 
-                array<double, 2> fov = net->get_box()->get_fov();
-                double area = fov[0] * fov[1];
-                array<array<double, 2>, 2> stress_tensor;
-                stress_tensor[0][0] = virial.xx / area;
-                stress_tensor[0][1] = virial.xy / area;
-                stress_tensor[1][0] = virial.yx / area;
-                stress_tensor[1][1] = virial.yy / area;
-                d_strain += bc->get_delrx() + stress_rate * (stress - stress_tensor[1][0]) * fov[1] * dt;
-            }
-            if (osc_strain_flag) {
+                double xbox = bc->get_xbox();
+                double ybox = bc->get_ybox();
+                double delrx = bc->get_delrx();
+                double f_delrx = -2.0 * virial.yx / ybox;
+                // if strain = delrx/ybox, then
+                // strain += stress_rate (-dU/dstrain / area + stress) dt
+                // units:
+                // - stress: energy / area
+                // - stress_rate: area / (energy time)
+                d_strain = delrx + stress_rate * (stress + f_delrx / xbox) * ybox * dt;
+            } else if (osc_strain_flag) {
                 //d_strain += d_strain_amp * sin(2*pi*d_strain_freq * ( t - time_of_dstrain) );
-                d_strain += restart_strain + d_strain_amp*4*d_strain_freq*((t-time_of_dstrain) - 1/(d_strain_freq*2)*floor(2*(t-time_of_dstrain)*d_strain_freq + 0.5))*pow(-1,floor(2*(t-time_of_dstrain)*d_strain_freq + 0.5));
+                d_strain = restart_strain + d_strain_amp*4*d_strain_freq*((t-time_of_dstrain) - 1/(d_strain_freq*2)*floor(2*(t-time_of_dstrain)*d_strain_freq + 0.5))*pow(-1,floor(2*(t-time_of_dstrain)*d_strain_freq + 0.5));
+            } else if (diff_strain_flag) {
+                d_strain = restart_strain + d_strain_amp*d_strain_freq*(t - time_of_dstrain);
             }
-            if (diff_strain_flag) {
-                d_strain += restart_strain + d_strain_amp*d_strain_freq*(t - time_of_dstrain);
-            }
-            double delta = d_strain - bc->get_delrx();
-            bc->update_d_strain(delta);
-            fmt::print("\nDEBUG: t = {}; adding d_strain of {} um here; total strain = {}",
-                    t, delta, d_strain);
+            bc->update_d_strain(d_strain - bc->get_delrx());
         }
 
         // Brownian dynamics and motor walking
