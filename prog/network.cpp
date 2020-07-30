@@ -172,9 +172,9 @@ int main(int argc, char **argv)
         ("a_m_koff", po::value<double>(&a_m_koff)->default_value(0.1),"active motor off rate")
         ("a_m_kend", po::value<double>(&a_m_kend)->default_value(0.1),"active motor off rate at filament end")
         ("a_m_cut", po::value<double>(&a_m_cut)->default_value(0.063),"cutoff distance for binding (um)")
-        ("a_m_kon2", po::value<double>(), "active motor on rate when both heads bound")
-        ("a_m_koff2", po::value<double>(), "active motor off rate when both heads bound")
-        ("a_m_kend2", po::value<double>(), "active motor off rate at filament end when both heads bound")
+        ("a_m_kon2", po::value<double>(&a_m_kon2)->default_value(-1), "active motor on rate when both heads bound")
+        ("a_m_koff2", po::value<double>(&a_m_koff2)->default_value(-1), "active motor off rate when both heads bound")
+        ("a_m_kend2", po::value<double>(&a_m_kend2)->default_value(-1), "active motor off rate at filament end when both heads bound")
 
         ("a_motor_length", po::value<double>(&a_motor_length)->default_value(0.4),"active motor rest length (um)")
         ("a_motor_stiffness", po::value<double>(&a_motor_stiffness)->default_value(1),"active motor spring stiffness (pN/um)")
@@ -223,9 +223,9 @@ int main(int argc, char **argv)
         ("p_m_koff", po::value<double>(&p_m_koff)->default_value(0.1),"passive motor off rate")
         ("p_m_kend", po::value<double>(&p_m_kend)->default_value(0.1),"passive motor off rate at filament end")
         ("p_m_cut", po::value<double>(&p_m_cut)->default_value(0.063),"cutoff distance for binding (um)")
-        ("p_m_kon2", po::value<double>(), "passive motor on rate when both heads bound")
-        ("p_m_koff2", po::value<double>(), "passive motor off rate when both heads bound")
-        ("p_m_kend2", po::value<double>(), "passive motor off rate at filament end when both heads bound")
+        ("p_m_kon2", po::value<double>(&p_m_kon2)->default_value(-1), "passive motor on rate when both heads bound")
+        ("p_m_koff2", po::value<double>(&p_m_koff2)->default_value(-1), "passive motor off rate when both heads bound")
+        ("p_m_kend2", po::value<double>(&p_m_kend2)->default_value(-1), "passive motor off rate at filament end when both heads bound")
 
         ("p_motor_length", po::value<double>(&p_motor_length)->default_value(0.150),"passive motor rest length (um) (default: filamin)")
         ("p_motor_stiffness", po::value<double>(&p_motor_stiffness)->default_value(1),"passive motor spring stiffness (pN/um)")
@@ -333,13 +333,13 @@ int main(int argc, char **argv)
         }
     }
 
-    a_m_kon2 = (vm.count("a_m_kon2")) ? vm["a_m_kon2"].as<double>() : a_m_kon;
-    a_m_koff2 = (vm.count("a_m_koff2")) ? vm["a_m_koff2"].as<double>() : a_m_koff;
-    a_m_kend2 = (vm.count("a_m_kend2")) ? vm["a_m_kend2"].as<double>() : a_m_kend;
+    if (a_m_kon2 == -1) a_m_kon2 = a_m_kon;
+    if (a_m_koff2 == -1) a_m_koff2 = a_m_koff;
+    if (a_m_kend2 == -1) a_m_kend2 = a_m_kend;
 
-    p_m_kon2 = (vm.count("p_m_kon2")) ? vm["p_m_kon2"].as<double>() : p_m_kon;
-    p_m_koff2 = (vm.count("p_m_koff2")) ? vm["p_m_koff2"].as<double>() : p_m_koff;
-    p_m_kend2 = (vm.count("p_m_kend2")) ? vm["p_m_kend2"].as<double>() : p_m_kend;
+    if (p_m_kon2 == -1) p_m_kon2 = p_m_kon;
+    if (p_m_koff2 == -1) p_m_koff2 = p_m_koff;
+    if (p_m_kend2 == -1) p_m_kend2 = p_m_kend;
 
     // END PROGRAM OPTIONS
 
