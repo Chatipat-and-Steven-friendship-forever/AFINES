@@ -623,7 +623,7 @@ int main(int argc, char **argv)
 
         // print to stdout
         if (count%n_bw_stdout==0) {
-            fmt::print("\nCount: {}\tTime: {} s\tCount: {}\tShear: {} um", count, t, bc->get_delrx());
+            fmt::print("\nCount: {}\tTime: {} s\tShear: {} um", count, t, bc->get_delrx());
             //net->print_filament_thermo();
             net->print_network_thermo();
             crosslks->print_ensemble_thermo();

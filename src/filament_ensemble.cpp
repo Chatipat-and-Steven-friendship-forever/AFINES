@@ -271,12 +271,15 @@ void filament_ensemble::print_filament_thermo()
 void filament_ensemble::print_network_thermo()
 {
     fmt::print(
-            "\nAll Fs\t:\t"
+            "\n"
+            "All Filaments\t:\t"
             "PEs = {}\t"
             "PEb = {}\t"
-            "PEexv = {}\t"
-            "PEext = {}\t",
-            pe_stretch, pe_bend, pe_exv, pe_ext);
+            "PEx = {}\t"
+            "PEe = {}\t"
+            "PE = {}",
+            pe_stretch, pe_bend, pe_exv, pe_ext,
+            pe_stretch + pe_bend + pe_exv + pe_ext);
 }
 
 void filament_ensemble::print_filament_lengths()
