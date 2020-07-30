@@ -437,7 +437,7 @@ void motor::update_external(int hd)
 void motor::update_force_proj(int hd)
 {
     f_proj[hd] = 0.0;  // zero if unbound
-    if (state[pr(hd)] != motor_state::free) {
+    if (state[hd] == motor_state::bound && state[pr(hd)] != motor_state::free) {
         vec_type dir = filament_network->get_attached_direction(fp_index[hd]);
         f_proj[hd] = dot(force[hd], dir);
     }
