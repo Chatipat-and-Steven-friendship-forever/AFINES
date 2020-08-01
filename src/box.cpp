@@ -40,6 +40,10 @@ void box::add_callback(function<void(double)> callback)
 
 void box::update_d_strain(double d_strain)
 {
+    if (BC == bc_type::nonperiodic)
+        throw std::runtime_error("NONPERIODIC does not support shearing (use external field instead).");
+    if (BC == bc_type::periodic)
+        throw std::runtime_error("PERIODIC does not support shearing (use LEES_EDWARDS instead).");
     delrx += d_strain;
     for (auto callback : callbacks) {
         callback(d_strain);

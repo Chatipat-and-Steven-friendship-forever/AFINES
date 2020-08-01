@@ -415,18 +415,16 @@ int main(int argc, char **argv)
     cout<<"\nDEBUG: actin_density = "<<actin_density;
     double link_bending_stiffness    = polymer_bending_modulus / link_length;
 
-    // set number of quadrants to 1 if there are no crosslinkers/motors
-    int xgrid, ygrid;
+    int xgrid = round(grid_factor*xrange);
+    int ygrid = round(grid_factor*yrange);
+    // neighbor list not needed if there are no crosslinkers/motors
+    bool needquad = true;
     if(a_motor_density == 0 && a_motor_pos_vec.size() == 0 &&
             p_motor_density==0 && p_motor_pos_vec.size() == 0 &&
             !link_intersect_flag && !motor_intersect_flag){
-        xgrid = 1;
-        ygrid = 1;
+        needquad = false;
     }
-    else{
-        xgrid  = (int) round(grid_factor*xrange);
-        ygrid  = (int) round(grid_factor*yrange);
-    }
+
     double d_strain_amp = d_strain_pct * xrange;
 
     box *bc = new box(bnd_cnd, xrange, yrange, restart_strain);
@@ -482,7 +480,10 @@ int main(int argc, char **argv)
 
     // additional options
     net->set_growing(kgrow, lgrow, l0min, l0max, nlink_max);
-    if (quad_off_flag) net->get_quads()->use_quad(false);
+    if (quad_off_flag) {
+        net->get_quads()->use_quad(false);
+        net->get_quads()->use_all(true);
+    }
 
     cout<<"\nAdding active motors...";
     motor_ensemble *myosins = new motor_ensemble(
@@ -523,11 +524,6 @@ int main(int argc, char **argv)
         crosslks->set_external(new ext_circle(circle_spring_constant, circle_radius));
     }
 
-    // compute forces and energies
-    net->compute_forces();
-    crosslks->compute_forces();
-    myosins->compute_forces();
-
     // END CREATE NETWORK OBJECTS
 
     // run simulation
@@ -548,6 +544,11 @@ int main(int argc, char **argv)
 
     int count; double t;
     for (count = 0, t = tinit; t <= tfinal; count++, t += dt) {
+
+        // compute forces and energies
+        net->compute_forces();
+        crosslks->compute_forces();
+        myosins->compute_forces();
 
         // output to file
         if (t+dt/100 >= tinit && (count-unprinted_count)%n_bw_print==0) {
@@ -676,25 +677,20 @@ int main(int argc, char **argv)
         // also unbinds motors
         net->montecarlo();
 
-        if (quad_off_flag) {
-            // we want results that are correct regardless of other settings when quadrants are off
-            // this just builds a list of all springs, which are then handed to attachment/etc
-            net->quad_update_serial();
-
-        } else if (count % quad_update_period == 0) {
-            // when quadrants are on, this actually builds quadrants
-            net->quad_update_serial();
-
+        if (needquad) {
+            if (quad_off_flag) {
+                // we want results that are correct regardless of other settings when quadrants are off
+                // this just builds a list of all springs, which are then handed to attachment/etc
+                net->quad_update_serial();
+            } else if (count % quad_update_period == 0) {
+                // when quadrants are on, this actually builds quadrants
+                net->quad_update_serial();
+            }
         }
 
         // motor attachment/detachment
         crosslks->montecarlo();
         myosins->montecarlo();
-
-        // compute forces and energies
-        net->compute_forces();
-        crosslks->compute_forces();
-        myosins->compute_forces();
     }
 
     file_a << "\n";

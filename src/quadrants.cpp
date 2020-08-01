@@ -1,21 +1,36 @@
 #include "quadrants.h"
+#include "filament_ensemble.h"
 
 quadrants::quadrants(box *bc_, array<int, 2> nq_)
 {
     bc = bc_;
     nq = nq_;
-    quad_flag = true;
+    all_flag = false;  // build all_springs
+    quad_flag = true;  // build quadrants
 
-    quads = new vector<array<int, 2>> *[nq[0]];
-    quads[0] = new vector<array<int, 2>>[nq[0] * nq[1]];
-    for (int x = 0; x < nq[0]; x++)
-        quads[x] = quads[0] + x * nq[1];
+    // quadrants at the box edges of a periodic boundary are the same
+    int nx, ny;
+    if (bc->get_BC() == bc_type::nonperiodic) {
+        nx = nq[0] + 1;
+        ny = nq[1] + 1;
+    } else if (bc->get_BC() == bc_type::xperiodic) {
+        nx = nq[0];
+        ny = nq[1] + 1;
+    } else {
+        nx = nq[0];
+        ny = nq[1];
+    }
+
+    quads = new vector<array<int, 2>> *[nx];
+    quads[0] = new vector<array<int, 2>>[nx * ny];
+    for (int x = 0; x < nx; x++)
+        quads[x] = quads[0] + x * ny;
 }
 
 quadrants::~quadrants()
 {
     delete[] quads[0];
-    delete quads;
+    delete[] quads;
 }
 
 void quadrants::use_quad(bool flag)
@@ -23,28 +38,37 @@ void quadrants::use_quad(bool flag)
     quad_flag = flag;
 }
 
+void quadrants::use_all(bool flag)
+{
+    all_flag = flag;
+}
+
 void quadrants::add_spring(spring *s, array<int, 2> fl)
 {
-    if (!quad_flag)
+    if (all_flag) {
         all_springs.push_back(fl);
-    if (bc->get_BC() == bc_type::periodic || bc->get_BC() == bc_type::lees_edwards)
-        add_spring_periodic(s, fl);
-    else
-        add_spring_nonperiodic(s, fl);
+    }
+    if (quad_flag) {
+        if (bc->get_BC() == bc_type::nonperiodic) {
+            this->add_spring_nonperiodic(s, fl);
+        } else if (bc->get_BC() == bc_type::xperiodic) {
+            this->add_spring_xperiodic(s, fl);
+        } else if (bc->get_BC() == bc_type::periodic) {
+            this->add_spring_periodic(s, fl);
+        } else if (bc->get_BC() == bc_type::lees_edwards) {
+            this->add_spring_lees_edwards(s, fl);
+        } else {
+            throw std::logic_error("Unknown boundary condition.");
+        }
+    }
 }
 
 void quadrants::build_pairs()
 {
     // TODO: build a Verlet list on top of this
     pairs.clear();
-    if (!quad_flag) {
-        for (size_t i = 0; i < all_springs.size(); i++) {
-            for (size_t j = i + 1; i < all_springs.size(); i++) {
-                pairs.push_back({all_springs[i], all_springs[j]});
-            }
-        }
 
-    } else {
+    if (quad_flag) {
         for (int ix = 0; ix < nq[0]; ix++) {
             for (int iy = 0; iy < nq[1]; iy++) {
                 vector<array<int, 2>> &q = quads[ix][iy];
@@ -61,6 +85,15 @@ void quadrants::build_pairs()
         pairs.assign(begin(pairset), end(pairset));
         pairset.clear();
 
+    } else if (all_flag) {
+        for (size_t i = 0; i < all_springs.size(); i++) {
+            for (size_t j = i + 1; i < all_springs.size(); i++) {
+                pairs.push_back({all_springs[i], all_springs[j]});
+            }
+        }
+
+    } else {
+        throw std::runtime_error("Neighbor list disabled.");
     }
 }
 
@@ -71,29 +104,63 @@ vector<array<array<int, 2>, 2>> *quadrants::get_pairs()
 
 vector<array<int, 2>> *quadrants::get_attach_list(vec_type pos)
 {
-    if (!quad_flag) {
-        return &all_springs;
-    } else {
+    if (quad_flag) {
         double x = pos.x;
         double y = pos.y;
         array<double, 2> fov = bc->get_fov();
-        double delrx = bc->get_delrx();
-        int iy = round(nq[1] * (y / fov[1] + 0.5));
-        while (iy < 0) {
-            iy += nq[1];
-            x += delrx;
+
+        int ix, iy;
+        if (bc->get_BC() == bc_type::nonperiodic) {
+            ix = round(nq[0] * (x / fov[0] + 0.5));
+            iy = round(nq[1] * (y / fov[1] + 0.5));
+
+            assert(0 <= ix && ix <= nq[0]);
+            assert(0 <= iy && iy <= nq[1]);
+
+        } else if (bc->get_BC() == bc_type::xperiodic) {
+            ix = round(nq[0] * (x / fov[0] + 0.5));
+            iy = round(nq[1] * (y / fov[1] + 0.5));
+            ix = imod(ix, nq[0]);
+
+            assert(0 <= ix && ix < nq[0]);
+            assert(0 <= iy && iy <= nq[1]);
+
+        } else if (bc->get_BC() == bc_type::periodic) {
+            ix = round(nq[0] * (x / fov[0] + 0.5));
+            iy = round(nq[1] * (y / fov[1] + 0.5));
+            ix = imod(ix, nq[0]);
+            iy = imod(iy, nq[1]);
+
+            assert(0 <= ix && ix < nq[0]);
+            assert(0 <= iy && iy < nq[1]);
+
+        } if (bc->get_BC() == bc_type::lees_edwards) {
+            double delrx = bc->get_delrx();
+            iy = round(nq[1] * (y / fov[1] + 0.5));
+            while (iy < 0) {
+                iy += nq[1];
+                x += delrx;
+            }
+            while (iy >= nq[1]) {
+                iy -= nq[1];
+                x -= delrx;
+            }
+            ix = round(nq[0] * (x / fov[0] + 0.5));
+            ix = imod(ix, nq[0]);
+
+            assert(0 <= ix && ix < nq[0]);
+            assert(0 <= iy && iy < nq[1]);
+
         }
-        while (iy >= nq[1]) {
-            iy -= nq[1];
-            x -= delrx;
-        }
-        int ix = round(nq[0] * (x / fov[0] + 0.5));
-        while (ix < 0) ix += nq[0];
-        while (ix >= nq[0]) ix -= nq[0];
-        if (!(0 <= ix && ix < nq[0] && 0 <= iy && iy < nq[1])) {
-            throw std::logic_error("Invalid quadrant index.");
-        }
-        return &quads[ix][iy];
+
+        vector<array<int, 2>> *q = &quads[ix][iy];
+        return q;
+
+    } else if (all_flag) {
+        return &all_springs;
+
+    } else {
+        throw std::runtime_error("Neighbor list disabled.");
     }
 }
 
@@ -105,113 +172,303 @@ void quadrants::clear()
             quads[x][y].clear();
 }
 
+// maximum cutoff supported by quadrants
+double quadrants::get_cut()
+{
+    double xcut = 0.5 * bc->get_xbox() / nq[0];
+    double ycut = 0.5 * bc->get_ybox() / nq[1];
+    double cut = std::min(xcut, ycut);
+    return 0.999 * cut;  // account for numerical error
+}
+
+// maximum pair list cutoff supported by quadrants
+double quadrants::get_paircut()
+{
+    double xcut = 2.0 * bc->get_xbox() / nq[0];
+    double ycut = 2.0 * bc->get_ybox() / nq[1];
+    double cut = std::min(xcut, ycut);
+    return 0.999 * cut;  // account for numerical error
+}
+
+// begin [checks]
+
 void quadrants::check_duplicates()
 {
+    // quadrants don't contain duplicate springs
     for (int x = 0; x < nq[0]; x++) {
         for (int y = 0; y < nq[1]; y++) {
             vector<array<int, 2>> &quad = quads[x][y];
 
             set<array<int, 2>> s(quad.begin(), quad.end());
-            if (s.size() != quad.size())
-                cerr << "Quadrant (" << x << ", " << y << ") contains duplicates!" << endl;
-
-            /*
-            set<array<int, 2>> s;
-            for (array<int, 2> fl : quad) {
-                if (s.find(fl) == s.end())
-                    s.insert(fl);
-                else
-                    cerr << "Quadrant (" << x << ", " << y << ") contains duplicates!" << endl;
-            }
-            */
+            assert(s.size() == quad.size());
         }
     }
+
+    // pair lists don't contain duplicate pairs
+    set<array<array<int, 2>, 2>> ps(pairs.begin(), pairs.end());
+    assert(ps.size() == pairs.size());
+    // if (fl0, fl1) is in pair list, then (fl1, fl0) isn't
+    for (array<array<int, 2>, 2> pair : pairs) {
+        std::swap(pair[0], pair[1]);
+        assert(ps.find(pair) == ps.end());
+    }
 }
+
+// quadrants should contain all springs within a cutoff
+void quadrants::check_quad(filament_ensemble *net, vector<array<int, 2>> *q, vec_type pos)
+{
+    double cut = this->get_cut();
+
+    // all springs within cutoff
+    std::vector<array<int, 2>> ref_fl;
+    for (array<int, 2> fl : all_springs) {
+        spring *s = net->get_filament(fl[0])->get_spring(fl[1]);
+        vec_type intpoint = s->intpoint(pos);
+        double dist = bc->dist_bc(intpoint - pos);
+        if (dist < cut) ref_fl.push_back(fl);
+    }
+
+    // springs in quadrant within cutoff
+    std::vector<array<int, 2>> q_fl;
+    for (array<int, 2> fl : *q) {
+        spring *s = net->get_filament(fl[0])->get_spring(fl[1]);
+        vec_type intpoint = s->intpoint(pos);
+        double dist = bc->dist_bc(intpoint - pos);
+        if (dist < cut) q_fl.push_back(fl);
+    }
+
+    // check that springs in both lists are the same
+    // we can do this since the spring addition order
+    // is preserved in each quadrant
+    assert(ref_fl.size() == q_fl.size());
+    for (size_t i = 0; i < ref_fl.size(); i++) {
+        assert(q_fl[i] == ref_fl[i]);
+    }
+}
+
+// quadrant pair lists should contain all spring-spring pairs within a cutoff
+void quadrants::check_pairs(filament_ensemble *net)
+{
+    double cut = this->get_paircut();
+
+    // all pairs within cutoff
+    std::vector<array<array<int, 2>, 2>> ref;
+    for (int i = 0; i < int(all_springs.size()); i++) {
+        array<int, 2> fli = all_springs[i];
+        spring *si = net->get_filament(fli[0])->get_spring(fli[1]);
+
+        for (int j = i + 1; j < int(all_springs.size()); j++) {
+            array<int, 2> flj = all_springs[j];
+            spring *sj = net->get_filament(flj[0])->get_spring(flj[1]);
+
+            // minimum distance between springs
+            double dist1 = bc->dist_bc(si->intpoint(sj->get_h0()) - sj->get_h0());
+            double dist2 = bc->dist_bc(si->intpoint(sj->get_h1()) - sj->get_h1());
+            double dist3 = bc->dist_bc(sj->intpoint(si->get_h0()) - si->get_h0());
+            double dist4 = bc->dist_bc(sj->intpoint(si->get_h1()) - si->get_h1());
+            double mindist = std::min(std::min(dist1, dist2), std::min(dist3, dist4));
+
+            if (mindist < cut) ref.push_back({fli, flj});
+        }
+    }
+
+    std::vector<array<array<int, 2>, 2>> p;
+    for (auto pair : pairs) {
+        array<int, 2> fli = pair[0];
+        spring *si = net->get_filament(fli[0])->get_spring(fli[1]);
+        array<int, 2> flj = pair[1];
+        spring *sj = net->get_filament(flj[0])->get_spring(flj[1]);
+
+        // minimum distance between springs
+        double dist1 = bc->dist_bc(si->intpoint(sj->get_h0()) - sj->get_h0());
+        double dist2 = bc->dist_bc(si->intpoint(sj->get_h1()) - sj->get_h1());
+        double dist3 = bc->dist_bc(sj->intpoint(si->get_h0()) - si->get_h0());
+        double dist4 = bc->dist_bc(sj->intpoint(si->get_h1()) - si->get_h1());
+        double mindist = std::min(std::min(dist1, dist2), std::min(dist3, dist4));
+
+        if (mindist < cut) p.push_back({fli, flj});
+    }
+
+    // check that spring-spring pairs in both lists are the same
+    // we can do this since the spring addition order
+    // is preserved in each quadrant
+    assert(ref.size() == p.size());
+    for (size_t i = 0; i < ref.size(); i++) {
+        assert(ref[i] == p[i]);
+    }
+}
+
+// end [checks]
+
+// begin [add spring bc]
+// implementations of adding a spring to quadrants for different boundary conditions
 
 void quadrants::add_spring_nonperiodic(spring *s, array<int, 2> fl)
 {
     array<double, 2> fov = bc->get_fov();
     vec_type h0 = s->get_h0();
-    vec_type h1 = s->get_h1();
     vec_type disp = s->get_disp();
 
-    double xlo = h0.x, xhi = h1.x;
+    // compute bounding box of spring
+
+    double xlo = h0.x;
+    double xhi = h0.x + disp.x;
     if (disp.x < 0) std::swap(xlo, xhi);
 
-    double ylo = h0.y, yhi = h1.y;
+    double ylo = h0.y;
+    double yhi = h0.y + disp.y;
     if (disp.y < 0) std::swap(ylo, yhi);
+
+    assert(xlo <= xhi);
+    assert(ylo <= yhi);
+
+    // compute quadrants containing bounding box
 
     int xlower = floor(nq[0] * (xlo / fov[0] + 0.5));
     int xupper = ceil(nq[0] * (xhi / fov[0] + 0.5));
-    if (xlower < 0) {
-        cout << "Warning: x-index of quadrant < 0." << endl;
-        xlower = 0;
-    }
-    if (xupper > nq[0]) {
-        cout << "Warning: x-index of quadrant > nq[0]." << endl;
-        xupper = nq[0];
-    }
-    if (xlower > xupper) throw std::logic_error("xlower > xupper");
 
     int ylower = floor(nq[1] * (ylo / fov[1] + 0.5));
     int yupper = ceil(nq[1] * (yhi / fov[1] + 0.5));
-    if (ylower < 0) {
-        cout << "Warning: y-index of quadrant < 0." << endl;
-        ylower = 0;
-    }
-    if (yupper > nq[1]) {
-        cout << "Warning: y-index of quadrant > nq[1]." << endl;
-        yupper = nq[1];
-    }
-    if (ylower > yupper) throw std::logic_error("ylower > yupper");
 
-    for (int i = xlower; i <= xupper; i++)
-        for (int j = ylower; j <= yupper; j++)
+    assert(xlower <= xupper);
+    assert(ylower <= yupper);
+
+    // add spring index to quadrants
+
+    for (int i = xlower; i <= xupper; i++) {
+        for (int j = ylower; j <= yupper; j++) {
+
+            assert(0 <= i && i <= nq[0]);
+            assert(0 <= j && j <= nq[1]);
+
             quads[i][j].push_back(fl);
+        }
+    }
+}
+
+void quadrants::add_spring_xperiodic(spring *s, array<int, 2> fl)
+{
+    array<double, 2> fov = bc->get_fov();
+    vec_type h0 = s->get_h0();
+    vec_type disp = s->get_disp();
+
+    // compute bounding box of spring
+
+    double xlo = h0.x;
+    double xhi = h0.x + disp.x;
+    if (disp.x < 0) std::swap(xlo, xhi);
+
+    double ylo = h0.y;
+    double yhi = h0.y + disp.y;
+    if (disp.y < 0) std::swap(ylo, yhi);
+
+    assert(xlo <= xhi);
+    assert(ylo <= yhi);
+
+    // compute quadrants containing bounding box
+
+    int xlower = floor(nq[0] * (xlo / fov[0] + 0.5));
+    int xupper = ceil(nq[0] * (xhi / fov[0] + 0.5));
+
+    int ylower = floor(nq[1] * (ylo / fov[1] + 0.5));
+    int yupper = ceil(nq[1] * (yhi / fov[1] + 0.5));
+
+    assert(xlower <= xupper);
+    assert(ylower <= yupper);
+
+    // add spring index to quadrants
+
+    for (int j = ylower; j <= yupper; j++) {
+        for (int ii = xlower; ii <= xupper; ii++) {
+            int i = imod(ii, nq[0]);
+
+            assert(0 <= i && i < nq[0]);
+            assert(0 <= j && j <= nq[1]);
+
+            quads[i][j].push_back(fl);
+        }
+    }
 }
 
 void quadrants::add_spring_periodic(spring *s, array<int, 2> fl)
 {
     array<double, 2> fov = bc->get_fov();
-    double delrx = bc->get_delrx();
     vec_type h0 = s->get_h0();
-    vec_type h1 = s->get_h1();
-    array<double, 2> hx = {h0.x, h1.x};
-    array<double, 2> hy = {h0.y, h1.y};
     vec_type disp = s->get_disp();
 
-    double xlo, xhi;
-    double ylo, yhi;
-    if (disp.y >= 0) {
-        ylo = hy[0];
-        yhi = hy[0] + disp.y;
-        if (disp.x >= 0) {
-            xlo = hx[0];
-            xhi = hx[0] + disp.x;
-        } else {
-            xlo = hx[0] + disp.x;
-            xhi = hx[0];
-        }
-    } else {
-        ylo = hy[1];
-        yhi = hy[1] - disp.y;
-        if (disp.x >= 0) {
-            xlo = hx[1] - disp.x;
-            xhi = hx[1];
-        } else {
-            xlo = hx[1];
-            xhi = hx[1] - disp.x;
+    // compute bounding box of spring
+
+    double xlo = h0.x;
+    double xhi = h0.x + disp.x;
+    if (disp.x < 0) std::swap(xlo, xhi);
+
+    double ylo = h0.y;
+    double yhi = h0.y + disp.y;
+    if (disp.y < 0) std::swap(ylo, yhi);
+
+    assert(xlo <= xhi);
+    assert(ylo <= yhi);
+
+    // compute quadrants containing bounding box
+
+    int xlower = floor(nq[0] * (xlo / fov[0] + 0.5));
+    int xupper = ceil(nq[0] * (xhi / fov[0] + 0.5));
+
+    int ylower = floor(nq[1] * (ylo / fov[1] + 0.5));
+    int yupper = ceil(nq[1] * (yhi / fov[1] + 0.5));
+
+    assert(xlower <= xupper);
+    assert(ylower <= yupper);
+
+    // add spring index to quadrants
+
+    for (int jj = ylower; jj <= yupper; jj++) {
+        int j = imod(jj, nq[1]);
+
+        for (int ii = xlower; ii <= xupper; ii++) {
+            int i = imod(ii, nq[0]);
+
+            assert(0 <= i && i < nq[0]);
+            assert(0 <= i && i < nq[1]);
+
+            quads[i][j].push_back(fl);
         }
     }
-    if (xlo > xhi) throw std::logic_error("xlo > xhi");
-    if (ylo > yhi) throw std::logic_error("ylo > yhi");
+}
+
+void quadrants::add_spring_lees_edwards(spring *s, array<int, 2> fl)
+{
+    array<double, 2> fov = bc->get_fov();
+    double delrx = bc->get_delrx();
+    vec_type h0 = s->get_h0();
+    vec_type disp = s->get_disp();
+
+    // compute bounding box of spring
+
+    double xlo = h0.x;
+    double xhi = h0.x + disp.x;
+    if (disp.x < 0.0) std::swap(xlo, xhi);
+
+    double ylo = h0.y;
+    double yhi = h0.y + disp.y;
+    if (disp.y < 0.0) std::swap(ylo, yhi);
+
+    assert(xlo <= xhi);
+    assert(ylo <= yhi);
+
+    // compute y quadrants containing bounding box
+    // note that the x quadrants depend on the y quadrant value
 
     int ylower = floor(nq[1] * (ylo / fov[1] + 0.5));
     int yupper =  ceil(nq[1] * (yhi / fov[1] + 0.5));
-    if (ylower > yupper) throw std::logic_error("ylower > yupper");
+
+    assert(ylower <= yupper);
 
     for (int jj = ylower; jj <= yupper; jj++) {
         int j = jj;
+
+        // compute x quadrants containing bounding box
+        // x quadrants in upper and lower images are shifted by delrx
 
         double xlo_new = xlo;
         double xhi_new = xhi;
@@ -225,20 +482,21 @@ void quadrants::add_spring_periodic(spring *s, array<int, 2> fl)
             xlo_new -= delrx;
             xhi_new -= delrx;
         }
-        if (!(0 <= j && j < nq[1])) throw std::logic_error("y quadrant index out of bounds");
 
         int xlower = floor(nq[0] * (xlo_new / fov[0] + 0.5));
         int xupper =  ceil(nq[0] * (xhi_new / fov[0] + 0.5));
-        if (xlower > xupper) throw std::logic_error("xlower > xupper");
+
+        assert(xlower <= xupper);
 
         for (int ii = xlower; ii <= xupper; ii++) {
-            int i = ii;
+            int i = imod(ii, nq[0]);
 
-            while (i < 0) i += nq[0];
-            while (i >= nq[0]) i -= nq[0];
-            if (!(0 <= i && i < nq[0])) throw std::logic_error("x quadrant index out of bounds");
+            assert(0 <= i && i < nq[0]);
+            assert(0 <= j && j < nq[1]);
 
             quads[i][j].push_back(fl);
         }
     }
 }
+
+// end [add spring bc]

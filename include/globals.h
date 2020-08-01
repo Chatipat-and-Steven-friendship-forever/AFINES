@@ -105,6 +105,14 @@ void write_first_tsteps(string path, double tstop);
 template <typename T> int sgn(T val);
 int mysgn(double);
 
+static inline int imod(int a, int b)
+{
+    while (a < 0) a += b;
+    while (a >= b) a -= b;
+    assert(0 <= a && a < b);
+    return a;
+};
+
 pair<double, array<int, 2> > flip_pair(const pair<array<int, 2>, double> &p);
 multimap<double, array<int, 2> > flip_map(const std::unordered_map<array<int, 2>, double, boost::hash<array<int,2>>> &p);
 string print_pair(string name, const array<double, 2>& p);
