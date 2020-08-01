@@ -28,8 +28,6 @@ motor_ensemble::motor_ensemble(vector<vector<double>> motors, double delta_t, do
 
     ext = nullptr;
 
-    cout << "\nDEBUG: Number of motors:" << motors.size() << "\n";
-
     for (vector<double> mvec : motors) {
         n_motors.push_back(new motor(mvec, mlen, f_network, delta_t, temp,
                     v0, stiffness, ron, roff, rend, fstall, rcut, vis));
@@ -285,13 +283,12 @@ virial_type motor_ensemble::get_external_virial()
 void motor_ensemble::print_ensemble_thermo()
 {
     fmt::print(
-            "\n"
             "All Motors\t:\t"
             "PEs = {}\t"
             "PEb = {}\t"
             "PEa = {}\t"
             "PEe = {}\t"
-            "PE = {}",
+            "PE = {}\n",
             pe_stretch, pe_bend, pe_align, pe_ext,
             pe_stretch + pe_bend + pe_align + pe_ext);
 }
@@ -305,20 +302,10 @@ vector<vector<double>> motor_ensemble::output()
     return out;
 }
 
-void motor_ensemble::motor_write(ostream& fout)
+void motor_ensemble::motor_write(ostream &fout)
 {
     for (motor *m : n_motors) {
-        fout << m->write();
-    }
-}
-
-void motor_ensemble::motor_write_doubly_bound(ostream& fout)
-{
-    array<motor_state, 2> doubly_bound = {motor_state::bound, motor_state::bound};
-    for (size_t i = 0; i < n_motors.size(); i++) {
-        if (n_motors[i]->get_states() == doubly_bound) {
-            fmt::print(fout, "{}\t{}", n_motors[i]->write(), i);
-        }
+        fmt::print(fout, "{}", m->write());
     }
 }
 

@@ -240,44 +240,45 @@ vector<vector<double>> filament_ensemble::output_thermo()
     return out;
 }
 
-void filament_ensemble::write_beads(ofstream& fout)
+void filament_ensemble::write_beads(ofstream &fout)
 {
-    for (unsigned int i=0; i<network.size(); i++) {
-        fout<<network[i]->write_beads(i);
+    for (size_t i = 0; i < network.size(); i++) {
+        fmt::print(fout, "{}", network[i]->write_beads(i));
     }
 }
 
-void filament_ensemble::write_springs(ofstream& fout)
+void filament_ensemble::write_springs(ofstream &fout)
 {
-    for (unsigned int i=0; i<network.size(); i++) {
-        fout<<network[i]->write_springs(i);
+    for (size_t i = 0; i < network.size(); i++) {
+        fmt::print(fout, "{}", network[i]->write_springs(i));
     }
 }
 
-void filament_ensemble::write_thermo(ofstream& fout){
-    for (unsigned int f = 0; f < network.size(); f++)
-        fout<<network[f]->write_thermo(f);
-
+void filament_ensemble::write_thermo(ofstream &fout)
+{
+    for (size_t i = 0; i < network.size(); i++) {
+        fmt::print(fout, "{}", network[i]->write_thermo(i));
+    }
 }
 
 void filament_ensemble::print_filament_thermo()
 {
     for (size_t i = 0; i < network.size(); i++) {
-        fmt::print("\nF{}\t:", i);
-        network[i]->print_thermo();
+        filament *f = network[i];
+        fmt::print("F{}\t:\tPEs = {}\tPEb = {}\n",
+                i, f->get_stretching_energy(), f->get_bending_energy());
     }
 }
 
 void filament_ensemble::print_network_thermo()
 {
     fmt::print(
-            "\n"
             "All Filaments\t:\t"
             "PEs = {}\t"
             "PEb = {}\t"
             "PEx = {}\t"
             "PEe = {}\t"
-            "PE = {}",
+            "PE = {}\n",
             pe_stretch, pe_bend, pe_exv, pe_ext,
             pe_stretch + pe_bend + pe_exv + pe_ext);
 }
@@ -285,7 +286,7 @@ void filament_ensemble::print_network_thermo()
 void filament_ensemble::print_filament_lengths()
 {
     for (size_t f = 0; f < network.size(); f++) {
-        fmt::print("\nF{} : {} um", f, network[f]->get_end2end());
+        fmt::print("F{} : {} um\n", f, network[f]->get_end2end());
     }
 }
 

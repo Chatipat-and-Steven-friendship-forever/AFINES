@@ -22,6 +22,7 @@
 // - force/energy calculation less insane
 // - fix virial calculation
 // - make dead, inactive, and static motor head work properly
+// - add check for state/fp_index consistency
 
 motor::motor(vector<double> mvec,
         double mlen, filament_ensemble * network,
@@ -821,7 +822,7 @@ string motor::write()
 {
     array<int, 2> fl0 = filament_network->get_attached_fl(fp_index[0]);
     array<int, 2> fl1 = filament_network->get_attached_fl(fp_index[1]);
-    return fmt::format("\n{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
+    return fmt::format("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
             h[0].x, h[0].y,
             disp.x, disp.y,
             fl0[0], fl1[0],

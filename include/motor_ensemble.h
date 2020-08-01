@@ -66,7 +66,7 @@ class motor_ensemble
         void print_ensemble_thermo();
         vector<vector<double>> output();
         void motor_write(ostream &fout);
-        void motor_write_doubly_bound(ostream &fout);
+        // void motor_write_doubly_bound(ostream &fout);
         // void motor_tension(ofstream& fout);
 
     protected:

@@ -33,12 +33,6 @@ class bead {
         double get_friction();
         double get_viscosity();
 
-        // output
-
-        vector<double> output();
-        string write();
-        string to_string();
-
         // misc
 
         bool operator==(const bead& that);

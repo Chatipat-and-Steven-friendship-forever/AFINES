@@ -170,9 +170,10 @@ void filament::affine_pull(double f)
 vector<vector<double>> filament::output_beads(int fil)
 {
     vector<vector<double>> out;
-    for (size_t i = 0; i < beads.size(); i++) {
-        out.push_back(beads[i]->output());
-        out[i].push_back(double(fil));
+    for (bead *b : beads) {
+        vec_type pos = b->get_pos();
+        double rad = b->get_length();
+        out.push_back({pos.x, pos.y, rad, double(fil)});
     }
     return out;
 }
@@ -180,9 +181,10 @@ vector<vector<double>> filament::output_beads(int fil)
 vector<vector<double>> filament::output_springs(int fil)
 {
     vector<vector<double>> out;
-    for (size_t i = 0; i < springs.size(); i++) {
-        out.push_back(springs[i]->output());
-        out[i].push_back(double(fil));
+    for (spring *s : springs) {
+        vec_type h0 = s->get_h0();
+        vec_type disp = s->get_disp();
+        out.push_back({h0.x, h0.y, disp.x, disp.y, double(fil)});
     }
     return out;
 }
@@ -200,7 +202,9 @@ string filament::write_beads(int fil)
 {
     string all_beads;
     for (bead *b : beads) {
-        all_beads += fmt::format("{}\t{}", b->write(), fil);
+        vec_type pos = b->get_pos();
+        double rad = b->get_length();
+        all_beads += fmt::format("{}\t{}\t{}\t{}\n", pos.x, pos.y, rad, fil);
     }
     return all_beads;
 }
@@ -209,16 +213,17 @@ string filament::write_springs(int fil)
 {
     string all_springs;
     for (spring *s : springs) {
-        all_springs += fmt::format("{}\t{}", s->write(), fil);
+        vec_type h0 = s->get_h0();
+        vec_type disp = s->get_disp();
+        all_springs += fmt::format("{}\t{}\t{}\t{}\t{}\n", h0.x, h0.y, disp.x, disp.y, fil);
     }
     return all_springs;
 }
 
 string filament::write_thermo(int fil)
 {
-    return fmt::format(
-            "\n{}\t{}",
-            this->get_stretching_energy(), this->get_bending_energy());
+    return fmt::format("{}\t{}\t{}\n",
+            this->get_stretching_energy(), this->get_bending_energy(), fil);
 }
 
 vector<vector<double>> filament::get_beads(size_t first, size_t last)
@@ -248,10 +253,10 @@ vector<filament *> filament::try_fracture()
     return {};
 }
 
-vector<filament *> filament::fracture(int node){
-
+vector<filament *> filament::fracture(int node)
+{
     vector<filament *> newfilaments;
-    cout<<"\n\tDEBUG: fracturing at node "<<node;
+    fmt::print("DEBUG: fracturing at node {}\n", node);
 
     if(springs.size() == 0)
         return newfilaments;
@@ -271,7 +276,6 @@ vector<filament *> filament::fracture(int node){
                     dt, temperature, fracture_force));
 
     return newfilaments;
-
 }
 
 void filament::detach_all_motors()
@@ -299,24 +303,6 @@ bool filament::operator==(const filament& that){
     return (this->temperature == that.temperature &&
             this->dt == that.dt && this->fracture_force == that.fracture_force);
 
-}
-
-string filament::to_string()
-{
-    // Note: not including springs in to_string, because spring's to_string includes filament's to_string
-    string out = "\n";
-
-    for (bead *b : beads) {
-        out += b->to_string();
-    }
-
-    out += fmt::format(
-            "temperature = {}\t"
-            "dt = {}\t"
-            "fracture_force = {}\n",
-            temperature, dt, fracture_force);
-
-    return out;
 }
 
 void filament::update_bending()
@@ -387,13 +373,6 @@ virial_type filament::get_stretching_virial()
 vec_type filament::get_bead_position(int n)
 {
     return beads[n]->get_pos();
-}
-
-void filament::print_thermo()
-{
-    fmt::print("\tPEs = {}\tPEb = {}",
-            this->get_stretching_energy(),
-            this->get_bending_energy());
 }
 
 double filament::get_end2end()

@@ -287,15 +287,15 @@ int main(int argc, char **argv)
     po::notify(vm);
 
     if (vm.count("help")) {
-        std::cout << generic << "\n";
-        std::cout << config << "\n";
+        fmt::print("{}\n", generic);
+        fmt::print("{}\n", config);
         return 1;
     }
 
     ifstream ifs(config_file);
-    if (!ifs){
-        cout<<"can not open config file: "<<config_file<<"\n";
-        return 0;
+    if (!ifs) {
+        fmt::print("Cannot open config file: {}\n", config_file);
+        return 1;
     } else {
         po::store(po::parse_config_file(ifs, config), vm);
         po::notify(vm);
@@ -311,9 +311,12 @@ int main(int argc, char **argv)
     string thfile = ddir + "/filament_e.txt";
     string pefile = ddir + "/pe.txt";
 
-    if (fs::create_directory(fs::path(dir))) cerr << "Directory Created: " << dir << endl;
-    if (fs::create_directory(fs::path(tdir))) cerr << "Directory Created: " << tdir << endl;
-    if (fs::create_directory(fs::path(ddir))) cerr << "Directory Created: " << ddir << endl;
+    if (fs::create_directory(fs::path(dir)))
+        fmt::print(cerr, "Directory created: {}\n", dir);
+    if (fs::create_directory(fs::path(tdir)))
+        fmt::print(cerr, "Directory created: {}\n", tdir);
+    if (fs::create_directory(fs::path(ddir)))
+        fmt::print(cerr, "Directory created: {}\n", ddir);
 
     // Write the full configuration file
     {
@@ -372,7 +375,7 @@ int main(int argc, char **argv)
         if (restart_time == -1 || restart_time > tf_prev)
             restart_time = tf_prev;
 
-        cout<<"\nRestarting from t = "<<restart_time<<endl;
+        fmt::print("Restarting from t = {}\n", restart);
 
         double nprinted = restart_time / (dt*n_bw_print);
 
@@ -407,13 +410,11 @@ int main(int argc, char **argv)
 
     // compute derived quantities
 
-    if (polymer_bending_modulus < 0){ //This is a flag for using the temperature for the bending modulus
+    if (polymer_bending_modulus < 0) { //This is a flag for using the temperature for the bending modulus
         polymer_bending_modulus = 10*temperature; // 10um * kT
     }
 
-    double actin_density = double(npolymer*nmonomer)/(xrange*yrange);//0.65;
-    cout<<"\nDEBUG: actin_density = "<<actin_density;
-    double link_bending_stiffness    = polymer_bending_modulus / link_length;
+    double link_bending_stiffness = polymer_bending_modulus / link_length;
 
     int xgrid = round(grid_factor*xrange);
     int ygrid = round(grid_factor*yrange);
@@ -471,12 +472,12 @@ int main(int argc, char **argv)
 
     // BEGIN CREATE NETWORK OBJECTS
 
-    cout<<"\nCreating actin network..";
     filament_ensemble *net = new filament_ensemble(
             bc, actin_pos_vec, {xgrid, ygrid}, dt,
             temperature, viscosity, link_length,
             link_stretching_stiffness, link_bending_stiffness,
             fracture_force, rmax, kexv);
+    fmt::print("Filaments: {}\n", net->get_nfilaments());
 
     // additional options
     net->set_growing(kgrow, lgrow, l0min, l0max, nlink_max);
@@ -485,11 +486,11 @@ int main(int argc, char **argv)
         net->get_quads()->use_all(true);
     }
 
-    cout<<"\nAdding active motors...";
     motor_ensemble *myosins = new motor_ensemble(
             a_motor_pos_vec, dt, temperature,
             a_motor_length, net, a_motor_v, a_motor_stiffness, a_m_kon, a_m_koff,
             a_m_kend, a_m_stall, a_m_cut, viscosity);
+    fmt::print("Active Motors: {}\n", myosins->get_nmotors());
 
     myosins->set_binding_two(a_m_kon2, a_m_koff2, a_m_kend2);
     myosins->set_bending(a_m_bend, a_m_ang);
@@ -501,11 +502,11 @@ int main(int argc, char **argv)
         if (a_m_align == -1) myosins->set_antipar(-a_m_kalign);
     }
 
-    cout<<"Adding passive motors (crosslinkers) ...\n";
     motor_ensemble *crosslks = new motor_ensemble(
             p_motor_pos_vec, dt, temperature,
             p_motor_length, net, p_motor_v, p_motor_stiffness, p_m_kon, p_m_koff,
             p_m_kend, p_m_stall, p_m_cut, viscosity);
+    fmt::print("Passive Motors: {}\n", crosslks->get_nmotors());
 
     crosslks->set_binding_two(p_m_kon2, p_m_koff2, p_m_kend2);
     crosslks->set_bending(p_m_bend, p_m_ang);
@@ -527,9 +528,6 @@ int main(int argc, char **argv)
     // END CREATE NETWORK OBJECTS
 
     // run simulation
-
-    cout<<"\nUpdating motors, filaments and crosslinks in the network..";
-    string time_str;
 
     // open output files
     // for restarts, append instead of writing from the start
@@ -553,22 +551,19 @@ int main(int argc, char **argv)
         // output to file
         if (t+dt/100 >= tinit && (count-unprinted_count)%n_bw_print==0) {
 
-            if (t>tinit) time_str ="\n";
-            time_str += "t = "+to_string(t);
-
-            fmt::print(file_a, "{}\tN = {}", time_str, net->get_nbeads());
+            fmt::print(file_a, "t = {}\tN = {}\n", t, net->get_nbeads());
             net->write_beads(file_a);
 
-            fmt::print(file_l, "{}\tN = {}", time_str, net->get_nsprings());
+            fmt::print(file_l, "t = {}\tN = {}\n", t, net->get_nsprings());
             net->write_springs(file_l);
 
-            fmt::print(file_am, "{}\tN = {}", time_str, myosins->get_nmotors());
+            fmt::print(file_am, "t = {}\tN = {}\n", t, myosins->get_nmotors());
             myosins->motor_write(file_am);
 
-            fmt::print(file_pm, "{}\tN = {}", time_str, crosslks->get_nmotors());
+            fmt::print(file_pm, "t = {}\tN = {}\n", t, crosslks->get_nmotors());
             crosslks->motor_write(file_pm);
 
-            fmt::print(file_th, "{}\tN = {}", time_str, net->get_nfilaments());
+            fmt::print(file_th, "t = {}\tN = {}\n", t, net->get_nfilaments());
             net->write_thermo(file_th);
 
             fmt::print(file_pe,
@@ -624,8 +619,8 @@ int main(int argc, char **argv)
 
         // print to stdout
         if (count%n_bw_stdout==0) {
-            fmt::print("\nCount: {}\tTime: {} s\tShear: {} um", count, t, bc->get_delrx());
-            //net->print_filament_thermo();
+            fmt::print("Count: {}\tTime: {} s\tShear: {} um\n", count, t, bc->get_delrx());
+            // net->print_filament_thermo();
             net->print_network_thermo();
             crosslks->print_ensemble_thermo();
             myosins->print_ensemble_thermo();
@@ -693,23 +688,12 @@ int main(int argc, char **argv)
         myosins->montecarlo();
     }
 
-    file_a << "\n";
-    file_l << "\n";
-    file_am << "\n";
-    file_pm << "\n";
-    file_th << "\n";
-
-    //Delete all objects created
-    cout<<"\nHere's where I think I delete things\n";
-
     delete myosins;
     delete crosslks;
     delete net;
     delete bc;
 
-    cout<<"\nTime counts: "<<count;
-    cout<<"\nExecuted";
-    cout<<"\n Done\n";
+    fmt::print("Simulated {} steps.\n", count);
 
     return 0;
 }

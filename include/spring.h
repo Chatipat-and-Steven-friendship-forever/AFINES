@@ -61,12 +61,6 @@ class spring {
 
         virial_type get_virial();
 
-        // [output]
-
-        string to_string();
-        vector<double> output();
-        string write();
-
         // [misc]
 
         bool operator==(const spring& that);

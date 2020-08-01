@@ -33,7 +33,6 @@ class filament
         string write_thermo(int fil);
 
         void print_thermo();
-        string to_string();
 
         // [thermo]
 

@@ -62,7 +62,7 @@ void bead::set_pos(vec_type p)
     pos = p;
 }
 
-bool bead::operator==(const bead& that) 
+bool bead::operator==(const bead& that)
 {
     double err = eps;
     return close(pos.x , that.pos.x , err)
@@ -74,32 +74,12 @@ bool bead::operator==(const bead& that)
         ;
 }
 
-vector<double> bead::output()
+double bead::get_viscosity()
 {
-    return {pos.x, pos.y, rad};
-}
-
-string bead::write()
-{
-    return fmt::format("\n{}\t{}\t{}", pos.x, pos.y, rad);
-}
-
-string bead::to_string()
-{
-    return fmt::format(
-            "x : {}\t"
-            "y : {}\t"
-            "rad : {}\t"
-            "visc : {}\t"
-            "force[0] : {}\t"
-            "force[1] : {}\n",
-            pos.x, pos.y, rad, visc, force.x, force.y);
-}
-
-double bead::get_viscosity(){
     return visc;
 }
 
-double bead::get_friction(){
+double bead::get_friction()
+{
     return friction;
 }

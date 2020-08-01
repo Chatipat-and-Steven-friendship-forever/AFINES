@@ -89,27 +89,6 @@ double spring::get_length(){
     return llen;
 }
 
-vector<double> spring::output()
-{
-    return {h0.x, h0.y, disp.x, disp.y};
-}
-
-std::string spring::write()
-{
-    return fmt::format("\n{}\t{}\t{}\t{}", h0.x, h0.y, disp.x, disp.y);
-}
-
-std::string spring::to_string()
-{
-    return fmt::format(
-            "aindex[0] = {};\t "
-            "aindex[1] = {};\t "
-            "kl = {};\t "
-            "l0 = {}\n"
-            "filament : \n{}",
-            aindex[0], aindex[1], kl, l0, fil->to_string());
-}
-
 bool spring::operator==(const spring& that)
 {
     /*Note: you can't compare the filament objects because that will lead to infinite recursion;
