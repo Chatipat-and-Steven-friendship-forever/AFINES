@@ -13,17 +13,55 @@
 
 #include "globals.h"
 #include <boost/range/irange.hpp>
-/* distances in microns, time in seconds, forces in pN */
-mt19937_64 generator;
-normal_distribution<double> distribution(0,1);
-//uniform_real_distribution<double> distribution(-0.5,0.5);
 
-/*generic functions to be used below*/
+// begin [random]
+
+pcg64 rng;
+std::uniform_real_distribution<double> uniform_dist;
+std::normal_distribution<double> normal_dist;
 
 double rng_u()
 {
-    return (double)rand()/(RAND_MAX);
+    return uniform_dist(rng);
 }
+
+double rng_n()
+{
+    return normal_dist(rng);
+}
+
+pcg64 *get_rng()
+{
+    return &rng;
+}
+
+string gen_seed()
+{
+    pcg_extras::seed_seq_from<std::random_device> seed_source;
+    return fmt::format("{}", pcg64(seed_source));
+}
+
+void set_seed(string seed)
+{
+    std::istringstream(seed + '\n') >> rng;
+}
+
+string get_seed()
+{
+    return fmt::format("{}", rng);
+}
+
+void rng_load(istream &inp)
+{
+    inp >> rng >> uniform_dist >> normal_dist;
+}
+
+void rng_save(ostream &out)
+{
+    out << rng << '\n' << uniform_dist << '\n' << normal_dist << '\n';
+}
+
+// end [random]
 
 int pr(int num)
 {
@@ -33,24 +71,6 @@ int pr(int num)
     else {
         return 0;
     }
-}
-
-double rng_exp(double mean)
-{
-    double u;
-    u=rand() / (RAND_MAX + 1.);
-    return  -mean*log(u);
-}
-
-void set_seed(int s){
-    generator.seed(s);
-    srand(s);
-}
-
-double rng_n()
-{
-    return distribution(generator);
-
 }
 
 array<double, 2> cm_bc(string bc, const vector<double>& xi, const vector<double>& yi, double xbox, double ybox, double delrx)

@@ -50,7 +50,8 @@ int main(int argc, char **argv)
     double viscosity, temperature;
 
     string dir;
-    int myseed;
+
+    string rng;
 
     bool restart;
     double restart_time;
@@ -80,7 +81,7 @@ int main(int argc, char **argv)
         ("temperature,temp", po::value<double>(&temperature)->default_value(0.004), "Temp in kT [pN-um] that effects magnituded of Brownian component of simulation")
 
         ("dir", po::value<string>(&dir)->default_value("."), "output directory")
-        ("myseed", po::value<int>(&myseed)->default_value(time(NULL)), "Random number generator myseed")
+        ("rng", po::value<string>(&rng)->default_value(gen_seed()), "Random number generator state")
 
         // restarts
         ("restart", po::value<bool>(&restart)->default_value(false), "if true, will restart simulation from last timestep recorded")
@@ -325,16 +326,20 @@ int main(int argc, char **argv)
             if (it.first == "config") continue;
             boost::any val = it.second.value();
 
-            if(typeid(bool) == val.type())
-                o_file << it.first <<"="<< boost::any_cast<bool>(val) <<endl;
-            else if(typeid(int) == val.type())
-                o_file << it.first <<"="<< boost::any_cast<int>(val) <<endl;
-            else if(typeid(double) == val.type())
-                o_file << it.first <<"="<< boost::any_cast<double>(val) <<endl;
-            else if(typeid(string) == val.type())
-                o_file << it.first <<"="<< boost::any_cast<string>(val) <<endl;
+            if (typeid(bool) == val.type())
+                fmt::print(o_file, "{}={}\n", it.first, boost::any_cast<bool>(val));
+            else if (typeid(int) == val.type())
+                fmt::print(o_file, "{}={}\n", it.first, boost::any_cast<int>(val));
+            else if (typeid(double) == val.type())
+                fmt::print(o_file, "{}={}\n", it.first, boost::any_cast<double>(val));
+            else if (typeid(string) == val.type())
+                fmt::print(o_file, "{}={}\n", it.first, boost::any_cast<string>(val));
+            else
+                throw std::logic_error(fmt::format("Cannot write option {}.\n", it.first));
         }
     }
+
+    set_seed(rng);
 
     if (a_m_kon2 == -1) a_m_kon2 = a_m_kon;
     if (a_m_koff2 == -1) a_m_koff2 = a_m_koff;
@@ -430,8 +435,6 @@ int main(int argc, char **argv)
 
     box *bc = new box(bnd_cnd, xrange, yrange, restart_strain);
 
-    set_seed(myseed);
-
     // BEGIN GENERATE CONFIGURATIONS
 
     if (actin_pos_vec.size() == 0 && actin_in.size() == 0) {
@@ -442,8 +445,8 @@ int main(int argc, char **argv)
         }
         actin_pos_vec = generate_filament_ensemble(
                 bc, npolymer, nmonomer, nmonomer_extra, extra_bead_prob,
-                dt, temperature, actin_length, link_length,
-                actin_position_arrs, link_bending_stiffness, myseed);
+                temperature, actin_length, link_length,
+                actin_position_arrs, link_bending_stiffness);
     }
 
     if (link_intersect_flag)
