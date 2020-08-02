@@ -13,6 +13,7 @@
 class filament_ensemble;
 
 #include "spring.h"
+#include "motor.h"
 #include "globals.h"
 
 class filament

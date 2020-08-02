@@ -58,9 +58,8 @@ filament::filament(filament_ensemble *net, vector<vec_type> beadvec,
             forces.push_back({});
             prv_rnds.push_back(vec_randn());
 
-            springs.push_back(new spring(spring_length, stretching_stiffness, this, {j-1, j}));
-            springs[j-1]->step();
-            springs[j-1]->update_force();
+            springs.push_back(new spring(bc, spring_length, stretching_stiffness));
+            springs[j - 1]->step(positions[j - 1], positions[j]);
         }
     }
 
@@ -78,9 +77,8 @@ void filament::add_bead(vec_type a, double spring_length, double stretching_stif
     prv_rnds.push_back(vec_randn());
     if (positions.size() > 1) {
         int j = int(positions.size()) - 1;
-        springs.push_back(new spring(spring_length, stretching_stiffness, this, {j-1,  j}));
-        springs[j-1]->step();
-        springs[j-1]->update_force();
+        springs.push_back(new spring(bc, spring_length, stretching_stiffness));
+        springs[j - 1]->step(positions[j - 1], positions[j]);
     }
 }
 
@@ -94,14 +92,17 @@ void filament::update_positions()
         positions[i] = bc->pos_bc(positions[i] + v * dt);
         forces[i].zero();
     }
-    for (spring *s : springs) s->step();
+    for (size_t i = 0; i < springs.size(); i++) {
+        springs[i]->step(positions[i], positions[i + 1]);
+    }
 }
 
 void filament::update_stretching()
 {
-    for (spring *s : springs) {
-        s->update_force();
-        s->filament_update();
+    for (size_t i = 0; i < springs.size(); i++) {
+        vec_type f = springs[i]->get_force();
+        forces[i + 0] += f;
+        forces[i + 1] -= f;
     }
 }
 
@@ -230,7 +231,6 @@ vector<vec_type> filament::get_beads(size_t first, size_t last)
 vector<filament *> filament::try_fracture()
 {
     for (size_t i = 0; i < springs.size(); i++) {
-        springs[i]->update_force();
         vec_type f = springs[i]->get_force();
         if (abs2(f) > fracture_force_sq) {
             return fracture(i);
@@ -285,13 +285,12 @@ bool filament::operator==(const filament& that){
     if (forces != that.forces) return false;
     if (prv_rnds != that.prv_rnds) return false;
 
-    for (unsigned int i = 0; i < springs.size(); i++)
-        if (!(springs[i]->is_similar(*(that.springs[i]))))
-            return false;
+    for (size_t i = 0; i < springs.size(); i++)
+        if (!(*springs[i] == *that.springs[i])) return false;
 
-    return (this->temperature == that.temperature &&
-            this->dt == that.dt && this->fracture_force == that.fracture_force);
-
+    return temperature == that.temperature
+        && dt == that.dt
+        && fracture_force == that.fracture_force;
 }
 
 void filament::update_bending()
@@ -398,7 +397,7 @@ void filament::grow(double dL)
     if (lb + dL < l0_max) {
         // make spring "0" longer
         springs[0]->set_l0(lb + dL);
-        springs[0]->step();
+        springs[0]->step(positions[0], positions[1]);
 
     } else {
 
@@ -413,21 +412,16 @@ void filament::grow(double dL)
         forces.insert(forces.begin() + 1, {});
         prv_rnds.insert(prv_rnds.begin() + 1, vec_randn());
 
-        // shift all springs forward, except the first one
-        for (size_t i = 1; i < springs.size(); i++) {
-            springs[i]->inc_aindex();
-        }
-
         // add new spring "1" with length l0
-        spring *s = new spring(spring_l0, springs[0]->get_kl(), this, {1, 2});
-        springs.insert(springs.begin() + 1, s);
+        spring *s = new spring(bc, spring_l0, springs[0]->get_kl());
+        springs.insert(springs.begin() + 1, s);  // (positions[1], positions[2])
 
         // set spring at barbed end to remaining length
         springs[0]->set_l0(lb + dL - spring_l0);
 
         // update springs (I think only springs "0" and "1" need updating)
-        for (spring *s : springs) {
-            s->step();
+        for (size_t i = 0; i < springs.size(); i++) {
+            springs[i]->step(positions[i], positions[i + 1]);
         }
 
         // fix attached points

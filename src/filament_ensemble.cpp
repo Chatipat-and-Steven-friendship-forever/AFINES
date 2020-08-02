@@ -130,9 +130,9 @@ vec_type filament_ensemble::get_direction(int fil, int spring)
     return network[fil]->get_spring(spring)->get_direction();
 }
 
-vec_type filament_ensemble::get_force(int fil, int spring)
+vec_type filament_ensemble::get_force(int fil, int bead)
 {
-    return network[fil]->get_force(spring);
+    return network[fil]->get_force(bead);
 }
 
 box *filament_ensemble::get_box()

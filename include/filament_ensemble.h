@@ -47,7 +47,8 @@ class filament_ensemble
         vector<filament *> * get_network();
         filament * get_filament(int index);
 
-        vec_type get_force(int fil, int spring);
+        vec_type get_force(int fil, int bead);
+
         vec_type get_direction(int fil, int spring);
         vec_type get_start(int fil, int spring);
         vec_type get_end(int fil, int spring);
