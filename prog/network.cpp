@@ -126,7 +126,7 @@ int main(int argc, char **argv)
 
         ("link_length", po::value<double>(&link_length)->default_value(1), "Length of links connecting monomers")
         ("polymer_bending_modulus", po::value<double>(&polymer_bending_modulus)->default_value(0.068), "Bending modulus of a filament")
-        ("fracture_force", po::value<double>(&fracture_force)->default_value(100000000), "pN-- filament breaking point")
+        ("fracture_force", po::value<double>(&fracture_force)->default_value(INFINITY), "pN-- filament breaking point")
         ("link_stretching_stiffness,ks", po::value<double>(&link_stretching_stiffness)->default_value(1), "stiffness of link, pN/um")
 
         // excluded volume
@@ -673,8 +673,8 @@ int main(int argc, char **argv)
         myosins->integrate();
 
         // filament growth and fracturing
-        // also unbinds motors
-        net->montecarlo();
+        net->try_grow();
+        net->try_fracture();  // unbinds motors when fracturing
 
         if (needquad) {
             if (quad_off_flag) {

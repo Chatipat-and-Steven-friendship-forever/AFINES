@@ -83,8 +83,6 @@ class filament_ensemble
         virial_type get_external_virial();
 
         // monte carlo
-        void montecarlo();
-
         void set_growing(double, double, double, double, int);
         void try_grow();
         void try_fracture();

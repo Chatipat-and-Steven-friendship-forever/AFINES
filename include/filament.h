@@ -19,7 +19,7 @@ class filament_ensemble;
 class filament
 {
     public:
-        filament(filament_ensemble *net, vector<vec_type> positions,
+        filament(filament_ensemble *net, vector<vec_type> positions, vector<vec_type> randoms,
                 double bead_radius, double visc,
                 double l0, double kl, double kb, double dt, double temp, double fracture);
         ~filament();
@@ -70,7 +70,6 @@ class filament
         // success: returns two filaments, split at the first fracture site
         vector<filament *> try_fracture();
         vector<filament *> fracture(int node);  // helper method
-        vector<vec_type> get_beads(size_t first, size_t last);  // helper method
 
         void detach_all_motors();
 
@@ -142,16 +141,12 @@ class filament
         virial_type bending_virial;
 
         // parameters
-        double kb, temperature, dt, fracture_force, damp;
+        double kb, temperature, dt, fracture_force, damp, bd_prefactor;
         double bead_radius, visc;
 
         // growing parameters
         int nsprings_max;
         double spring_l0, l0_max, l0_min, kgrow, lgrow;
-
-        // precompute
-        double bd_prefactor;
-        double fracture_force_sq;
 };
 
 #endif

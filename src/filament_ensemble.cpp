@@ -33,7 +33,7 @@ filament_ensemble::filament_ensemble(
 
         if (beads[i][3] != fil_idx && avec.size() > 0) {
 
-            network.push_back(new filament(this, avec, bead_radius, vis, spring_len, stretching, bending, delta_t, temp, frac_force));
+            network.push_back(new filament(this, avec, {}, bead_radius, vis, spring_len, stretching, bending, delta_t, temp, frac_force));
             avec.clear();
             fil_idx = beads[i][3];
         }
@@ -42,7 +42,7 @@ filament_ensemble::filament_ensemble(
     }
 
     if (avec.size() > 0)
-        network.push_back(new filament(this, avec, bead_radius, vis, spring_len, stretching, bending, delta_t, temp, frac_force));
+        network.push_back(new filament(this, avec, {}, bead_radius, vis, spring_len, stretching, bending, delta_t, temp, frac_force));
 
     avec.clear();
 
@@ -389,7 +389,8 @@ void filament_ensemble::try_grow()
     }
 }
 
-void filament_ensemble::try_fracture() {
+void filament_ensemble::try_fracture()
+{
     // Note: network.size() is not a constant
     // fractured filaments are added to the end of network,
     // so they can be fractured again
@@ -405,12 +406,6 @@ void filament_ensemble::try_fracture() {
             delete broken;
         }
     }
-}
-
-void filament_ensemble::montecarlo()
-{
-    this->try_grow();
-    this->try_fracture();
 }
 
 // end [monte carlo]
