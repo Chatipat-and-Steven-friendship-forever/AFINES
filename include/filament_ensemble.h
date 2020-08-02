@@ -20,8 +20,11 @@ class filament_ensemble
 {
     public:
 
-        filament_ensemble(box *bc, vector<vector<double>> beads, array<int, 2> nq,
-                double dt, double temp, double visc, double l0, double kl, double kb,
+        filament_ensemble(
+                box *bc, vector<vector<double>> beads, array<int, 2> nq,
+                double dt, double temp, double visc,
+                double bead_radius, double l0,
+                double kl, double kb,
                 double frac_force, double rmax, double kexv);
 
         ~filament_ensemble();

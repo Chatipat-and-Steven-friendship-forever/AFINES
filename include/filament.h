@@ -18,7 +18,8 @@ class filament_ensemble;
 class filament
 {
     public:
-        filament(filament_ensemble *net, vector<vector<double>> beadvec,
+        filament(filament_ensemble *net, vector<vec_type> positions,
+                double bead_radius, double visc,
                 double l0, double kl, double kb, double dt, double temp, double fracture);
         ~filament();
 
@@ -68,7 +69,7 @@ class filament
         // success: returns two filaments, split at the first fracture site
         vector<filament *> try_fracture();
         vector<filament *> fracture(int node);  // helper method
-        vector<vector<double>> get_beads(size_t first, size_t last);  // helper method
+        vector<vec_type> get_beads(size_t first, size_t last);  // helper method
 
         void detach_all_motors();
 
@@ -96,7 +97,7 @@ class filament
 
         box *get_box();
 
-        void add_bead(vector<double> a, double l0, double kl);
+        void add_bead(vec_type a, double l0, double kl);
 
         bool operator==(const filament& that);
 
@@ -125,8 +126,11 @@ class filament
         filament_ensemble *filament_network;
 
         // state
+
+        vector<vec_type> positions;
+        vector<vec_type> forces;
         vector<vec_type> prv_rnds;
-        vector<class bead *> beads;
+
         vector<spring *> springs;
 
         struct attached_type { class motor *m; int hd; int l; double pos; };
@@ -138,6 +142,7 @@ class filament
 
         // parameters
         double kb, temperature, dt, fracture_force, damp;
+        double bead_radius, visc;
 
         // growing parameters
         int nsprings_max;

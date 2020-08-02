@@ -476,8 +476,9 @@ int main(int argc, char **argv)
     // BEGIN CREATE NETWORK OBJECTS
 
     filament_ensemble *net = new filament_ensemble(
-            bc, actin_pos_vec, {xgrid, ygrid}, dt,
-            temperature, viscosity, link_length,
+            bc, actin_pos_vec, {xgrid, ygrid},
+            dt, temperature, viscosity,
+            actin_length, link_length,
             link_stretching_stiffness, link_bending_stiffness,
             fracture_force, rmax, kexv);
     fmt::print("Filaments: {}\n", net->get_nfilaments());

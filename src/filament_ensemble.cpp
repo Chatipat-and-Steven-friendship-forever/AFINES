@@ -14,29 +14,35 @@
 #include "globals.h"
 #include "filament_ensemble.h"
 
-filament_ensemble::filament_ensemble(box *bc_, vector<vector<double> > beads, array<int,2> mynq, double delta_t, double temp,
-        double vis, double spring_len, double stretching, double bending, double frac_force, double RMAX, double A)
+filament_ensemble::filament_ensemble(
+        box *bc_, vector<vector<double>> beads, array<int,2> mynq,
+        double delta_t, double temp, double vis,
+        double bead_radius, double spring_len,
+        double stretching, double bending,
+        double frac_force, double RMAX, double A)
 {
     bc = bc_;
 
     bc->add_callback([this](double g) { this->update_d_strain(g); });
 
     int fil_idx = 0;
-    vector<vector<double>> avec;
+    vector<vec_type> avec;
 
-    for (int i=0; i < int(beads.size()); i++){
+    for (int i = 0; i < int(beads.size()); i++) {
+        if (beads[i].size() != 4) throw std::runtime_error("wrong number of fields");
 
-        if (beads[i][3] != fil_idx && avec.size() > 0){
+        if (beads[i][3] != fil_idx && avec.size() > 0) {
 
-            network.push_back(new filament(this, avec, spring_len, stretching, bending, delta_t, temp, frac_force));
+            network.push_back(new filament(this, avec, bead_radius, vis, spring_len, stretching, bending, delta_t, temp, frac_force));
             avec.clear();
             fil_idx = beads[i][3];
         }
-        avec.push_back({beads[i][0], beads[i][1], beads[i][2], vis});
+        if (beads[i][2] != bead_radius) throw std::runtime_error("bead radius mismatch");
+        avec.push_back({beads[i][0], beads[i][1]});
     }
 
     if (avec.size() > 0)
-        network.push_back(new filament(this, avec, spring_len, stretching, bending, delta_t, temp, frac_force));
+        network.push_back(new filament(this, avec, bead_radius, vis, spring_len, stretching, bending, delta_t, temp, frac_force));
 
     avec.clear();
 

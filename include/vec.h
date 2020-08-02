@@ -100,6 +100,11 @@ inline virial_type outer(vec_type a, vec_type b)
             a.y * b.x, a.y * b.y};
 }
 
+inline bool operator==(vec_type a, vec_type b)
+{
+    return a.x == b.x && a.y == b.y;
+}
+
 inline vec_type operator-(vec_type a, vec_type b)
 {
     return {a.x - b.x, a.y - b.y};

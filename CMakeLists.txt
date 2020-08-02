@@ -9,7 +9,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(Boost 1.53 REQUIRED COMPONENTS filesystem program_options system)
 
 set(sources
-    src/bead.cpp
     src/spring.cpp
     src/filament.cpp
     src/filament_ensemble.cpp
