@@ -130,6 +130,16 @@ vec_type filament_ensemble::get_direction(int fil, int spring)
     return network[fil]->get_spring(spring)->get_direction();
 }
 
+vec_type filament_ensemble::get_disp(int fil, int spring)
+{
+    return network[fil]->get_spring(spring)->get_disp();
+}
+
+vec_type filament_ensemble::intpoint(int fil, int spring, vec_type pos)
+{
+    return network[fil]->get_spring(spring)->intpoint(pos);
+}
+
 vec_type filament_ensemble::get_force(int fil, int bead)
 {
     return network[fil]->get_force(bead);
@@ -200,7 +210,24 @@ vec_type filament_ensemble::get_attached_direction(fp_index_type i)
 {
     int f_index = i.f_index;
     int l_index = network[f_index]->get_attached_l(i.p_index);
-    return get_direction(f_index, l_index);
+    return this->get_direction(f_index, l_index);
+}
+
+// get displacement h[f,l+1]-h[f,l]
+vec_type filament_ensemble::get_attached_disp(fp_index_type i)
+{
+    int f_index = i.f_index;
+    int l_index = network[f_index]->get_attached_l(i.p_index);
+    return this->get_disp(f_index, l_index);
+}
+
+// applies force f=-dU/d(h[f,l+1]-h[f,l]) to h[f,l+1] and h[f,l]
+void filament_ensemble::add_attached_disp_force(fp_index_type i, vec_type f)
+{
+    int f_index = i.f_index;
+    int l_index = network[f_index]->get_attached_l(i.p_index);
+    network[f_index]->update_forces(l_index, -f);
+    network[f_index]->update_forces(l_index + 1, f);
 }
 
 bool filament_ensemble::at_barbed_end(fp_index_type i)

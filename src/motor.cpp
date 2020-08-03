@@ -361,14 +361,12 @@ void motor::update_force()
 // applies part of the force to filaments (the other part is in filament_update)
 void motor::update_bending(int hd)
 {
-    array<int, 2> fl = filament_network->get_attached_fl(fp_index[hd]);
-    vec_type delr1 = filament_network->get_filament(fl[0])->get_spring(fl[1])->get_disp();
+    vec_type delr1 = filament_network->get_attached_disp(fp_index[hd]);
     vec_type delr2 = pow(-1, hd) * disp;
 
     bend_result_type result = bend_harmonic(kb, th0, delr1, delr2);
 
-    filament_network->update_forces(fl[0], fl[1], -result.force1);
-    filament_network->update_forces(fl[0], fl[1] + 1, result.force1);
+    filament_network->add_attached_disp_force(fp_index[hd], result.force1);
 
     b_force[pr(hd)] += result.force2;
     b_force[hd] -= result.force2;
@@ -382,11 +380,8 @@ void motor::update_bending(int hd)
 // update forces and energies for alignment
 void motor::update_alignment()
 {
-    array<int, 2> fl0 = filament_network->get_attached_fl(fp_index[0]);
-    vec_type delr0 = filament_network->get_filament(fl0[0])->get_spring(fl0[1])->get_disp();
-
-    array<int, 2> fl1 = filament_network->get_attached_fl(fp_index[1]);
-    vec_type delr1 = filament_network->get_filament(fl1[0])->get_spring(fl1[1])->get_disp();
+    vec_type delr0 = filament_network->get_attached_disp(fp_index[0]);
+    vec_type delr1 = filament_network->get_attached_disp(fp_index[1]);
 
     bend_result_type result = bend_angle(delr0, delr1);
 
@@ -415,11 +410,8 @@ void motor::update_alignment()
     vec_type f0 = a * result.force1;
     vec_type f1 = a * result.force2;
 
-    filament_network->update_forces(fl0[0], fl0[1], -f0);
-    filament_network->update_forces(fl0[0], fl0[1] + 1, f0);
-
-    filament_network->update_forces(fl1[0], fl1[1], -f1);
-    filament_network->update_forces(fl1[0], fl1[1] + 1, f1);
+    filament_network->add_attached_disp_force(fp_index[0], f0);
+    filament_network->add_attached_disp_force(fp_index[1], f1);
 
     vir_align += -0.5 * outer(delr0, f0);
     vir_align += -0.5 * outer(delr1, f1);
@@ -531,20 +523,17 @@ double motor::metropolis_prob(int hd, array<int, 2> fl_idx, vec_type newpos)
 
     // bending
     if (kb > 0.0 && state[pr(hd)] == motor_state::bound) {
-        array<int, 2> fl;
         vec_type delr1, delr2;
         if (state[hd] == motor_state::free) {
             // attach: singly bound -> doubly bound
 
             // new bending energy of attaching head
-            fl = fl_idx;
-            delr1 = filament_network->get_filament(fl[0])->get_spring(fl[1])->get_disp();
+            delr1 = filament_network->get_disp(fl_idx[0], fl_idx[1]);
             delr2 = pow(-1, hd) * disp;
             dE += bend_harmonic_energy(kb, th0, delr1, delr2);
 
             // new bending energy of other head
-            fl = filament_network->get_attached_fl(fp_index[pr(hd)]);
-            delr1 = filament_network->get_filament(fl[0])->get_spring(fl[1])->get_disp();
+            delr1 = filament_network->get_attached_disp(fp_index[pr(hd)]);
             delr2 = pow(-1, pr(hd)) * disp;
             dE += bend_harmonic_energy(kb, th0, delr1, delr2);
 
@@ -553,14 +542,12 @@ double motor::metropolis_prob(int hd, array<int, 2> fl_idx, vec_type newpos)
             // detach: doubly bound -> singly bound
 
             // old bending energy of detaching head
-            fl = filament_network->get_attached_fl(fp_index[hd]);
-            delr1 = filament_network->get_filament(fl[0])->get_spring(fl[1])->get_disp();
+            delr1 = filament_network->get_attached_disp(fp_index[hd]);
             delr2 = pow(-1, hd) * disp;
             dE -= bend_harmonic_energy(kb, th0, delr1, delr2);
 
             // old bending energy of other head
-            fl = filament_network->get_attached_fl(fp_index[pr(hd)]);
-            delr1 = filament_network->get_filament(fl[0])->get_spring(fl[1])->get_disp();
+            delr1 = filament_network->get_attached_disp(fp_index[pr(hd)]);
             delr2 = pow(-1, pr(hd)) * disp;
             dE -= bend_harmonic_energy(kb, th0, delr1, delr2);
 
@@ -569,17 +556,14 @@ double motor::metropolis_prob(int hd, array<int, 2> fl_idx, vec_type newpos)
 
     // alignment
     if (kalign != 0.0 && state[pr(hd)] == motor_state::bound) {
-        array<int, 2> fl;
         if (state[hd] == motor_state::free) {
             // attach: singly bound -> doubly bound
 
             // spring to be attached
-            fl = fl_idx;
-            vec_type delr1 = filament_network->get_filament(fl[0])->get_spring(fl[1])->get_disp();
+            vec_type delr1 = filament_network->get_disp(fl_idx[0], fl_idx[1]);
 
             // other attached spring
-            fl = filament_network->get_attached_fl(fp_index[pr(hd)]);
-            vec_type delr2 = filament_network->get_filament(fl[0])->get_spring(fl[1])->get_disp();
+            vec_type delr2 = filament_network->get_attached_disp(fp_index[pr(hd)]);
 
             dE += alignment_penalty(delr1, delr2);
         }
@@ -587,12 +571,10 @@ double motor::metropolis_prob(int hd, array<int, 2> fl_idx, vec_type newpos)
             // detach: doubly bound -> singly bound
 
             // spring to be detached
-            fl = filament_network->get_attached_fl(fp_index[hd]);
-            vec_type delr1 = filament_network->get_filament(fl[0])->get_spring(fl[1])->get_disp();
+            vec_type delr1 = filament_network->get_attached_disp(fp_index[hd]);
 
             // other attached spring
-            fl = filament_network->get_attached_fl(fp_index[pr(hd)]);
-            vec_type delr2 = filament_network->get_filament(fl[0])->get_spring(fl[1])->get_disp();
+            vec_type delr2 = filament_network->get_attached_disp(fp_index[pr(hd)]);
 
             dE -= alignment_penalty(delr1, delr2);
         }
@@ -654,9 +636,7 @@ bool motor::try_attach(int hd, mc_prob &p)
 
         // compute and get attachment point
         array<int, 2> fl = attach_list->at(i);
-        filament *f = filament_network->get_filament(fl[0]);
-        spring *s = f->get_spring(fl[1]);
-        vec_type intpoint = s->intpoint(h[hd]);
+        vec_type intpoint = filament_network->intpoint(fl[0], fl[1], h[hd]);
 
         // don't bind if binding site is further away than the cutoff
         vec_type dr = bc->rij_bc(intpoint - h[hd]);

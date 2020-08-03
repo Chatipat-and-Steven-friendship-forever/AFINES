@@ -48,15 +48,14 @@ class filament_ensemble
         filament * get_filament(int index);
 
         vec_type get_force(int fil, int bead);
+        bool is_polymer_start(int f, int bead);
 
+        vec_type get_disp(int fil, int spring);
         vec_type get_direction(int fil, int spring);
         vec_type get_start(int fil, int spring);
         vec_type get_end(int fil, int spring);
-
-        double get_int_direction(int fil, int spring, double xp, double yp);
+        vec_type intpoint(int fil, int spring, vec_type pos);
         double get_llength(int fil, int spring);
-
-        bool is_polymer_start(int f, int a);
 
         // attached locations
         fp_index_type new_attached(motor *m, int hd, int f_index, int l_index, vec_type pos);
@@ -66,6 +65,8 @@ class filament_ensemble
         void add_attached_force(fp_index_type i, vec_type f);
         void add_attached_pos(fp_index_type i, double dist);
         vec_type get_attached_direction(fp_index_type i);
+        vec_type get_attached_disp(fp_index_type i);
+        void add_attached_disp_force(fp_index_type i, vec_type f);
         bool at_pointed_end(fp_index_type i);
         bool at_barbed_end(fp_index_type i);
 
