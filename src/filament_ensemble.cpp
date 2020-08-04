@@ -18,7 +18,6 @@
 #include "exv.h"
 #include "filament.h"
 #include "quadrants.h"
-#include "spring.h"
 
 filament_ensemble::filament_ensemble(
         box *bc_, vector<vector<double>> beads, array<int,2> mynq,
@@ -92,8 +91,9 @@ void filament_ensemble::quad_update_serial()
     quads->clear();
     for (int f = 0; f < int(network.size()); f++) {
         for (int l = 0; l < network[f]->get_nsprings(); l++) {
-            spring *s = network[f]->get_spring(l);
-            quads->add_spring(s->get_h0(), s->get_disp(), {f, l});
+            vec_type start = network[f]->get_start(l);
+            vec_type disp = network[f]->get_disp(l);
+            quads->add_spring(start, disp, {f, l});
         }
     }
     if (exv) quads->build_pairs();
@@ -108,32 +108,32 @@ vector<array<int, 2>> *filament_ensemble::get_attach_list(vec_type pos)
 
 double filament_ensemble::get_llength(int fil, int spring)
 {
-    return network[fil]->get_spring(spring)->get_length();
+    return network[fil]->get_llength(spring);
 }
 
 vec_type filament_ensemble::get_start(int fil, int spring)
 {
-    return network[fil]->get_spring(spring)->get_h0();
+    return network[fil]->get_start(spring);
 }
 
 vec_type filament_ensemble::get_end(int fil, int spring)
 {
-    return network[fil]->get_spring(spring)->get_h1();
+    return network[fil]->get_end(spring);
 }
 
 vec_type filament_ensemble::get_direction(int fil, int spring)
 {
-    return network[fil]->get_spring(spring)->get_direction();
+    return network[fil]->get_direction(spring);
 }
 
 vec_type filament_ensemble::get_disp(int fil, int spring)
 {
-    return network[fil]->get_spring(spring)->get_disp();
+    return network[fil]->get_disp(spring);
 }
 
 vec_type filament_ensemble::intpoint(int fil, int spring, vec_type pos)
 {
-    return network[fil]->get_spring(spring)->intpoint(pos);
+    return network[fil]->intpoint(spring, pos);
 }
 
 vec_type filament_ensemble::get_pos(int fil, int bead)
@@ -158,9 +158,16 @@ bool filament_ensemble::is_polymer_start(int fil, int bead)
 
 bool filament_ensemble::intersect(array<int, 2> fl1, array<int, 2> fl2)
 {
-    spring *s1 = network[fl1[0]]->get_spring(fl1[1]);
-    spring *s2 = network[fl2[0]]->get_spring(fl2[1]);
-    return s1->get_line_intersect(s2);
+    vec_type r1 = network[fl1[0]]->get_start(fl1[1]);
+    vec_type r2 = network[fl1[0]]->get_end(fl1[1]);
+    vec_type s1 = network[fl2[0]]->get_start(fl2[1]);
+    vec_type s2 = network[fl2[0]]->get_end(fl2[1]);
+    boost::optional<vec_type> inter = seg_seg_intersection_bc(bc, r1, r2, s1, s2);
+    if (inter) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 int filament_ensemble::get_nbeads()

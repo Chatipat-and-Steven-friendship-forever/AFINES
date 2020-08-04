@@ -48,8 +48,21 @@ class filament
         vec_type get_force(int i);
 
         int get_nsprings();
-        class spring *get_spring(int i);
 
+        // spring state
+        vec_type get_start(int i);
+        vec_type get_end(int i);
+        double get_llength(int i);
+        vec_type get_disp(int i);
+        vec_type get_direction(int i);
+        double get_tension(int i);
+        double get_stretching_energy(int i);
+        vec_type intpoint(int i, vec_type pos);
+        // spring params
+        double get_kl(int i);
+        double get_l0(int i);
+
+        // filament state
         double get_end2end();
 
         // [dynamics]

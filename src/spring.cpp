@@ -103,32 +103,6 @@ vec_type spring::intpoint(vec_type pos)
     }
 }
 
-bool spring::get_line_intersect(spring *l2)
-{
-    //Reference to Stack Overflow entry by iMalc on Feb 10, 2013
-    //Web Address: https://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
-
-    vec_type disp1 = this->get_disp();
-    vec_type disp2 = l2->get_disp();
-
-    vec_type disp12 = bc->rij_bc(h0 - l2->get_h0());
-
-    double denom = disp1.x*disp2.y - disp1.y*disp2.x;
-    if (denom == 0) return false;
-    bool denomPos = denom > 0;
-
-    double s_num = disp1.x*disp12.y - disp1.y*disp12.x;
-    double t_num = disp2.x*disp12.y - disp2.y*disp12.x;
-
-    if ((s_num < 0) == denomPos) return false;
-    if ((t_num < 0) == denomPos) return false;
-
-    if (((s_num > denom) == denomPos) || ((t_num > denom) == denomPos)) return false;
-
-    //Else Collision have been detected, the filaments do intersect!
-    return true;
-}
-
 vec_type spring::get_direction()
 {
     return direc;

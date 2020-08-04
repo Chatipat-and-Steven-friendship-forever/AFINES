@@ -52,7 +52,6 @@ class spring
         bool operator==(const spring& that);
 
         vec_type intpoint(vec_type pos);
-        bool get_line_intersect(spring *l2); 
 
     protected:
 

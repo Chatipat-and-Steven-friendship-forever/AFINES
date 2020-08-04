@@ -106,9 +106,57 @@ void filament::update_stretching()
     }
 }
 
-spring *filament::get_spring(int i)
+vec_type filament::get_start(int i)
 {
-    return springs[i];
+    return springs[i]->get_h0();
+}
+
+vec_type filament::get_end(int i)
+{
+    return springs[i]->get_h1();
+}
+
+double filament::get_llength(int i)
+{
+    return springs[i]->get_length();
+}
+
+vec_type filament::get_disp(int i)
+{
+    return springs[i]->get_disp();
+}
+
+vec_type filament::get_direction(int i)
+{
+    return springs[i]->get_direction();
+}
+
+double filament::get_tension(int i)
+{
+    double kl = springs[i]->get_kl();
+    double l0 = springs[i]->get_l0();
+    double len = springs[i]->get_length();
+    return kl * (len - l0);
+}
+
+double filament::get_stretching_energy(int i)
+{
+    return springs[i]->get_stretching_energy();
+}
+
+vec_type filament::intpoint(int i, vec_type pos)
+{
+    return springs[i]->intpoint(pos);
+}
+
+double filament::get_kl(int i)
+{
+    return springs[i]->get_kl();
+}
+
+double filament::get_l0(int i)
+{
+    return springs[i]->get_l0();
 }
 
 void filament::update_d_strain(double g)
