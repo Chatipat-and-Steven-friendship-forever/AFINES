@@ -93,7 +93,7 @@ void filament_ensemble::quad_update_serial()
     for (int f = 0; f < int(network.size()); f++) {
         for (int l = 0; l < network[f]->get_nsprings(); l++) {
             spring *s = network[f]->get_spring(l);
-            quads->add_spring(s, {f, l});
+            quads->add_spring(s->get_h0(), s->get_disp(), {f, l});
         }
     }
     if (exv) quads->build_pairs();

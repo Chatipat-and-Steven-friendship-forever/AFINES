@@ -10,7 +10,7 @@ class quadrants {
         void use_quad(bool flag);
         void use_all(bool flag);
 
-        void add_spring(class spring *s, array<int, 2> fl);
+        void add_spring(vec_type h0, vec_type disp, array<int, 2> fl);
         vector<array<int, 2>> *get_attach_list(vec_type pos);
         void build_pairs();
         vector<array<array<int, 2>, 2>> *get_pairs();
@@ -28,10 +28,10 @@ class quadrants {
         void check_pairs(class filament_ensemble *);
 
     protected:
-        void add_spring_nonperiodic(class spring *, array<int, 2>);
-        void add_spring_xperiodic(class spring *, array<int, 2>);
-        void add_spring_periodic(class spring *, array<int, 2>);
-        void add_spring_lees_edwards(class spring *, array<int, 2>);
+        void add_spring_nonperiodic(double xlo, double xhi, double ylo, double yhi, array<int, 2>);
+        void add_spring_xperiodic(double xlo, double xhi, double ylo, double yhi, array<int, 2>);
+        void add_spring_periodic(double xlo, double xhi, double ylo, double yhi, array<int, 2>);
+        void add_spring_lees_edwards(double xlo, double xhi, double ylo, double yhi, array<int, 2>);
 
         class box *bc;
         array<int, 2> nq;

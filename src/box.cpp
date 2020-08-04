@@ -50,12 +50,6 @@ void box::update_d_strain(double d_strain)
     }
 }
 
-// modified from www.cplusplus.com/forum/articles/3638/-
-double roundhalfup(double value)
-{
-    return floor(value + 0.5);
-}
-
 // using the minimum image convention
 // Allen and Tildesley, page 30 (periodic)
 // Allen and Tildesley, page 247 (Lees-Edwards)
@@ -64,16 +58,16 @@ vec_type box::rij_bc(vec_type disp)
     double dx = disp.x;
     double dy = disp.y;
     if (BC == bc_type::periodic) {
-        dx -= xbox * roundhalfup(dx / xbox);
-        dy -= ybox * roundhalfup(dy / ybox);
+        dx -= xbox * rint(dx / xbox);
+        dy -= ybox * rint(dy / ybox);
 
     } else if (BC == bc_type::xperiodic) {
-        dx -= xbox * roundhalfup(dx / xbox);
+        dx -= xbox * rint(dx / xbox);
 
     } else if (BC == bc_type::lees_edwards) {
-        double cory = roundhalfup(dy / ybox);
+        double cory = rint(dy / ybox);
         dx -= delrx * cory;
-        dx -= xbox * roundhalfup(dx / xbox);
+        dx -= xbox * rint(dx / xbox);
         dy -= ybox * cory;
 
     }
@@ -82,45 +76,7 @@ vec_type box::rij_bc(vec_type disp)
 
 vec_type box::pos_bc(vec_type pos)
 {
-    double x = pos.x;
-    double y = pos.y;
-
-    if (BC == bc_type::periodic) {
-        x -= xbox * roundhalfup(x / xbox);
-        y -= ybox * roundhalfup(y / ybox);
-
-    } else if (BC == bc_type::lees_edwards) {
-        double cory = roundhalfup(y / ybox);
-        x -= delrx * cory;
-        x -= xbox * roundhalfup(x / xbox);
-        y -= ybox * cory;
-
-    } else if (BC == bc_type::xperiodic) {
-        double xlo = -0.5 * xbox;
-        double xhi =  0.5 * xbox;
-        double ylo = -0.5 * ybox;
-        double yhi =  0.5 * ybox;
-        if (x < xlo)
-            x += xbox;
-        else if (x > xhi)
-            x -= xbox;
-        if (y < ylo || y > yhi)
-            throw runtime_error("Coordinate outside of box.");
-
-    } else if (BC == bc_type::nonperiodic) {
-        double xlo = -0.5 * xbox;
-        double xhi =  0.5 * xbox;
-        double ylo = -0.5 * ybox;
-        double yhi =  0.5 * ybox;
-        if (x < xlo || x > xhi || y < ylo || y > yhi)
-            throw runtime_error("Coordinate outside of box.");
-
-    } else {
-        throw runtime_error("Boundary condition not recognized.");
-
-    }
-
-    return {x, y};
+    return rij_bc(pos);
 }
 
 double box::dist_bc(vec_type disp)

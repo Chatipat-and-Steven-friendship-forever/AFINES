@@ -137,7 +137,15 @@ static inline int imod(int a, int b)
     while (a >= b) a -= b;
     assert(0 <= a && a < b);
     return a;
-};
+}
+
+static inline int clip(int x, int lo, int hi)
+{
+    if (x < lo) x = lo;
+    if (x > hi) x = hi;
+    assert(lo <= x && x <= hi);
+    return x;
+}
 
 pair<double, array<int, 2> > flip_pair(const pair<array<int, 2>, double> &p);
 multimap<double, array<int, 2> > flip_map(const std::unordered_map<array<int, 2>, double, boost::hash<array<int,2>>> &p);

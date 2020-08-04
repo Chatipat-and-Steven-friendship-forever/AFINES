@@ -1,7 +1,6 @@
 #include "quadrants.h"
 
 #include "box.h"
-#include "spring.h"
 #include "filament_ensemble.h"
 
 quadrants::quadrants(box *bc_, array<int, 2> nq_)
@@ -46,20 +45,34 @@ void quadrants::use_all(bool flag)
     all_flag = flag;
 }
 
-void quadrants::add_spring(spring *s, array<int, 2> fl)
+void quadrants::add_spring(vec_type h0, vec_type disp, array<int, 2> fl)
 {
     if (all_flag) {
         all_springs.push_back(fl);
     }
     if (quad_flag) {
+
+        // compute bounding box of spring
+
+        double xlo = h0.x;
+        double xhi = h0.x + disp.x;
+        if (disp.x < 0) std::swap(xlo, xhi);
+
+        double ylo = h0.y;
+        double yhi = h0.y + disp.y;
+        if (disp.y < 0) std::swap(ylo, yhi);
+
+        assert(xlo <= xhi);
+        assert(ylo <= yhi);
+
         if (bc->get_BC() == bc_type::nonperiodic) {
-            this->add_spring_nonperiodic(s, fl);
+            this->add_spring_nonperiodic(xlo, xhi, ylo, yhi, fl);
         } else if (bc->get_BC() == bc_type::xperiodic) {
-            this->add_spring_xperiodic(s, fl);
+            this->add_spring_xperiodic(xlo, xhi, ylo, yhi, fl);
         } else if (bc->get_BC() == bc_type::periodic) {
-            this->add_spring_periodic(s, fl);
+            this->add_spring_periodic(xlo, xhi, ylo, yhi, fl);
         } else if (bc->get_BC() == bc_type::lees_edwards) {
-            this->add_spring_lees_edwards(s, fl);
+            this->add_spring_lees_edwards(xlo, xhi, ylo, yhi, fl);
         } else {
             throw std::logic_error("Unknown boundary condition.");
         }
@@ -308,24 +321,10 @@ void quadrants::check_pairs(filament_ensemble *net)
 // begin [add spring bc]
 // implementations of adding a spring to quadrants for different boundary conditions
 
-void quadrants::add_spring_nonperiodic(spring *s, array<int, 2> fl)
+void quadrants::add_spring_nonperiodic(
+        double xlo, double xhi, double ylo, double yhi, array<int, 2> fl)
 {
     array<double, 2> fov = bc->get_fov();
-    vec_type h0 = s->get_h0();
-    vec_type disp = s->get_disp();
-
-    // compute bounding box of spring
-
-    double xlo = h0.x;
-    double xhi = h0.x + disp.x;
-    if (disp.x < 0) std::swap(xlo, xhi);
-
-    double ylo = h0.y;
-    double yhi = h0.y + disp.y;
-    if (disp.y < 0) std::swap(ylo, yhi);
-
-    assert(xlo <= xhi);
-    assert(ylo <= yhi);
 
     // compute quadrants containing bounding box
 
@@ -340,35 +339,19 @@ void quadrants::add_spring_nonperiodic(spring *s, array<int, 2> fl)
 
     // add spring index to quadrants
 
-    for (int i = xlower; i <= xupper; i++) {
-        for (int j = ylower; j <= yupper; j++) {
-
-            assert(0 <= i && i <= nq[0]);
-            assert(0 <= j && j <= nq[1]);
-
+    for (int ii = xlower; ii <= xupper; ii++) {
+        int i = clip(ii, 0, nq[0]);
+        for (int jj = ylower; jj <= yupper; jj++) {
+            int j = clip(jj, 0, nq[1]);
             quads[i][j].push_back(fl);
         }
     }
 }
 
-void quadrants::add_spring_xperiodic(spring *s, array<int, 2> fl)
+void quadrants::add_spring_xperiodic(
+        double xlo, double xhi, double ylo, double yhi, array<int, 2> fl)
 {
     array<double, 2> fov = bc->get_fov();
-    vec_type h0 = s->get_h0();
-    vec_type disp = s->get_disp();
-
-    // compute bounding box of spring
-
-    double xlo = h0.x;
-    double xhi = h0.x + disp.x;
-    if (disp.x < 0) std::swap(xlo, xhi);
-
-    double ylo = h0.y;
-    double yhi = h0.y + disp.y;
-    if (disp.y < 0) std::swap(ylo, yhi);
-
-    assert(xlo <= xhi);
-    assert(ylo <= yhi);
 
     // compute quadrants containing bounding box
 
@@ -383,36 +366,19 @@ void quadrants::add_spring_xperiodic(spring *s, array<int, 2> fl)
 
     // add spring index to quadrants
 
-    for (int j = ylower; j <= yupper; j++) {
-        for (int ii = xlower; ii <= xupper; ii++) {
-            int i = imod(ii, nq[0]);
-
-            assert(0 <= i && i < nq[0]);
-            assert(0 <= j && j <= nq[1]);
-
+    for (int ii = xlower; ii <= xupper; ii++) {
+        int i = imod(ii, nq[0]);
+        for (int jj = ylower; jj <= yupper; jj++) {
+            int j = clip(jj, 0, nq[1]);
             quads[i][j].push_back(fl);
         }
     }
 }
 
-void quadrants::add_spring_periodic(spring *s, array<int, 2> fl)
+void quadrants::add_spring_periodic(
+        double xlo, double xhi, double ylo, double yhi, array<int, 2> fl)
 {
     array<double, 2> fov = bc->get_fov();
-    vec_type h0 = s->get_h0();
-    vec_type disp = s->get_disp();
-
-    // compute bounding box of spring
-
-    double xlo = h0.x;
-    double xhi = h0.x + disp.x;
-    if (disp.x < 0) std::swap(xlo, xhi);
-
-    double ylo = h0.y;
-    double yhi = h0.y + disp.y;
-    if (disp.y < 0) std::swap(ylo, yhi);
-
-    assert(xlo <= xhi);
-    assert(ylo <= yhi);
 
     // compute quadrants containing bounding box
 
@@ -427,39 +393,20 @@ void quadrants::add_spring_periodic(spring *s, array<int, 2> fl)
 
     // add spring index to quadrants
 
-    for (int jj = ylower; jj <= yupper; jj++) {
-        int j = imod(jj, nq[1]);
-
-        for (int ii = xlower; ii <= xupper; ii++) {
-            int i = imod(ii, nq[0]);
-
-            assert(0 <= i && i < nq[0]);
-            assert(0 <= i && i < nq[1]);
-
+    for (int ii = xlower; ii <= xupper; ii++) {
+        int i = imod(ii, nq[0]);
+        for (int jj = ylower; jj <= yupper; jj++) {
+            int j = imod(jj, nq[1]);
             quads[i][j].push_back(fl);
         }
     }
 }
 
-void quadrants::add_spring_lees_edwards(spring *s, array<int, 2> fl)
+void quadrants::add_spring_lees_edwards(
+        double xlo, double xhi, double ylo, double yhi, array<int, 2> fl)
 {
     array<double, 2> fov = bc->get_fov();
     double delrx = bc->get_delrx();
-    vec_type h0 = s->get_h0();
-    vec_type disp = s->get_disp();
-
-    // compute bounding box of spring
-
-    double xlo = h0.x;
-    double xhi = h0.x + disp.x;
-    if (disp.x < 0.0) std::swap(xlo, xhi);
-
-    double ylo = h0.y;
-    double yhi = h0.y + disp.y;
-    if (disp.y < 0.0) std::swap(ylo, yhi);
-
-    assert(xlo <= xhi);
-    assert(ylo <= yhi);
 
     // compute y quadrants containing bounding box
     // note that the x quadrants depend on the y quadrant value
@@ -487,6 +434,7 @@ void quadrants::add_spring_lees_edwards(spring *s, array<int, 2> fl)
             xlo_new -= delrx;
             xhi_new -= delrx;
         }
+        assert(0 <= j && j < nq[1]);
 
         int xlower = floor(nq[0] * (xlo_new / fov[0] + 0.5));
         int xupper =  ceil(nq[0] * (xhi_new / fov[0] + 0.5));
@@ -496,8 +444,6 @@ void quadrants::add_spring_lees_edwards(spring *s, array<int, 2> fl)
         for (int ii = xlower; ii <= xupper; ii++) {
             int i = imod(ii, nq[0]);
 
-            assert(0 <= i && i < nq[0]);
-            assert(0 <= j && j < nq[1]);
 
             quads[i][j].push_back(fl);
         }
