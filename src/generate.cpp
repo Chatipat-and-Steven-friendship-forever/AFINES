@@ -1,5 +1,7 @@
 #include "generate.h"
 
+#include "box.h"
+
 // for straight filaments, set temp=0
 vector<vector<double>> generate_filament_ensemble(
         box *bc, int npolymer, int nbeads_min, int nbeads_extra, double nbeads_extra_prob,

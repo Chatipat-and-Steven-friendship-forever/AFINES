@@ -10,21 +10,21 @@
 #ifndef AFINES_MOTOR_ENSEMBLE_H
 #define AFINES_MOTOR_ENSEMBLE_H
 
-#include "motor.h"
+#include "globals.h"
 
 class motor_ensemble
 {
     public:
 
         motor_ensemble(vector<vector<double>> motors, double dt, double temp,
-                double l0, filament_ensemble *network, double v0, double kl,
+                double l0, class filament_ensemble *network, double v0, double kl,
                 double ron, double roff, double rend,
                 double fstall, double rcut, double vis);
         ~motor_ensemble();
 
-        void add_motor(motor *m);
+        void add_motor(class motor *m);
         int get_nmotors();
-        motor *get_motor(int);
+        class motor *get_motor(int);
 
         // [settings]
         void set_binding_two(double, double, double);
@@ -37,7 +37,7 @@ class motor_ensemble
         void kill_heads(int i);
         void unbind_all_heads();
         void revive_heads();
-        void set_external(external *ext);
+        void set_external(class external *ext);
 
         // [dynamics]
         void montecarlo();  // attach/detach
@@ -70,11 +70,11 @@ class motor_ensemble
         // void motor_tension(ofstream& fout);
 
     protected:
-        filament_ensemble *f_network;
-        vector<motor *> n_motors;
+        class filament_ensemble *f_network;
+        vector<class motor *> n_motors;
 
         double mld;  // saved for set_bending
-        external *ext;  // saved for deletion in destructor
+        class external *ext;  // saved for deletion in destructor
 
         // flags
         bool shear_flag, static_flag;

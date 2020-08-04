@@ -11,8 +11,14 @@
  (at your option) any later version. See ../LICENSE for details.
 -------------------------------------------------------------------*/
 
-#include "globals.h"
 #include "filament_ensemble.h"
+
+#include "box.h"
+#include "ext.h"
+#include "exv.h"
+#include "filament.h"
+#include "quadrants.h"
+#include "spring.h"
 
 filament_ensemble::filament_ensemble(
         box *bc_, vector<vector<double>> beads, array<int,2> mynq,
@@ -33,7 +39,7 @@ filament_ensemble::filament_ensemble(
 
         if (beads[i][3] != fil_idx && avec.size() > 0) {
 
-            network.push_back(new filament(this, avec, {}, bead_radius, vis, spring_len, stretching, bending, delta_t, temp, frac_force));
+            network.push_back(new filament(bc, avec, {}, bead_radius, vis, spring_len, stretching, bending, delta_t, temp, frac_force));
             avec.clear();
             fil_idx = beads[i][3];
         }
@@ -42,7 +48,7 @@ filament_ensemble::filament_ensemble(
     }
 
     if (avec.size() > 0)
-        network.push_back(new filament(this, avec, {}, bead_radius, vis, spring_len, stretching, bending, delta_t, temp, frac_force));
+        network.push_back(new filament(bc, avec, {}, bead_radius, vis, spring_len, stretching, bending, delta_t, temp, frac_force));
 
     avec.clear();
 

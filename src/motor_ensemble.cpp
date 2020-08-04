@@ -11,9 +11,11 @@
  (at your option) any later version. See ../LICENSE for details.
 -------------------------------------------------------------------*/
 
-#include "filament_ensemble.h"
-#include "globals.h"
 #include "motor_ensemble.h"
+
+#include "box.h"
+#include "ext.h"
+#include "filament_ensemble.h"
 #include "motor.h"
 
 motor_ensemble::motor_ensemble(vector<vector<double>> motors, double delta_t, double temp,

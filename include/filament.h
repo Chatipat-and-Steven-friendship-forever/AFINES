@@ -10,16 +10,13 @@
 #ifndef AFINES_FILAMENT_H
 #define AFINES_FILAMENT_H
 
-class filament_ensemble;
-
-#include "spring.h"
-#include "motor.h"
 #include "globals.h"
 
 class filament
 {
     public:
-        filament(filament_ensemble *net, vector<vec_type> positions, vector<vec_type> randoms,
+        filament(class box *bc,
+                vector<vec_type> positions, vector<vec_type> randoms,
                 double bead_radius, double visc,
                 double l0, double kl, double kb, double dt, double temp, double fracture);
         ~filament();
@@ -51,7 +48,7 @@ class filament
         vec_type get_force(int i);
 
         int get_nsprings();
-        spring *get_spring(int i);
+        class spring *get_spring(int i);
 
         double get_end2end();
 
@@ -68,8 +65,8 @@ class filament
         // attempts to fracture the filament
         // failure: returns no filaments
         // success: returns two filaments, split at the first fracture site
-        vector<filament *> try_fracture();
-        vector<filament *> fracture(int node);  // helper method
+        vector<class filament *> try_fracture();
+        vector<class filament *> fracture(int node);  // helper method
 
         void detach_all_motors();
 
@@ -95,7 +92,7 @@ class filament
 
         // [misc]
 
-        box *get_box();
+        class box *get_box();
 
         void add_bead(vec_type a, double l0, double kl);
 
@@ -103,7 +100,7 @@ class filament
 
         // [attached positions]
 
-        int new_attached(motor *m, int hd, int l, vec_type pos);
+        int new_attached(class motor *m, int hd, int l, vec_type pos);
         void del_attached(int i);
 
         int get_attached_l(int i);
@@ -122,8 +119,7 @@ class filament
         void set_lgrow(double);
 
     protected:
-        box *bc;
-        filament_ensemble *filament_network;
+        class box *bc;
 
         // state
 
@@ -131,7 +127,7 @@ class filament
         vector<vec_type> forces;
         vector<vec_type> prv_rnds;
 
-        vector<spring *> springs;
+        vector<class spring *> springs;
 
         struct attached_type { class motor *m; int hd; int l; double pos; };
         vector<attached_type> attached;

@@ -10,18 +10,14 @@
 #ifndef AFINES_FILAMENT_ENSEMBLE_H
 #define AFINES_FILAMENT_ENSEMBLE_H
 
-#include "filament.h"
-#include "box.h"
-#include "quadrants.h"
-#include "exv.h"
-#include "ext.h"
+#include "globals.h"
 
 class filament_ensemble
 {
     public:
 
         filament_ensemble(
-                box *bc, vector<vector<double>> beads, array<int, 2> nq,
+                class box *bc, vector<vector<double>> beads, array<int, 2> nq,
                 double dt, double temp, double visc,
                 double bead_radius, double l0,
                 double kl, double kb,
@@ -30,10 +26,10 @@ class filament_ensemble
         ~filament_ensemble();
 
         // settings
-        void set_external(external *);
+        void set_external(class external *);
 
         // quadrants
-        quadrants *get_quads();
+        class quadrants *get_quads();
         void quad_update_serial();
         vector<array<int, 2>> *get_attach_list(vec_type pos);
 
@@ -122,11 +118,11 @@ class filament_ensemble
         void print_filament_lengths();
 
     protected:
-        box *bc;
-        quadrants *quads;
-        excluded_volume *exv;
-        external *ext;
-        vector<filament *> network;
+        class box *bc;
+        class quadrants *quads;
+        class excluded_volume *exv;
+        class external *ext;
+        vector<class filament *> network;
 
         // thermo
         double pe_stretch, pe_bend, pe_exv, pe_ext;

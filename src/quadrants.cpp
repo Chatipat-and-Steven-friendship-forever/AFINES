@@ -1,4 +1,6 @@
 #include "quadrants.h"
+
+#include "box.h"
 #include "spring.h"
 #include "filament_ensemble.h"
 

@@ -10,13 +10,12 @@
 #define AFINES_SPRING_H
 
 #include "globals.h"
-#include "box.h"
 
 class spring
 {
     public:
         spring() {}
-        spring(box *bc, double l0, double kl);
+        spring(class box *bc, double l0, double kl);
         virtual ~spring() {}
 
         // updates all state
@@ -68,7 +67,7 @@ class spring
 
         // parameters
         double kl, l0;
-        box *bc;
+        class box *bc;
 };
 
 #endif

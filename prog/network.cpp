@@ -1,7 +1,9 @@
+#include "box.h"
+#include "ext.h"
 #include "filament_ensemble.h"
-#include "motor_ensemble.h"
-#include "globals.h"
 #include "generate.h"
+#include "motor_ensemble.h"
+#include "quadrants.h"
 
 #include <iostream>
 #include <fstream>

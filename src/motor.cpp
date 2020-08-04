@@ -11,8 +11,10 @@
  (at your option) any later version. See ../LICENSE for details.
 -------------------------------------------------------------------*/
 
-#include "globals.h"
 #include "motor.h"
+
+#include "box.h"
+#include "ext.h"
 #include "filament_ensemble.h"
 #include "potentials.h"
 

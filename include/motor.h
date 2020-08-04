@@ -10,11 +10,7 @@
 #ifndef AFINES_MOTOR_H
 #define AFINES_MOTOR_H
 
-class filament_ensemble;
-
 #include "globals.h"
-#include "box.h"
-#include "ext.h"
 
 enum class motor_state {
     free = 0,
@@ -28,7 +24,7 @@ class motor
     public:
         motor() {}
         motor(vector<double> mvec,
-                double l0, filament_ensemble *network,
+                double l0, class filament_ensemble *network,
                 double delta_t, double v0, double temp, double kl,
                 double ron, double roff, double rend,
                 double fstall, double rcut,
@@ -49,7 +45,7 @@ class motor
         double get_kalign();
         int get_align();
 
-        void set_external(external *ext);
+        void set_external(class external *ext);
 
         void relax_head( int hd);
         void kill_head( int hd);
@@ -118,8 +114,8 @@ class motor
 
     protected:
 
-        box *bc;
-        filament_ensemble *filament_network;
+        class box *bc;
+        class filament_ensemble *filament_network;
 
         // [parameters]
 
@@ -145,7 +141,7 @@ class motor
         int par_flag;
 
         // external
-        external *ext;
+        class external *ext;
 
         // [state]
 

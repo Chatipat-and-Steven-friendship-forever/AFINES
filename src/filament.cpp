@@ -12,20 +12,19 @@
 -------------------------------------------------------------------*/
 
 #include "filament.h"
-#include "spring.h"
-#include "filament_ensemble.h"
-#include "globals.h"
-#include "potentials.h"
 
-filament::filament(filament_ensemble *net, vector<vec_type> beadvec, vector<vec_type> randvec,
+#include "box.h"
+#include "motor.h"
+#include "potentials.h"
+#include "spring.h"
+
+filament::filament(box *bc_, vector<vec_type> beadvec, vector<vec_type> randvec,
         double bead_radius_, double visc_,
         double spring_length,
         double stretching_stiffness, double bending_stiffness,
         double deltat, double temp, double frac_force)
 {
-    filament_network = net;
-
-    bc = net->get_box();
+    bc = bc_;
     dt = deltat;
     temperature = temp;
     fracture_force = frac_force;
@@ -252,14 +251,14 @@ vector<filament *> filament::fracture(int node)
     // create filaments with the same parameters
     // forces are zeroed, but they should be already zeroed anyway
 
-    filament *upper = new filament(
-            filament_network, lower_pos, lower_ran,
+    filament *upper = new filament(bc,
+            lower_pos, lower_ran,
             bead_radius, visc,
             springs[0]->get_l0(), springs[0]->get_kl(), kb,
             dt, temperature, fracture_force);
 
-    filament *lower = new filament(
-            filament_network, upper_pos, upper_ran,
+    filament *lower = new filament(bc,
+            upper_pos, upper_ran,
             bead_radius, visc,
             springs[0]->get_l0(), springs[0]->get_kl(), kb,
             dt, temperature, fracture_force);

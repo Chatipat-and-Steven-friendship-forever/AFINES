@@ -2,7 +2,6 @@
 #define AFINES_BOX_H
 
 #include "globals.h"
-#include "vec.h"
 
 enum class bc_type {
     lees_edwards,

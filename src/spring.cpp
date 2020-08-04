@@ -13,8 +13,8 @@
 -------------------------------------------------------------------*/
 
 #include "spring.h"
-#include "globals.h"
-#include "filament.h"
+
+#include "box.h"
 
 spring::spring(box *bc_, double l0_, double kl_)
 {

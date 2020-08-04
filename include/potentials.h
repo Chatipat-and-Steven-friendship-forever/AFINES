@@ -2,7 +2,6 @@
 #define AFINES_POTENTIALS_H
 
 #include "globals.h"
-#include "vec.h"
 
 struct stretch_fene {
     double kl, l0, max_ext, eps_ext;
