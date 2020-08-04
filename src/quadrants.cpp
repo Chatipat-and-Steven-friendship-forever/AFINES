@@ -1,4 +1,5 @@
 #include "quadrants.h"
+#include "spring.h"
 #include "filament_ensemble.h"
 
 quadrants::quadrants(box *bc_, array<int, 2> nq_)
@@ -222,8 +223,7 @@ void quadrants::check_quad(filament_ensemble *net, vector<array<int, 2>> *q, vec
     // all springs within cutoff
     std::vector<array<int, 2>> ref_fl;
     for (array<int, 2> fl : all_springs) {
-        spring *s = net->get_filament(fl[0])->get_spring(fl[1]);
-        vec_type intpoint = s->intpoint(pos);
+        vec_type intpoint = net->intpoint(fl[0], fl[1], pos);
         double dist = bc->dist_bc(intpoint - pos);
         if (dist < cut) ref_fl.push_back(fl);
     }
@@ -231,8 +231,7 @@ void quadrants::check_quad(filament_ensemble *net, vector<array<int, 2>> *q, vec
     // springs in quadrant within cutoff
     std::vector<array<int, 2>> q_fl;
     for (array<int, 2> fl : *q) {
-        spring *s = net->get_filament(fl[0])->get_spring(fl[1]);
-        vec_type intpoint = s->intpoint(pos);
+        vec_type intpoint = net->intpoint(fl[0], fl[1], pos);
         double dist = bc->dist_bc(intpoint - pos);
         if (dist < cut) q_fl.push_back(fl);
     }
@@ -255,17 +254,19 @@ void quadrants::check_pairs(filament_ensemble *net)
     std::vector<array<array<int, 2>, 2>> ref;
     for (int i = 0; i < int(all_springs.size()); i++) {
         array<int, 2> fli = all_springs[i];
-        spring *si = net->get_filament(fli[0])->get_spring(fli[1]);
 
         for (int j = i + 1; j < int(all_springs.size()); j++) {
             array<int, 2> flj = all_springs[j];
-            spring *sj = net->get_filament(flj[0])->get_spring(flj[1]);
 
             // minimum distance between springs
-            double dist1 = bc->dist_bc(si->intpoint(sj->get_h0()) - sj->get_h0());
-            double dist2 = bc->dist_bc(si->intpoint(sj->get_h1()) - sj->get_h1());
-            double dist3 = bc->dist_bc(sj->intpoint(si->get_h0()) - si->get_h0());
-            double dist4 = bc->dist_bc(sj->intpoint(si->get_h1()) - si->get_h1());
+            vec_type p1 = net->get_start(flj[0], flj[1]);
+            vec_type p2 = net->get_end(flj[0], flj[1]);
+            vec_type p3 = net->get_start(fli[0], fli[1]);
+            vec_type p4 = net->get_end(fli[0], fli[1]);
+            double dist1 = bc->dist_bc(net->intpoint(fli[0], fli[1], p1) - p1);
+            double dist2 = bc->dist_bc(net->intpoint(fli[0], fli[1], p2) - p2);
+            double dist3 = bc->dist_bc(net->intpoint(flj[0], flj[1], p3) - p3);
+            double dist4 = bc->dist_bc(net->intpoint(flj[0], flj[1], p4) - p4);
             double mindist = std::min(std::min(dist1, dist2), std::min(dist3, dist4));
 
             if (mindist < cut) ref.push_back({fli, flj});
@@ -275,15 +276,17 @@ void quadrants::check_pairs(filament_ensemble *net)
     std::vector<array<array<int, 2>, 2>> p;
     for (auto pair : pairs) {
         array<int, 2> fli = pair[0];
-        spring *si = net->get_filament(fli[0])->get_spring(fli[1]);
         array<int, 2> flj = pair[1];
-        spring *sj = net->get_filament(flj[0])->get_spring(flj[1]);
 
         // minimum distance between springs
-        double dist1 = bc->dist_bc(si->intpoint(sj->get_h0()) - sj->get_h0());
-        double dist2 = bc->dist_bc(si->intpoint(sj->get_h1()) - sj->get_h1());
-        double dist3 = bc->dist_bc(sj->intpoint(si->get_h0()) - si->get_h0());
-        double dist4 = bc->dist_bc(sj->intpoint(si->get_h1()) - si->get_h1());
+        vec_type p1 = net->get_start(flj[0], flj[1]);
+        vec_type p2 = net->get_end(flj[0], flj[1]);
+        vec_type p3 = net->get_start(fli[0], fli[1]);
+        vec_type p4 = net->get_end(fli[0], fli[1]);
+        double dist1 = bc->dist_bc(net->intpoint(fli[0], fli[1], p1) - p1);
+        double dist2 = bc->dist_bc(net->intpoint(fli[0], fli[1], p2) - p2);
+        double dist3 = bc->dist_bc(net->intpoint(flj[0], flj[1], p3) - p3);
+        double dist4 = bc->dist_bc(net->intpoint(flj[0], flj[1], p4) - p4);
         double mindist = std::min(std::min(dist1, dist2), std::min(dist3, dist4));
 
         if (mindist < cut) p.push_back({fli, flj});

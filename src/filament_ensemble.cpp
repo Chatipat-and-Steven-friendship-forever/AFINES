@@ -100,16 +100,6 @@ vector<array<int, 2>> *filament_ensemble::get_attach_list(vec_type pos)
 
 // end [quadrants]
 
-vector<filament *>* filament_ensemble::get_network()
-{
-    return &network;
-}
-
-filament * filament_ensemble::get_filament(int index)
-{
-    return network[index];
-}
-
 double filament_ensemble::get_llength(int fil, int spring)
 {
     return network[fil]->get_spring(spring)->get_length();
@@ -140,6 +130,11 @@ vec_type filament_ensemble::intpoint(int fil, int spring, vec_type pos)
     return network[fil]->get_spring(spring)->intpoint(pos);
 }
 
+vec_type filament_ensemble::get_pos(int fil, int bead)
+{
+    return network[fil]->get_bead_position(bead);
+}
+
 vec_type filament_ensemble::get_force(int fil, int bead)
 {
     return network[fil]->get_force(bead);
@@ -150,25 +145,49 @@ box *filament_ensemble::get_box()
     return bc;
 }
 
-bool filament_ensemble::is_polymer_start(int fil, int bead){
-
+bool filament_ensemble::is_polymer_start(int fil, int bead)
+{
     return !(bead);
-
 }
 
-int filament_ensemble::get_nbeads(){
+bool filament_ensemble::intersect(array<int, 2> fl1, array<int, 2> fl2)
+{
+    spring *s1 = network[fl1[0]]->get_spring(fl1[1]);
+    spring *s2 = network[fl2[0]]->get_spring(fl2[1]);
+    return s1->get_line_intersect(s2);
+}
+
+int filament_ensemble::get_nbeads()
+{
     int tot = 0;
-    for (unsigned int f = 0; f < network.size(); f++)
-        tot += network[f]->get_nbeads();
+    for (filament *f : network) {
+        tot += f->get_nbeads();
+    }
     return tot;
 }
 
-int filament_ensemble::get_nsprings(){
-    return this->get_nbeads() - network.size();
+int filament_ensemble::get_nsprings()
+{
+    int tot = 0;
+    for (filament *f : network) {
+        tot += f->get_nsprings();
+    }
+    return tot;
 }
 
-int filament_ensemble::get_nfilaments(){
+int filament_ensemble::get_nfilaments()
+{
     return network.size();
+}
+
+int filament_ensemble::get_nbeads(int i)
+{
+    return network[i]->get_nbeads();
+}
+
+int filament_ensemble::get_nsprings(int i)
+{
+    return network[i]->get_nsprings();
 }
 
 // begin [attached]
@@ -491,7 +510,7 @@ void filament_ensemble::update_excluded_volume()
     pe_exv = 0.0;
     vir_ext.zero();
     if (exv) {
-        exv->update_spring_forces_from_quads(quads, network);
+        exv->update_spring_forces_from_quads(quads, this);
         pe_exv = exv->get_pe_exv();
         vir_exv = exv->get_vir_exv();
     }

@@ -39,14 +39,15 @@ class filament_ensemble
 
         // state
 
-        int get_nbeads();
-        int get_nsprings();
         int get_nfilaments();
+        int get_nbeads();
+        int get_nbeads(int);
+        int get_nsprings();
+        int get_nsprings(int);
 
         box *get_box();
-        vector<filament *> * get_network();
-        filament * get_filament(int index);
 
+        vec_type get_pos(int fil, int bead);
         vec_type get_force(int fil, int bead);
         bool is_polymer_start(int f, int bead);
 
@@ -57,8 +58,11 @@ class filament_ensemble
         vec_type intpoint(int fil, int spring, vec_type pos);
         double get_llength(int fil, int spring);
 
+        bool intersect(array<int, 2> fl1, array<int, 2> fl2);
+
         // attached locations
-        fp_index_type new_attached(motor *m, int hd, int f_index, int l_index, vec_type pos);
+        fp_index_type new_attached(
+                class motor *m, int hd, int f_index, int l_index, vec_type pos);
         void del_attached(fp_index_type i);
         array<int, 2> get_attached_fl(fp_index_type i);
         vec_type get_attached_pos(fp_index_type i);

@@ -12,6 +12,7 @@
 -------------------------------------------------------------------*/
 
 #include "filament.h"
+#include "spring.h"
 #include "filament_ensemble.h"
 #include "globals.h"
 #include "potentials.h"

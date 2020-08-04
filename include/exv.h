@@ -1,14 +1,12 @@
 #ifndef AFINES_EXV_H
 #define AFINES_EXV_H
 
-#include "filament.h"
-#include "quadrants.h"
-#include "box.h"
+#include "globals.h"
 
 class excluded_volume
 {
     public:
-        excluded_volume(box *bc_, double rmax_, double kexv_)
+        excluded_volume(class box *bc_, double rmax_, double kexv_)
         {
             bc = bc_;
             rmax = rmax_;
@@ -16,17 +14,18 @@ class excluded_volume
             pe_exv = 0.0;
         }
 
-        void update_spring_forces(vector<filament *> &network, int f);
-        void update_spring_forces_from_quads(quadrants *quads, vector<filament *> &network);
+        void update_spring_forces(class filament_ensemble *net);
+        void update_spring_forces_from_quads(
+                class quadrants *quads, class filament_ensemble *net);
         void update_force_between_filaments(
-                vector<filament *> &network, int n1, int l1, int n2, int l2);
-        void update_excluded_volume(vector<filament *> &network, int f);
+                class filament_ensemble *net, array<int, 2> fl1, array<int, 2> fl2);
+        void update_excluded_volume(class filament_ensemble *net);
 
         double get_pe_exv() { return pe_exv; }
         virial_type get_vir_exv() { return vir_exv; }
 
     protected:
-        box *bc;
+        class box *bc;
         double rmax, kexv;
         double pe_exv;
         virial_type vir_exv;
