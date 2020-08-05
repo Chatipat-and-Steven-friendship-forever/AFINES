@@ -342,6 +342,7 @@ void motor::update_force()
 
     // external forces
     if (ext) {
+        vir_ext.zero();
         this->update_external(0);
         this->update_external(1);
     }
@@ -425,7 +426,7 @@ void motor::update_external(int hd)
     ext_result_type result = ext->compute(h[hd]);
     ext_eng[hd] = result.energy;
     ext_force[hd] = result.force;
-    vir_ext = result.virial;
+    vir_ext += result.virial;
 }
 
 // update projected force for walking
