@@ -65,7 +65,7 @@ int main(int argc, char **argv)
     bool quad_off_flag;
     int quad_update_period;
 
-    bool circle_flag; double circle_radius, circle_spring_constant;
+    bool circle_flag; double circle_radius, circle_max_radius, circle_spring_constant;
 
     po::options_description config_environment("Environment Options");
     config_environment.add_options()
@@ -100,6 +100,7 @@ int main(int argc, char **argv)
         // circular confinement
         ("circle_flag", po::value<bool>(&circle_flag)->default_value(false), "flag to add a circular wall")
         ("circle_radius", po::value<double>(&circle_radius)->default_value(INFINITY), "radius of circular wall")
+        ("circle_max_radius", po::value<double>(&circle_max_radius)->default_value(INFINITY), "maximum allowed distance from center of circle")
         ("circle_spring_constant", po::value<double>(&circle_spring_constant)->default_value(0.0), "spring constant of circular wall")
         ;
 
@@ -526,9 +527,15 @@ int main(int argc, char **argv)
     }
 
     if (circle_flag) {
-        net->set_external(new ext_circle(circle_spring_constant, circle_radius));
-        myosins->set_external(new ext_circle(circle_spring_constant, circle_radius));
-        crosslks->set_external(new ext_circle(circle_spring_constant, circle_radius));
+        if (std::isinf(circle_max_radius)) {
+            net->set_external(new ext_circle(circle_spring_constant, circle_radius));
+            myosins->set_external(new ext_circle(circle_spring_constant, circle_radius));
+            crosslks->set_external(new ext_circle(circle_spring_constant, circle_radius));
+        } else {
+            net->set_external(new ext_circle_fene(circle_spring_constant, circle_radius, circle_max_radius));
+            myosins->set_external(new ext_circle_fene(circle_spring_constant, circle_radius, circle_max_radius));
+            crosslks->set_external(new ext_circle_fene(circle_spring_constant, circle_radius, circle_max_radius));
+        }
     }
 
     // END CREATE NETWORK OBJECTS
