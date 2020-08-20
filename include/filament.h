@@ -105,8 +105,6 @@ class filament
 
         // [misc]
 
-        class box *get_box();
-
         void add_bead(vec_type a, double l0, double kl);
 
         bool operator==(const filament& that);

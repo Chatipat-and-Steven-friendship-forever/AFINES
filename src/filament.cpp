@@ -166,11 +166,6 @@ void filament::update_d_strain(double g)
     }
 }
 
-box *filament::get_box()
-{
-    return bc;
-}
-
 vec_type filament::get_force(int i)
 {
     return forces[i];
