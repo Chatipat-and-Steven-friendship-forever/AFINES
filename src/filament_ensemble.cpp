@@ -76,6 +76,7 @@ filament_ensemble::~filament_ensemble()
 
 void filament_ensemble::set_external(external *ext_)
 {
+    if (ext) delete ext;
     ext = ext_;
 }
 

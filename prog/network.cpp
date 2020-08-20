@@ -66,6 +66,8 @@ int main(int argc, char **argv)
     int quad_update_period;
 
     bool circle_flag; double circle_radius, circle_max_radius, circle_spring_constant;
+    bool circle_linear_change_flag; double circle_radius_change_rate, circle_max_radius_change_rate, circle_spring_constant_change_rate;
+    int n_bw_confinement_change;
 
     po::options_description config_environment("Environment Options");
     config_environment.add_options()
@@ -102,6 +104,11 @@ int main(int argc, char **argv)
         ("circle_radius", po::value<double>(&circle_radius)->default_value(INFINITY), "radius of circular wall")
         ("circle_max_radius", po::value<double>(&circle_max_radius)->default_value(INFINITY), "maximum allowed distance from center of circle")
         ("circle_spring_constant", po::value<double>(&circle_spring_constant)->default_value(0.0), "spring constant of circular wall")
+        ("circle_linear_change_flag", po::value<bool>(&circle_linear_change_flag)->default_value(false), "if true, linearly increases circular wall parameters")
+        ("circle_radius_change_rate", po::value<double>(&circle_radius_change_rate)->default_value(0.0), "rate at which to increase radius of circular wall")
+        ("circle_max_radius_change_rate", po::value<double>(&circle_max_radius_change_rate)->default_value(0.0), "rate at which to increase maximum allowed distance from center of circle")
+        ("circle_spring_constant_change_rate", po::value<double>(&circle_spring_constant_change_rate)->default_value(0.0), "rate at which to increase spring constant of circular wall")
+        ("n_bw_confinement_change", po::value<int>(&n_bw_confinement_change)->default_value(1), "steps between subsequent changes in confinement parameters")
         ;
 
     // filaments
@@ -555,6 +562,21 @@ int main(int argc, char **argv)
 
     int count; double t;
     for (count = 0, t = tinit; t <= tfinal; count++, t += dt) {
+
+        if (circle_linear_change_flag && count % n_bw_confinement_change == 0) {
+            double ck = circle_spring_constant + circle_spring_constant_change_rate * t;
+            double cr = circle_radius + circle_radius_change_rate * t;
+            double cmr = circle_max_radius + circle_max_radius_change_rate * t;
+            if (std::isinf(circle_max_radius)) {
+                net->set_external(new ext_circle(ck, cr));
+                myosins->set_external(new ext_circle(ck, cr));
+                crosslks->set_external(new ext_circle(ck, cr));
+            } else {
+                net->set_external(new ext_circle_fene(ck, cr, cmr));
+                myosins->set_external(new ext_circle_fene(ck, cr, cmr));
+                crosslks->set_external(new ext_circle_fene(ck, cr, cmr));
+            }
+        }
 
         // compute forces and energies
         net->compute_forces();

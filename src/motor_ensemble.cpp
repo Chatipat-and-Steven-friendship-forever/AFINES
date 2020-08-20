@@ -127,6 +127,7 @@ void motor_ensemble::revive_heads()
 
 void motor_ensemble::set_external(external *ext_)
 {
+    if (ext) delete ext;
     ext = ext_;
     for (motor *m : n_motors) {
         m->set_external(ext);
