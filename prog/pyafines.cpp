@@ -463,7 +463,7 @@ void motor_ensemble_bindings(py::module &m)
         ;
 }
 
-PYBIND11_MODULE(afines, m)
+PYBIND11_MODULE(pyafines, m)
 {
     vec_bindings(m);
     globals_bindings(m);
