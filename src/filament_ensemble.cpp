@@ -163,7 +163,7 @@ bool filament_ensemble::intersect(array<int, 2> fl1, array<int, 2> fl2)
     vec_type r2 = network[fl1[0]]->get_end(fl1[1]);
     vec_type s1 = network[fl2[0]]->get_start(fl2[1]);
     vec_type s2 = network[fl2[0]]->get_end(fl2[1]);
-    boost::optional<vec_type> inter = seg_seg_intersection_bc(bc, r1, r2, s1, s2);
+    std::optional<vec_type> inter = seg_seg_intersection_bc(bc, r1, r2, s1, s2);
     if (inter) {
         return true;
     } else {

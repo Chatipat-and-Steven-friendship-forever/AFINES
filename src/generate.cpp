@@ -127,7 +127,7 @@ vector<vector<double>> spring_spring_intersections(box *bc, vector<vector<double
                     if (f1 == f2 && abs(int(l1) - int(l2)) < 2) continue;
                     vec_type s1 = filaments[f2][l2];
                     vec_type s2 = filaments[f2][l2 + 1];
-                    boost::optional<vec_type> inter = seg_seg_intersection_bc(bc, r1, r2, s1, s2);
+                    std::optional<vec_type> inter = seg_seg_intersection_bc(bc, r1, r2, s1, s2);
                     if (inter && rng_u() <= prob) {
                         vec_type disp = bc->rij_bc(s2 - s1);
                         double llen = abs(disp);

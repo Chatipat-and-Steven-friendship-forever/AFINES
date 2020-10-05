@@ -12,7 +12,6 @@
 -------------------------------------------------------------------*/
 
 #include "globals.h"
-#include <boost/range/irange.hpp>
 
 // begin [random]
 
@@ -342,7 +341,7 @@ multimap<double, array<int, 2> > flip_map(const unordered_map<array<int, 2>, dou
     return dst;
 }
 
-boost::optional<vec_type> seg_seg_intersection(
+std::optional<vec_type> seg_seg_intersection(
         vec_type p1, vec_type q1,
         vec_type p2, vec_type q2)
 {

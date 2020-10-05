@@ -36,6 +36,6 @@ class box {
         vector<function<void(double)>> callbacks;
 };
 
-boost::optional<vec_type> seg_seg_intersection_bc(box *bc, vec_type r1, vec_type r2, vec_type r3, vec_type r4);
+std::optional<vec_type> seg_seg_intersection_bc(box *bc, vec_type r1, vec_type r2, vec_type r3, vec_type r4);
 
 #endif

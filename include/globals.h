@@ -19,13 +19,8 @@
 //=====================================
 //included dependences
 #include <boost/algorithm/string.hpp>
-#include <boost/range/irange.hpp>
-#include <boost/range/join.hpp>
-#include <boost/optional.hpp>
 #include <boost/functional/hash.hpp>
-#define BOOST_NO_CXX11_SCOPED_ENUMS
 #include <boost/filesystem.hpp>
-#undef BOOST_NO_CXX11_SCOPED_ENUMS
 
 #include <algorithm> //std::for_each
 #include <array>
@@ -38,6 +33,7 @@
 #include <iostream> //std::cout
 #include <limits>
 #include <map>
+#include <optional>
 #include <random>
 #include <set>
 #include <stdexcept>
@@ -158,7 +154,7 @@ map<array<int, 2>, double> transpose(map<array<int, 2>, double> mat);
 map<array<int, 2>, double> invert_block_diagonal(map<array<int, 2>, double> mat);
 void intarray_printer(array<int,2> a);
 
-boost::optional<vec_type> seg_seg_intersection(vec_type, vec_type, vec_type, vec_type);
+std::optional<vec_type> seg_seg_intersection(vec_type, vec_type, vec_type, vec_type);
 std::string quads_error_message(std::string, vector<array<int, 2> >, vector<array<int, 2> > );
 
 struct mc_prob
@@ -172,9 +168,9 @@ struct mc_prob
     double prob;
     double used;
 
-    boost::optional<double> operator()(double needprob)
+    std::optional<double> operator()(double needprob)
     {
-        boost::optional<double> result;
+        std::optional<double> result;
         if (used <= prob && prob < used + needprob) {
             result = {prob - used};
         }

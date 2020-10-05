@@ -626,7 +626,7 @@ bool motor::try_attach(int hd, mc_prob &p)
 
     int count = attach_list->size();
     double needprob = onrate * count;
-    boost::optional<double> opt_p = p(needprob);
+    std::optional<double> opt_p = p(needprob);
 
     if (opt_p) {
         double mf_rand = *opt_p;
@@ -697,7 +697,7 @@ bool motor::try_detach(int hd, mc_prob &p)
     if (state[pr(hd)] == motor_state::bound)
         offrate = filament_network->at_barbed_end(fp_index[hd]) ? kend2 : koff2;
 
-    boost::optional<double> opt_p = p(offrate);
+    std::optional<double> opt_p = p(offrate);
     if (opt_p) {
         double prob = offrate * metropolis_prob(hd, {-1, -1}, hpos_new);
         if (*opt_p < prob) {

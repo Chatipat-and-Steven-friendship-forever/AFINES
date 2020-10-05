@@ -89,18 +89,18 @@ double box::dot_bc(vec_type disp1, vec_type disp2)
     return dot(rij_bc(disp1), rij_bc(disp2));
 }
 
-boost::optional<vec_type> seg_seg_intersection_bc(box *bc, vec_type r1, vec_type r2, vec_type r3, vec_type r4)
+std::optional<vec_type> seg_seg_intersection_bc(box *bc, vec_type r1, vec_type r2, vec_type r3, vec_type r4)
 {
     vec_type rij12 = bc->rij_bc(r2 - r1);
     vec_type rij13 = bc->rij_bc(r3 - r1);
     vec_type rij34 = bc->rij_bc(r4 - r3);
     vec_type rij14 = rij13 + rij34;
 
-    boost::optional<vec_type> inter = seg_seg_intersection({}, rij12, rij13, rij14);
+    std::optional<vec_type> inter = seg_seg_intersection({}, rij12, rij13, rij14);
     if (inter) {
         return bc->pos_bc(*inter + r1);
     } else {
-        return boost::none;
+        return {};
     }
 }
 
