@@ -23,12 +23,7 @@ set(sources
 )
 
 add_subdirectory(external/fmt)
-add_subdirectory(external/pybind11)
 
 add_executable(network prog/network.cpp ${sources})
 target_include_directories(network PRIVATE include)
 target_link_libraries(network PRIVATE Boost::filesystem Boost::program_options Boost::system fmt::fmt-header-only)
-
-pybind11_add_module(pyafines prog/pyafines.cpp ${sources})
-target_include_directories(pyafines PUBLIC include)
-target_link_libraries(pyafines PRIVATE Boost::filesystem Boost::program_options Boost::system fmt::fmt-header-only)
