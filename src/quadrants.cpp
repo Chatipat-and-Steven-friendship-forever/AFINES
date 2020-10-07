@@ -35,7 +35,6 @@ void quadrants::add_spring(spring *s, array<int, 2> fl)
 
 void quadrants::build_pairs()
 {
-    // TODO: build a Verlet list on top of this
     pairs.clear();
     if (!quad_flag) {
         for (size_t i = 0; i < all_springs.size(); i++) {
@@ -52,7 +51,6 @@ void quadrants::build_pairs()
                     for (size_t j = i + 1; j < q.size(); j++) {
                         // insertion order is preserved in each quadrant,
                         // so we don't risk double counting
-                        // TODO: add check for double counting, just in case
                         pairset.insert({q[i], q[j]});
                     }
                 }

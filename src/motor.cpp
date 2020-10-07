@@ -16,13 +16,6 @@
 #include "filament_ensemble.h"
 #include "potentials.h"
 
-// TODO:
-// - decouple damp from mld
-// - add rotational force to head so forces aren't immediately applied to filaments
-// - force/energy calculation less insane
-// - fix virial calculation
-// - make dead, inactive, and static motor head work properly
-
 motor::motor(vector<double> mvec,
         double mlen, filament_ensemble * network,
         double delta_t,
@@ -696,7 +689,6 @@ void motor::attach_head(int hd, vec_type intpoint, array<int, 2> fl)
     bind_disp[hd] = bc->rij_bc(intpoint - h[hd]);
 
     // update head position
-    // TODO: check that intpoint and get_attached_pos coincide
     h[hd] = intpoint;
     this->step();
 }

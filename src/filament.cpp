@@ -140,7 +140,6 @@ void filament::update_forces(int index, vec_type f)
     beads[index]->update_force(f);
 }
 
-// TODO: energy, virial
 void filament::pull_on_ends(double f)
 {
     if (beads.size() < 2) return;
@@ -152,7 +151,6 @@ void filament::pull_on_ends(double f)
     beads[last]->update_force( 0.5*f*dr/len);
 }
 
-// TODO: energy, virial
 void filament::affine_pull(double f)
 {
     if (beads.size() < 2) return;
@@ -501,7 +499,6 @@ void filament::set_lgrow(double dl){
 
 // begin [attached]
 
-// TODO: use an in-place linked list instead
 // pos = distance from pointed end, relative to bead[l + 1]
 
 int filament::new_attached(motor *m, int hd, int l, vec_type intpoint)
