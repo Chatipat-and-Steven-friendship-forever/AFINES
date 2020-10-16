@@ -56,6 +56,9 @@ class motor
         void revive_head(int hd);
         void deactivate_head(int hd);
 
+        void set_velocity(double v1, double v2);
+        void set_stall_force(double f1, double f2);
+
         // get [state]
         array<motor_state, 2> get_states();
         vec_type get_h0();
@@ -132,7 +135,7 @@ class motor
         double max_bind_dist, max_bind_dist_sq;
 
         // walk
-        double vs, stall_force;
+        array<double, 2> vs, stall_force;
 
         // stretch
         double mk, mld;

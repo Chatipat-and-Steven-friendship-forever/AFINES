@@ -43,8 +43,8 @@ motor::motor(vector<double> mvec,
     max_bind_dist_sq = rcut * rcut;
 
     // walk
-    vs = v0;
-    stall_force = fstall;
+    vs[0] = vs[1] = v0;
+    stall_force[0] = stall_force[1] = fstall;
 
     // stretch
     mk = stiffness;
@@ -159,6 +159,18 @@ int motor::get_align()
 void motor::set_external(external *ext_)
 {
     ext = ext_;
+}
+
+void motor::set_velocity(double v1, double v2)
+{
+    vs[0] = v1;
+    vs[1] = v2;
+}
+
+void motor::set_stall_force(double f1, double f2)
+{
+    stall_force[0] = f1;
+    stall_force[1] = f2;
 }
 
 // move head in the direction of the other head
@@ -342,10 +354,8 @@ void motor::update_force()
 
     // update projected force for walking
     // computed from other forces, so should be called last
-    if (vs != 0.0) {
-        this->update_force_proj(0);
-        this->update_force_proj(1);
-    }
+    if (vs[0] != 0.0) this->update_force_proj(0);
+    if (vs[1] != 0.0) this->update_force_proj(1);
 
     this->filament_update();
 }
@@ -477,17 +487,17 @@ void motor::brownian_relax(int hd)
 // stepping kinetics of a single bound head
 void motor::walk(int hd)
 {
-    if (vs == 0.0) return;
-    if (vs > 0.0 && filament_network->at_barbed_end(fp_index[hd])) return;
-    if (vs < 0.0 && filament_network->at_pointed_end(fp_index[hd])) return;
+    if (vs[hd] == 0.0) return;
+    if (vs[hd] > 0.0 && filament_network->at_barbed_end(fp_index[hd])) return;
+    if (vs[hd] < 0.0 && filament_network->at_pointed_end(fp_index[hd])) return;
 
     //calculate motor velocity
-    double vm = vs;
+    double vm = vs[hd];
     if (state[pr(hd)] != motor_state::free) {
-        double factor = 1.0 - f_proj[hd] / stall_force;
+        double factor = 1.0 - f_proj[hd] / stall_force[hd];
         if (factor < 0.0) factor = 0.0;
         if (factor > 2.0) factor = 2.0;
-        vm = factor * vs;
+        vm = factor * vs[hd];
     }
 
     // update relative position

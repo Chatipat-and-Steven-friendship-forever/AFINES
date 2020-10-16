@@ -38,6 +38,8 @@ class motor_ensemble
         void unbind_all_heads();
         void revive_heads();
         void set_external(external *ext);
+        void set_velocity(double v1, double v2);
+        void set_stall_force(double f1, double f2);
 
         // [dynamics]
         void montecarlo();  // attach/detach

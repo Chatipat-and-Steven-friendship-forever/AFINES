@@ -153,6 +153,7 @@ int main(int argc, char **argv)
     double a_m_kon2, a_m_kend2, a_m_koff2;
     double a_motor_length, a_motor_stiffness;
     double a_motor_v, a_m_stall;
+    double a_motor_v2, a_m_stall2;
     double a_m_bend, a_m_ang, a_m_kalign;
     int a_m_align;
 
@@ -186,6 +187,8 @@ int main(int argc, char **argv)
         // walking
         ("a_motor_v", po::value<double>(&a_motor_v)->default_value(1),"active motor velocity (um/s)")
         ("a_m_stall", po::value<double>(&a_m_stall)->default_value(0.5),"force beyond which motors don't walk (pN)")
+        ("a_motor_v2", po::value<double>(&a_motor_v2)->default_value(NAN),"active motor velocity (um/s) for the second head")
+        ("a_m_stall2", po::value<double>(&a_m_stall2)->default_value(NAN),"force beyond which motors don't walk (pN) for the second head")
 
         ("dead_head_flag", po::value<bool>(&dead_head_flag)->default_value(false), "flag to kill head <dead_head> of all motors")
         ("dead_head", po::value<int>(&dead_head)->default_value(0), "index of head to kill")
@@ -203,6 +206,7 @@ int main(int argc, char **argv)
     double p_m_kon2, p_m_kend2, p_m_koff2;
     double p_motor_length, p_motor_stiffness;
     double p_motor_v, p_m_stall;
+    double p_motor_v2, p_m_stall2;
     double p_m_bend, p_m_ang, p_m_kalign;
     int p_m_align;
 
@@ -237,6 +241,8 @@ int main(int argc, char **argv)
         // walking
         ("p_motor_v", po::value<double>(&p_motor_v)->default_value(0),"passive motor velocity (um/s)")
         ("p_m_stall", po::value<double>(&p_m_stall)->default_value(0),"force beyond which xlinks don't walk (pN)")
+        ("p_motor_v2", po::value<double>(&p_motor_v2)->default_value(NAN),"passive motor velocity (um/s) for the second head")
+        ("p_m_stall2", po::value<double>(&p_m_stall2)->default_value(NAN),"force beyond which xlinks don't walk (pN) for the second head")
 
         ("p_dead_head_flag", po::value<bool>(&p_dead_head_flag)->default_value(false), "flag to kill head <dead_head> of all crosslinks")
         ("p_dead_head", po::value<int>(&p_dead_head)->default_value(0), "index of head to kill")
@@ -499,6 +505,8 @@ int main(int argc, char **argv)
         if (a_m_align == 0) myosins->set_align(a_m_kalign);
         if (a_m_align == -1) myosins->set_antipar(-a_m_kalign);
     }
+    if (!std::isnan(a_motor_v2)) myosins->set_velocity(a_motor_v, a_motor_v2);
+    if (!std::isnan(a_m_stall2)) myosins->set_stall_force(a_m_stall, a_m_stall2);
 
     cout<<"Adding passive motors (crosslinkers) ...\n";
     motor_ensemble *crosslks = new motor_ensemble(
@@ -516,6 +524,8 @@ int main(int argc, char **argv)
         if (p_m_align == 0) crosslks->set_align(p_m_kalign);
         if (p_m_align == -1) crosslks->set_antipar(-p_m_kalign);
     }
+    if (!std::isnan(p_motor_v2)) crosslks->set_velocity(p_motor_v, p_motor_v2);
+    if (!std::isnan(p_m_stall2)) crosslks->set_stall_force(p_m_stall, p_m_stall2);
 
     if (circle_flag) {
         net->set_external(new ext_circle(circle_spring_constant, circle_radius));

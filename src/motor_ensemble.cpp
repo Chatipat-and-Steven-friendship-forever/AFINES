@@ -133,6 +133,20 @@ void motor_ensemble::set_external(external *ext_)
     }
 }
 
+void motor_ensemble::set_velocity(double v1, double v2)
+{
+    for (motor *m : n_motors) {
+        m->set_velocity(v1, v2);
+    }
+}
+
+void motor_ensemble::set_stall_force(double f1, double f2)
+{
+    for (motor *m : n_motors) {
+        m->set_stall_force(f1, f2);
+    }
+}
+
 // end [settings]
 
 // begin [dynamics]
