@@ -147,28 +147,40 @@ void motor_ensemble::set_stall_force(double f1, double f2)
     }
 }
 
+void motor_ensemble::set_occ(double occ)
+{
+    for (motor *m : n_motors) {
+        m->set_occ(occ);
+    }
+}
+
 // end [settings]
 
 // begin [dynamics]
 
-void motor_ensemble::montecarlo()
+void motor_ensemble::try_attach_detach()
 {
-    for (motor *m : n_motors) {
-        array<motor_state, 2> s = m->get_states();
+    for (size_t i = 0; i < n_motors.size(); i++) {
+        this->try_attach_detach(i);
+    }
+}
 
-        mc_prob p;
+void motor_ensemble::try_attach_detach(int i)
+{
+    array<motor_state, 2> s = n_motors[i]->get_states();
 
-        if (s[0] == motor_state::free) {
-            m->try_attach(0, p);
-        } else if (s[0] != motor_state::inactive) {
-            m->try_detach(0, p);
-        }
+    mc_prob p;
 
-        if (s[1] == motor_state::free) {
-            m->try_attach(1, p);
-        } else if (s[1] != motor_state::inactive) {
-            m->try_detach(1, p);
-        }
+    if (s[0] == motor_state::free) {
+        n_motors[i]->try_attach(0, p);
+    } else if (s[0] != motor_state::inactive) {
+        n_motors[i]->try_detach(0, p);
+    }
+
+    if (s[1] == motor_state::free) {
+        n_motors[i]->try_attach(1, p);
+    } else if (s[1] != motor_state::inactive) {
+        n_motors[i]->try_detach(1, p);
     }
 }
 

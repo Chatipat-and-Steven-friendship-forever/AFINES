@@ -40,9 +40,11 @@ class motor_ensemble
         void set_external(external *ext);
         void set_velocity(double v1, double v2);
         void set_stall_force(double f1, double f2);
+        void set_occ(double occ);
 
         // [dynamics]
-        void montecarlo();  // attach/detach
+        void try_attach_detach();  // attach/detach all motors
+        void try_attach_detach(int i);  // attach/detach a single motor
         void integrate();  // brownian/walk
         void update_d_strain(double g);  // shear
         void compute_forces();  // compute force/energy/virial

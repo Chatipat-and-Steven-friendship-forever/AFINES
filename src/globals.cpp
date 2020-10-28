@@ -53,6 +53,11 @@ double rng_n()
 
 }
 
+mt19937_64 &get_rng()
+{
+    return generator;
+}
+
 array<double, 2> cm_bc(string bc, const vector<double>& xi, const vector<double>& yi, double xbox, double ybox, double delrx)
 {
     if (bc == "PERIODIC" || bc == "LEES-EDWARDS")

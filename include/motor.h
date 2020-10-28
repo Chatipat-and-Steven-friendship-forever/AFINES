@@ -59,6 +59,8 @@ class motor
         void set_velocity(double v1, double v2);
         void set_stall_force(double f1, double f2);
 
+        void set_occ(double occ);
+
         // get [state]
         array<motor_state, 2> get_states();
         vec_type get_h0();
@@ -133,6 +135,7 @@ class motor
         double kon, koff, kend;
         double kon2, koff2, kend2;
         double max_bind_dist, max_bind_dist_sq;
+        double occ;
 
         // walk
         array<double, 2> vs, stall_force;

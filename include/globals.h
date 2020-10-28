@@ -68,6 +68,7 @@ double rng_u();
 int pr(int num);
 double rng_exp(double mean);
 double rng_n(); //default parameters --> mu = 0, sig = 1
+mt19937_64 &get_rng();
 
 vector<int> range_bc(string bc, double delrx, int botq, int topq, int low, int high);
 vector<int> range_bc(string bc, double delrx, int botq, int topq, int low, int high, int di);

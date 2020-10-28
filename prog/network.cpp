@@ -112,6 +112,8 @@ int main(int argc, char **argv)
     double rmax, kexv;
     double kgrow, lgrow, l0min, l0max; int nlink_max;
 
+    double occ;
+
     po::options_description config_actin("Filament Options");
     config_actin.add_options()
         ("actin_in", po::value<string>(&actin_in)->default_value(""), "input actin positions file")
@@ -138,6 +140,9 @@ int main(int argc, char **argv)
         ("l0min", po::value<double>(&l0min)->default_value(0), "minimum length a link can shrink to before disappearing")
         ("l0max", po::value<double>(&l0max)->default_value(2), "maximum length a link can grow to before breaking into two links")
         ("nlink_max", po::value<int>(&nlink_max)->default_value(25), "maximum number of links allowed on filament")
+
+        // steric occlusion for binding
+        ("occ", po::value<double>(&occ)->default_value(0), "closest distance crosslinkers and motors can bind on a filament")
         ;
 
     // motors
@@ -533,6 +538,11 @@ int main(int argc, char **argv)
         crosslks->set_external(new ext_circle(circle_spring_constant, circle_radius));
     }
 
+    if (occ > 0.0) {
+        myosins->set_occ(occ);
+        crosslks->set_occ(occ);
+    }
+
     // compute forces and energies
     net->compute_forces();
     crosslks->compute_forces();
@@ -555,6 +565,14 @@ int main(int argc, char **argv)
     ofstream file_pm(pmfile, write_mode);
     ofstream file_th(thfile, write_mode);
     ofstream file_pe(pefile, write_mode);
+
+    // set up occ
+    size_t n_myosins = myosins->get_nmotors();
+    size_t n_crosslks = crosslks->get_nmotors();
+    vector<size_t> motor_ix(n_myosins + n_crosslks);
+    for (size_t i = 0; i < n_myosins + n_crosslks; i++) {
+        motor_ix[i] = i;
+    }
 
     int count; double t;
     for (count = 0, t = tinit; t <= tfinal; count++, t += dt) {
@@ -698,8 +716,19 @@ int main(int argc, char **argv)
         }
 
         // motor attachment/detachment
-        crosslks->montecarlo();
-        myosins->montecarlo();
+        if (occ > 0.0) {
+            std::shuffle(motor_ix.begin(), motor_ix.end(), get_rng());
+            for (size_t i : motor_ix) {
+                if (i < n_myosins) {
+                    myosins->try_attach_detach(i);
+                } else {
+                    crosslks->try_attach_detach(i - n_myosins);
+                }
+            }
+        } else {
+            crosslks->try_attach_detach();
+            myosins->try_attach_detach();
+        }
 
         // compute forces and energies
         net->compute_forces();

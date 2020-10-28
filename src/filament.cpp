@@ -587,4 +587,30 @@ bool filament::at_pointed_end(int i)
     return attached[i].l + 1 == int(springs.size()) && attached[i].pos == 0.0;
 }
 
+double filament::distance_from_pointed_end(int l, double pos)
+{
+    double dist = 0.0;
+    for (size_t i = springs.size() - 1; i > l; i--) {
+        dist += springs[i]->get_length();
+    }
+    return dist + pos;
+}
+
+double filament::closest_attached_distance(int l, vec_type intpoint)
+{
+    double ref_pos = bc->dist_bc(springs[l]->get_h1() - intpoint);
+    double ref_dist = this->distance_from_pointed_end(l, ref_pos);
+    double min_delta = INFINITY;
+    for (size_t i = 0; i < attached.size(); i++) {
+        if (attached[i].m) {
+            double dist = this->distance_from_pointed_end(attached[i].l, attached[i].pos);
+            double delta = fabs(dist - ref_dist);
+            if (delta < min_delta) {
+                min_delta = delta;
+            }
+        }
+    }
+    return min_delta;
+}
+
 // end [attached]

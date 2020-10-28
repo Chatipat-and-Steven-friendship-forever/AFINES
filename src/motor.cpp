@@ -41,6 +41,7 @@ motor::motor(vector<double> mvec,
     kend = kend2 = rend * dt;
     max_bind_dist = rcut;
     max_bind_dist_sq = rcut * rcut;
+    occ = 0.0;
 
     // walk
     vs[0] = vs[1] = v0;
@@ -194,6 +195,11 @@ void motor::revive_head(int hd)
 void motor::deactivate_head(int hd)
 {
     state[hd] = motor_state::inactive;
+}
+
+void motor::set_occ(double o)
+{
+    occ = o;
 }
 
 // end [settings]
@@ -671,6 +677,14 @@ bool motor::try_attach(int hd, mc_prob &p)
         double prob = onrate * metropolis_prob(hd, fl, intpoint);
 
         if (remprob < prob) {
+
+            // don't bind if there is a head bound closer than occ
+            // closest_attached_distance is expensive to calculate,
+            // so compute it as the last check
+            if (occ != 0.0 && f->closest_attached_distance(fl[1], intpoint) < occ) {
+                return false;
+            }
+
             attach_head(hd, intpoint, fl);
             return true;
         }

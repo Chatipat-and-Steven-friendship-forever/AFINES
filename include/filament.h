@@ -114,6 +114,9 @@ class filament
         bool at_barbed_end(int i);
         bool at_pointed_end(int i);
 
+        double distance_from_pointed_end(int i, double pos);
+        double closest_attached_distance(int i, vec_type intpoint);
+
         // [growing settings]
         void set_l0_max(double);
         void set_nsprings_max(int);
