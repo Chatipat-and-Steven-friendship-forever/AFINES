@@ -114,6 +114,8 @@ int main(int argc, char **argv)
 
     double occ;
 
+    bool freeze_filaments;
+
     po::options_description config_actin("Filament Options");
     config_actin.add_options()
         ("actin_in", po::value<string>(&actin_in)->default_value(""), "input actin positions file")
@@ -143,6 +145,8 @@ int main(int argc, char **argv)
 
         // steric occlusion for binding
         ("occ", po::value<double>(&occ)->default_value(0), "closest distance crosslinkers and motors can bind on a filament")
+
+        ("freeze_filaments", po::value<bool>(&freeze_filaments)->default_value(false), "freeze filaments in place")
         ;
 
     // motors
@@ -696,13 +700,15 @@ int main(int argc, char **argv)
         }
 
         // Brownian dynamics and motor walking
-        net->integrate();
+        if (!freeze_filaments)
+            net->integrate();
         crosslks->integrate();
         myosins->integrate();
 
         // filament growth and fracturing
         // also unbinds motors
-        net->montecarlo();
+        if (!freeze_filaments)
+            net->montecarlo();
 
         if (quad_off_flag) {
             // we want results that are correct regardless of other settings when quadrants are off
@@ -731,7 +737,8 @@ int main(int argc, char **argv)
         }
 
         // compute forces and energies
-        net->compute_forces();
+        if (!freeze_filaments)
+            net->compute_forces();
         crosslks->compute_forces();
         myosins->compute_forces();
     }
