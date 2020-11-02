@@ -21,6 +21,38 @@ ext_result_type ext_circle::compute(vec_type pos)
     return result;
 }
 
+// [ring]
+
+ext_ring::ext_ring(double k_, double r1_, double r2_)
+{
+    k = k_;
+    r1 = r1_;
+    r2 = r2_;
+}
+
+ext_result_type ext_ring::compute(vec_type pos)
+{
+    ext_result_type result;
+    double lsq = abs2(pos);
+    if (lsq < r1 * r1) {
+        double l = sqrt(lsq);
+        double dl = l - r1;
+        result.energy = 0.5 * k * dl * dl;
+        result.force = (-k * dl / l) * pos;
+        result.virial = -0.5 * outer(pos, result.force);
+        return result;
+    }
+    if (lsq > r2 * r2) {
+        double l = sqrt(lsq);
+        double dl = l - r2;
+        result.energy = 0.5 * k * dl * dl;
+        result.force = (-k * dl / l) * pos;
+        result.virial = -0.5 * outer(pos, result.force);
+        return result;
+    }
+    return result;
+}
+
 // [rectangle]
 
 ext_rectangle::ext_rectangle(double k_, double x_, double y_)

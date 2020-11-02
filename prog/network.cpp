@@ -168,6 +168,9 @@ int main(int argc, char **argv)
 
     bool dead_head_flag; int dead_head;
 
+    bool a_m_ring_flag;
+    double a_m_ring_inner_radius, a_m_ring_outer_radius, a_m_ring_spring_constant;
+
     po::options_description config_motors("Motor Options");
     config_motors.add_options()
         ("a_motor_in", po::value<string>(&a_motor_in)->default_value(""), "input motor positions file")
@@ -201,6 +204,12 @@ int main(int argc, char **argv)
 
         ("dead_head_flag", po::value<bool>(&dead_head_flag)->default_value(false), "flag to kill head <dead_head> of all motors")
         ("dead_head", po::value<int>(&dead_head)->default_value(0), "index of head to kill")
+
+        // confinement
+        ("a_m_ring_flag", po::value<bool>(&a_m_ring_flag)->default_value(false), "flag to confine motors to a ring")
+        ("a_m_ring_inner_radius", po::value<double>(&a_m_ring_inner_radius)->default_value(0.0), "inner radius of ring")
+        ("a_m_ring_outer_radius", po::value<double>(&a_m_ring_outer_radius)->default_value(INFINITY), "outer radius of ring")
+        ("a_m_ring_spring_constant", po::value<double>(&a_m_ring_spring_constant)->default_value(0.0), "spring constant of ring")
         ;
 
     // crosslinkers
@@ -221,6 +230,9 @@ int main(int argc, char **argv)
 
     bool p_dead_head_flag; int p_dead_head;
     bool static_cl_flag;
+
+    bool p_m_ring_flag;
+    double p_m_ring_inner_radius, p_m_ring_outer_radius, p_m_ring_spring_constant;
 
     po::options_description config_crosslinks("Crosslinker Options");
     config_crosslinks.add_options()
@@ -257,6 +269,12 @@ int main(int argc, char **argv)
         ("p_dead_head", po::value<int>(&p_dead_head)->default_value(0), "index of head to kill")
 
         ("static_cl_flag", po::value<bool>(&static_cl_flag)->default_value(false), "flag to indicate compeletely static xlinks; i.e, no walking, no detachment")
+
+        // confinement
+        ("p_m_ring_flag", po::value<bool>(&p_m_ring_flag)->default_value(false), "flag to confine motors to a ring")
+        ("p_m_ring_inner_radius", po::value<double>(&p_m_ring_inner_radius)->default_value(0.0), "inner radius of ring")
+        ("p_m_ring_outer_radius", po::value<double>(&p_m_ring_outer_radius)->default_value(INFINITY), "outer radius of ring")
+        ("p_m_ring_spring_constant", po::value<double>(&p_m_ring_spring_constant)->default_value(0.0), "spring constant of ring")
         ;
 
     int n_bw_shear;
@@ -538,7 +556,17 @@ int main(int argc, char **argv)
 
     if (circle_flag) {
         net->set_external(new ext_circle(circle_spring_constant, circle_radius));
+    }
+
+    if (a_m_ring_flag) {
+        myosins->set_external(new ext_ring(a_m_ring_spring_constant, a_m_ring_inner_radius, a_m_ring_outer_radius));
+    } else if (circle_flag) {
         myosins->set_external(new ext_circle(circle_spring_constant, circle_radius));
+    }
+
+    if (p_m_ring_flag) {
+        crosslks->set_external(new ext_ring(p_m_ring_spring_constant, p_m_ring_inner_radius, p_m_ring_outer_radius));
+    } else if (circle_flag) {
         crosslks->set_external(new ext_circle(circle_spring_constant, circle_radius));
     }
 

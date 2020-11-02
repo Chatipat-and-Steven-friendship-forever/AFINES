@@ -29,6 +29,15 @@ class ext_circle : public external
         double k, r;
 };
 
+class ext_ring : public external
+{
+    public:
+        ext_ring(double k, double r1, double r2);
+        ext_result_type compute(vec_type pos) override;
+    protected:
+        double k, r1, r2;
+};
+
 class ext_rectangle : public external
 {
     public:
