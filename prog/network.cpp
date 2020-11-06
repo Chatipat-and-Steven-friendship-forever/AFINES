@@ -1,7 +1,9 @@
+#include "box.h"
+#include "ext.h"
 #include "filament_ensemble.h"
-#include "motor_ensemble.h"
-#include "globals.h"
 #include "generate.h"
+#include "motor_ensemble.h"
+#include "quadrants.h"
 
 #include <iostream>
 #include <fstream>
@@ -50,7 +52,8 @@ int main(int argc, char **argv)
     double viscosity, temperature;
 
     string dir;
-    int myseed;
+
+    string rng;
 
     bool restart;
     double restart_time;
@@ -62,7 +65,9 @@ int main(int argc, char **argv)
     bool quad_off_flag;
     int quad_update_period;
 
-    bool circle_flag; double circle_radius, circle_spring_constant;
+    bool circle_flag; double circle_radius, circle_max_radius, circle_spring_constant;
+    bool circle_linear_change_flag; double circle_radius_change_rate, circle_max_radius_change_rate, circle_spring_constant_change_rate;
+    int n_bw_confinement_change;
 
     po::options_description config_environment("Environment Options");
     config_environment.add_options()
@@ -80,7 +85,7 @@ int main(int argc, char **argv)
         ("temperature,temp", po::value<double>(&temperature)->default_value(0.004), "Temp in kT [pN-um] that effects magnituded of Brownian component of simulation")
 
         ("dir", po::value<string>(&dir)->default_value("."), "output directory")
-        ("myseed", po::value<int>(&myseed)->default_value(time(NULL)), "Random number generator myseed")
+        ("rng", po::value<string>(&rng)->default_value(gen_seed()), "Random number generator state")
 
         // restarts
         ("restart", po::value<bool>(&restart)->default_value(false), "if true, will restart simulation from last timestep recorded")
@@ -97,7 +102,13 @@ int main(int argc, char **argv)
         // circular confinement
         ("circle_flag", po::value<bool>(&circle_flag)->default_value(false), "flag to add a circular wall")
         ("circle_radius", po::value<double>(&circle_radius)->default_value(INFINITY), "radius of circular wall")
+        ("circle_max_radius", po::value<double>(&circle_max_radius)->default_value(INFINITY), "maximum allowed distance from center of circle")
         ("circle_spring_constant", po::value<double>(&circle_spring_constant)->default_value(0.0), "spring constant of circular wall")
+        ("circle_linear_change_flag", po::value<bool>(&circle_linear_change_flag)->default_value(false), "if true, linearly increases circular wall parameters")
+        ("circle_radius_change_rate", po::value<double>(&circle_radius_change_rate)->default_value(0.0), "rate at which to increase radius of circular wall")
+        ("circle_max_radius_change_rate", po::value<double>(&circle_max_radius_change_rate)->default_value(0.0), "rate at which to increase maximum allowed distance from center of circle")
+        ("circle_spring_constant_change_rate", po::value<double>(&circle_spring_constant_change_rate)->default_value(0.0), "rate at which to increase spring constant of circular wall")
+        ("n_bw_confinement_change", po::value<int>(&n_bw_confinement_change)->default_value(1), "steps between subsequent changes in confinement parameters")
         ;
 
     // filaments
@@ -129,7 +140,7 @@ int main(int argc, char **argv)
 
         ("link_length", po::value<double>(&link_length)->default_value(1), "Length of links connecting monomers")
         ("polymer_bending_modulus", po::value<double>(&polymer_bending_modulus)->default_value(0.068), "Bending modulus of a filament")
-        ("fracture_force", po::value<double>(&fracture_force)->default_value(100000000), "pN-- filament breaking point")
+        ("fracture_force", po::value<double>(&fracture_force)->default_value(INFINITY), "pN-- filament breaking point")
         ("link_stretching_stiffness,ks", po::value<double>(&link_stretching_stiffness)->default_value(1), "stiffness of link, pN/um")
 
         // excluded volume
@@ -320,15 +331,15 @@ int main(int argc, char **argv)
     po::notify(vm);
 
     if (vm.count("help")) {
-        std::cout << generic << "\n";
-        std::cout << config << "\n";
+        fmt::print("{}\n", generic);
+        fmt::print("{}\n", config);
         return 1;
     }
 
     ifstream ifs(config_file);
-    if (!ifs){
-        cout<<"can not open config file: "<<config_file<<"\n";
-        return 0;
+    if (!ifs) {
+        fmt::print("Cannot open config file: {}\n", config_file);
+        return 1;
     } else {
         po::store(po::parse_config_file(ifs, config), vm);
         po::notify(vm);
@@ -344,9 +355,12 @@ int main(int argc, char **argv)
     string thfile = ddir + "/filament_e.txt";
     string pefile = ddir + "/pe.txt";
 
-    if (fs::create_directory(fs::path(dir))) cerr << "Directory Created: " << dir << endl;
-    if (fs::create_directory(fs::path(tdir))) cerr << "Directory Created: " << tdir << endl;
-    if (fs::create_directory(fs::path(ddir))) cerr << "Directory Created: " << ddir << endl;
+    if (fs::create_directory(fs::path(dir)))
+        fmt::print(cerr, "Directory created: {}\n", dir);
+    if (fs::create_directory(fs::path(tdir)))
+        fmt::print(cerr, "Directory created: {}\n", tdir);
+    if (fs::create_directory(fs::path(ddir)))
+        fmt::print(cerr, "Directory created: {}\n", ddir);
 
     // Write the full configuration file
     {
@@ -355,16 +369,20 @@ int main(int argc, char **argv)
             if (it.first == "config") continue;
             boost::any val = it.second.value();
 
-            if(typeid(bool) == val.type())
-                o_file << it.first <<"="<< boost::any_cast<bool>(val) <<endl;
-            else if(typeid(int) == val.type())
-                o_file << it.first <<"="<< boost::any_cast<int>(val) <<endl;
-            else if(typeid(double) == val.type())
-                o_file << it.first <<"="<< boost::any_cast<double>(val) <<endl;
-            else if(typeid(string) == val.type())
-                o_file << it.first <<"="<< boost::any_cast<string>(val) <<endl;
+            if (typeid(bool) == val.type())
+                fmt::print(o_file, "{}={}\n", it.first, boost::any_cast<bool>(val));
+            else if (typeid(int) == val.type())
+                fmt::print(o_file, "{}={}\n", it.first, boost::any_cast<int>(val));
+            else if (typeid(double) == val.type())
+                fmt::print(o_file, "{}={}\n", it.first, boost::any_cast<double>(val));
+            else if (typeid(string) == val.type())
+                fmt::print(o_file, "{}={}\n", it.first, boost::any_cast<string>(val));
+            else
+                throw std::logic_error(fmt::format("Cannot write option {}.\n", it.first));
         }
     }
+
+    set_seed(rng);
 
     if (a_m_kon2 == -1) a_m_kon2 = a_m_kon;
     if (a_m_koff2 == -1) a_m_koff2 = a_m_koff;
@@ -405,7 +423,7 @@ int main(int argc, char **argv)
         if (restart_time == -1 || restart_time > tf_prev)
             restart_time = tf_prev;
 
-        cout<<"\nRestarting from t = "<<restart_time<<endl;
+        fmt::print("Restarting from t = {}\n", restart);
 
         double nprinted = restart_time / (dt*n_bw_print);
 
@@ -440,31 +458,25 @@ int main(int argc, char **argv)
 
     // compute derived quantities
 
-    if (polymer_bending_modulus < 0){ //This is a flag for using the temperature for the bending modulus
+    if (polymer_bending_modulus < 0) { //This is a flag for using the temperature for the bending modulus
         polymer_bending_modulus = 10*temperature; // 10um * kT
     }
 
-    double actin_density = double(npolymer*nmonomer)/(xrange*yrange);//0.65;
-    cout<<"\nDEBUG: actin_density = "<<actin_density;
-    double link_bending_stiffness    = polymer_bending_modulus / link_length;
+    double link_bending_stiffness = polymer_bending_modulus / link_length;
 
-    // set number of quadrants to 1 if there are no crosslinkers/motors
-    int xgrid, ygrid;
+    int xgrid = round(grid_factor*xrange);
+    int ygrid = round(grid_factor*yrange);
+    // neighbor list not needed if there are no crosslinkers/motors
+    bool needquad = true;
     if(a_motor_density == 0 && a_motor_pos_vec.size() == 0 &&
             p_motor_density==0 && p_motor_pos_vec.size() == 0 &&
             !link_intersect_flag && !motor_intersect_flag){
-        xgrid = 1;
-        ygrid = 1;
+        needquad = false;
     }
-    else{
-        xgrid  = (int) round(grid_factor*xrange);
-        ygrid  = (int) round(grid_factor*yrange);
-    }
+
     double d_strain_amp = d_strain_pct * xrange;
 
     box *bc = new box(bnd_cnd, xrange, yrange, restart_strain);
-
-    set_seed(myseed);
 
     // BEGIN GENERATE CONFIGURATIONS
 
@@ -476,8 +488,8 @@ int main(int argc, char **argv)
         }
         actin_pos_vec = generate_filament_ensemble(
                 bc, npolymer, nmonomer, nmonomer_extra, extra_bead_prob,
-                dt, temperature, actin_length, link_length,
-                actin_position_arrs, link_bending_stiffness, myseed);
+                temperature, actin_length, link_length,
+                actin_position_arrs, link_bending_stiffness);
     }
 
     if (link_intersect_flag)
@@ -506,22 +518,26 @@ int main(int argc, char **argv)
 
     // BEGIN CREATE NETWORK OBJECTS
 
-    cout<<"\nCreating actin network..";
     filament_ensemble *net = new filament_ensemble(
-            bc, actin_pos_vec, {xgrid, ygrid}, dt,
-            temperature, viscosity, link_length,
+            bc, actin_pos_vec, {xgrid, ygrid},
+            dt, temperature, viscosity,
+            actin_length, link_length,
             link_stretching_stiffness, link_bending_stiffness,
             fracture_force, rmax, kexv);
+    fmt::print("Filaments: {}\n", net->get_nfilaments());
 
     // additional options
     net->set_growing(kgrow, lgrow, l0min, l0max, nlink_max);
-    if (quad_off_flag) net->get_quads()->use_quad(false);
+    if (quad_off_flag) {
+        net->get_quads()->use_quad(false);
+        net->get_quads()->use_all(true);
+    }
 
-    cout<<"\nAdding active motors...";
     motor_ensemble *myosins = new motor_ensemble(
             a_motor_pos_vec, dt, temperature,
             a_motor_length, net, a_motor_v, a_motor_stiffness, a_m_kon, a_m_koff,
             a_m_kend, a_m_stall, a_m_cut, viscosity);
+    fmt::print("Active Motors: {}\n", myosins->get_nmotors());
 
     myosins->set_binding_two(a_m_kon2, a_m_koff2, a_m_kend2);
     myosins->set_bending(a_m_bend, a_m_ang);
@@ -535,11 +551,11 @@ int main(int argc, char **argv)
     if (!std::isnan(a_motor_v2)) myosins->set_velocity(a_motor_v, a_motor_v2);
     if (!std::isnan(a_m_stall2)) myosins->set_stall_force(a_m_stall, a_m_stall2);
 
-    cout<<"Adding passive motors (crosslinkers) ...\n";
     motor_ensemble *crosslks = new motor_ensemble(
             p_motor_pos_vec, dt, temperature,
             p_motor_length, net, p_motor_v, p_motor_stiffness, p_m_kon, p_m_koff,
             p_m_kend, p_m_stall, p_m_cut, viscosity);
+    fmt::print("Passive Motors: {}\n", crosslks->get_nmotors());
 
     crosslks->set_binding_two(p_m_kon2, p_m_koff2, p_m_kend2);
     crosslks->set_bending(p_m_bend, p_m_ang);
@@ -555,19 +571,31 @@ int main(int argc, char **argv)
     if (!std::isnan(p_m_stall2)) crosslks->set_stall_force(p_m_stall, p_m_stall2);
 
     if (circle_flag) {
-        net->set_external(new ext_circle(circle_spring_constant, circle_radius));
+        if (std::isinf(circle_max_radius)) {
+            net->set_external(new ext_circle(circle_spring_constant, circle_radius));
+        } else {
+            net->set_external(new ext_circle_fene(circle_spring_constant, circle_radius, circle_max_radius));
+        }
     }
 
     if (a_m_ring_flag) {
         myosins->set_external(new ext_ring(a_m_ring_spring_constant, a_m_ring_inner_radius, a_m_ring_outer_radius));
     } else if (circle_flag) {
-        myosins->set_external(new ext_circle(circle_spring_constant, circle_radius));
+        if (std::isinf(circle_max_radius)) {
+            myosins->set_external(new ext_circle(circle_spring_constant, circle_radius));
+        } else {
+            myosins->set_external(new ext_circle_fene(circle_spring_constant, circle_radius, circle_max_radius));
+        }
     }
 
     if (p_m_ring_flag) {
         crosslks->set_external(new ext_ring(p_m_ring_spring_constant, p_m_ring_inner_radius, p_m_ring_outer_radius));
     } else if (circle_flag) {
-        crosslks->set_external(new ext_circle(circle_spring_constant, circle_radius));
+        if (std::isinf(circle_max_radius)) {
+            crosslks->set_external(new ext_circle(circle_spring_constant, circle_radius));
+        } else {
+            crosslks->set_external(new ext_circle_fene(circle_spring_constant, circle_radius, circle_max_radius));
+        }
     }
 
     if (occ > 0.0) {
@@ -583,9 +611,6 @@ int main(int argc, char **argv)
     // END CREATE NETWORK OBJECTS
 
     // run simulation
-
-    cout<<"\nUpdating motors, filaments and crosslinks in the network..";
-    string time_str;
 
     // open output files
     // for restarts, append instead of writing from the start
@@ -609,25 +634,42 @@ int main(int argc, char **argv)
     int count; double t;
     for (count = 0, t = tinit; t <= tfinal; count++, t += dt) {
 
+        if (circle_linear_change_flag && count % n_bw_confinement_change == 0) {
+            double ck = circle_spring_constant + circle_spring_constant_change_rate * t;
+            double cr = circle_radius + circle_radius_change_rate * t;
+            double cmr = circle_max_radius + circle_max_radius_change_rate * t;
+            if (std::isinf(circle_max_radius)) {
+                net->set_external(new ext_circle(ck, cr));
+                myosins->set_external(new ext_circle(ck, cr));
+                crosslks->set_external(new ext_circle(ck, cr));
+            } else {
+                net->set_external(new ext_circle_fene(ck, cr, cmr));
+                myosins->set_external(new ext_circle_fene(ck, cr, cmr));
+                crosslks->set_external(new ext_circle_fene(ck, cr, cmr));
+            }
+        }
+
+        // compute forces and energies
+        net->compute_forces();
+        crosslks->compute_forces();
+        myosins->compute_forces();
+
         // output to file
         if (t+dt/100 >= tinit && (count-unprinted_count)%n_bw_print==0) {
 
-            if (t>tinit) time_str ="\n";
-            time_str += "t = "+to_string(t);
-
-            fmt::print(file_a, "{}\tN = {}", time_str, net->get_nbeads());
+            fmt::print(file_a, "t = {}\tN = {}\n", t, net->get_nbeads());
             net->write_beads(file_a);
 
-            fmt::print(file_l, "{}\tN = {}", time_str, net->get_nsprings());
+            fmt::print(file_l, "t = {}\tN = {}\n", t, net->get_nsprings());
             net->write_springs(file_l);
 
-            fmt::print(file_am, "{}\tN = {}", time_str, myosins->get_nmotors());
+            fmt::print(file_am, "t = {}\tN = {}\n", t, myosins->get_nmotors());
             myosins->motor_write(file_am);
 
-            fmt::print(file_pm, "{}\tN = {}", time_str, crosslks->get_nmotors());
+            fmt::print(file_pm, "t = {}\tN = {}\n", t, crosslks->get_nmotors());
             crosslks->motor_write(file_pm);
 
-            fmt::print(file_th, "{}\tN = {}", time_str, net->get_nfilaments());
+            fmt::print(file_th, "t = {}\tN = {}\n", t, net->get_nfilaments());
             net->write_thermo(file_th);
 
             fmt::print(file_pe,
@@ -683,8 +725,8 @@ int main(int argc, char **argv)
 
         // print to stdout
         if (count%n_bw_stdout==0) {
-            fmt::print("\nCount: {}\tTime: {} s\tShear: {} um", count, t, bc->get_delrx());
-            //net->print_filament_thermo();
+            fmt::print("Count: {}\tTime: {} s\tShear: {} um\n", count, t, bc->get_delrx());
+            // net->print_filament_thermo();
             net->print_network_thermo();
             crosslks->print_ensemble_thermo();
             myosins->print_ensemble_thermo();
@@ -735,18 +777,20 @@ int main(int argc, char **argv)
 
         // filament growth and fracturing
         // also unbinds motors
-        if (!freeze_filaments)
-            net->montecarlo();
+        if (!freeze_filaments) {
+            net->try_grow();
+            net->try_fracture();  // unbinds motors when fracturing
+        }
 
-        if (quad_off_flag) {
-            // we want results that are correct regardless of other settings when quadrants are off
-            // this just builds a list of all springs, which are then handed to attachment/etc
-            net->quad_update_serial();
-
-        } else if (count % quad_update_period == 0) {
-            // when quadrants are on, this actually builds quadrants
-            net->quad_update_serial();
-
+        if (needquad) {
+            if (quad_off_flag) {
+                // we want results that are correct regardless of other settings when quadrants are off
+                // this just builds a list of all springs, which are then handed to attachment/etc
+                net->quad_update_serial();
+            } else if (count % quad_update_period == 0) {
+                // when quadrants are on, this actually builds quadrants
+                net->quad_update_serial();
+            }
         }
 
         // motor attachment/detachment
@@ -771,23 +815,12 @@ int main(int argc, char **argv)
         myosins->compute_forces();
     }
 
-    file_a << "\n";
-    file_l << "\n";
-    file_am << "\n";
-    file_pm << "\n";
-    file_th << "\n";
-
-    //Delete all objects created
-    cout<<"\nHere's where I think I delete things\n";
-
     delete myosins;
     delete crosslks;
     delete net;
     delete bc;
 
-    cout<<"\nTime counts: "<<count;
-    cout<<"\nExecuted";
-    cout<<"\n Done\n";
+    fmt::print("Simulated {} steps.\n", count);
 
     return 0;
 }

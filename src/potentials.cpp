@@ -1,5 +1,4 @@
 #include "potentials.h"
-#include "globals.h"
 
 // most of these methods are modified from LAMMPS
 

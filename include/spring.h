@@ -9,29 +9,17 @@
 #ifndef AFINES_SPRING_H
 #define AFINES_SPRING_H
 
-class filament;
-
 #include "globals.h"
-#include "box.h"
-#include "motor.h"
 
-class spring {
+class spring
+{
     public:
         spring() {}
-        spring(double l0, double kl, filament* f, array<int, 2> aindex);
+        spring(class box *bc, double l0, double kl);
         virtual ~spring() {}
 
-        // [dynamics]
-
-        // reads positions from filament
-        // updates all state except force
-        void step();
-
-        // updates force
-        void update_force();
-
-        // applies force to filament
-        void filament_update();
+        // updates all state
+        void step(vec_type h0, vec_type h1);
 
         // [state]
 
@@ -42,6 +30,7 @@ class spring {
         vec_type get_disp();
         vec_type get_direction();
 
+        // -dU/dh0
         vec_type get_force();
 
         // [parameters]
@@ -51,29 +40,18 @@ class spring {
         double get_l0();
         void set_l0(double myl0);
 
-        array<int, 2> get_aindex();
-        void set_aindex(array<int, 2> idx);
-        void inc_aindex();
-
         // [thermo]
 
         double get_stretching_energy();
 
         virial_type get_virial();
 
-        // [output]
-
-        string to_string();
-        vector<double> output();
-        string write();
-
         // [misc]
 
+        // compare parameters
         bool operator==(const spring& that);
-        bool is_similar(const spring& that);
 
         vec_type intpoint(vec_type pos);
-        bool get_line_intersect(spring *l2); 
 
     protected:
 
@@ -87,10 +65,8 @@ class spring {
         vec_type force;
 
         // parameters
-        array<int, 2> aindex;  // bead indices
         double kl, l0;
-        box *bc;
-        filament *fil;
+        class box *bc;
 };
 
 #endif

@@ -1,19 +1,15 @@
-#include "filament_ensemble.h"
-#include "motor_ensemble.h"
+#include "generate.h"
 
+#include "box.h"
+
+// for straight filaments, set temp=0
 vector<vector<double>> generate_filament_ensemble(
         box *bc, int npolymer, int nbeads_min, int nbeads_extra, double nbeads_extra_prob,
-        double dt, double temp, double radius, double l0,
-        vector<array<double, 3>> pos_sets, double kb, double seed)
+        double temp, double radius, double l0,
+        vector<array<double, 3>> pos_sets, double kb)
 {
-    bool is_straight = false;
-    if (seed == -1) {
-        is_straight = true;
-    } else {
-        srand(seed);
-    }
+    pcg64 &rng = *get_rng();
     binomial_distribution<int> distribution(nbeads_extra, nbeads_extra_prob);
-    default_random_engine generator(seed + 2);
     array<double, 2> fov = bc->get_fov();
     double var = (temp != 0.0) ? temp / kb : 0.0;
     array<double, 2> view = {1.0, 1.0};
@@ -31,28 +27,23 @@ vector<vector<double>> generate_filament_ensemble(
             phi = 2.0 * pi * rng_u();
         }
         beads.push_back({x, y, radius, double(i)});
-        int nbeads = nbeads_min + distribution(generator);
+        int nbeads = nbeads_min + distribution(rng);
         for (int j = 1; j < nbeads; j++) {
             vec_type pos = bc->pos_bc({x + l0 * cos(phi), y + l0 * sin(phi)});
             x = pos.x;
             y = pos.y;
             beads.push_back({x, y, radius, double(i)});
-            if (!is_straight) phi += sqrt(var) * rng_n();
+            phi += sqrt(var) * rng_n();
         }
     }
     return beads;
 }
 
+// for straight filaments, set temp=0
 vector<vector<double>> generate_filament_ensemble(
-        box *bc, double density, double dt, double temp, double radius, int nbeads, double l0,
-        vector<array<double, 3>> pos_sets, double kb, double seed)
+        box *bc, double density, double temp, double radius, int nbeads, double l0,
+        vector<array<double, 3>> pos_sets, double kb)
 {
-    bool is_straight = false;
-    if (seed == -1) {
-        is_straight = true;
-    } else {
-        srand(seed);
-    }
     array<double, 2> fov = bc->get_fov();
     int npolymer = ceil(density * fov[0] * fov[1]) / nbeads;
     double var = (temp != 0.0) ? temp / kb : 0.0;
@@ -77,7 +68,7 @@ vector<vector<double>> generate_filament_ensemble(
             x = pos.x;
             y = pos.y;
             beads.push_back({x, y, radius, double(i)});
-            if (!is_straight) phi += sqrt(var) * rng_n();
+            phi += sqrt(var) * rng_n();
         }
     }
     return beads;
@@ -136,7 +127,7 @@ vector<vector<double>> spring_spring_intersections(box *bc, vector<vector<double
                     if (f1 == f2 && abs(int(l1) - int(l2)) < 2) continue;
                     vec_type s1 = filaments[f2][l2];
                     vec_type s2 = filaments[f2][l2 + 1];
-                    boost::optional<vec_type> inter = seg_seg_intersection_bc(bc, r1, r2, s1, s2);
+                    std::optional<vec_type> inter = seg_seg_intersection_bc(bc, r1, r2, s1, s2);
                     if (inter && rng_u() <= prob) {
                         vec_type disp = bc->rij_bc(s2 - s1);
                         double llen = abs(disp);

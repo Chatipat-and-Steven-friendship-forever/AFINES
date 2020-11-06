@@ -11,32 +11,43 @@
  (at your option) any later version. See ../LICENSE for details.
 -------------------------------------------------------------------*/
 
-#include "globals.h"
 #include "filament_ensemble.h"
 
-filament_ensemble::filament_ensemble(box *bc_, vector<vector<double> > beads, array<int,2> mynq, double delta_t, double temp,
-        double vis, double spring_len, double stretching, double bending, double frac_force, double RMAX, double A)
+#include "box.h"
+#include "ext.h"
+#include "exv.h"
+#include "filament.h"
+#include "quadrants.h"
+
+filament_ensemble::filament_ensemble(
+        box *bc_, vector<vector<double>> beads, array<int,2> mynq,
+        double delta_t, double temp, double vis,
+        double bead_radius, double spring_len,
+        double stretching, double bending,
+        double frac_force, double RMAX, double A)
 {
     bc = bc_;
 
     bc->add_callback([this](double g) { this->update_d_strain(g); });
 
     int fil_idx = 0;
-    vector<vector<double>> avec;
+    vector<vec_type> avec;
 
-    for (int i=0; i < int(beads.size()); i++){
+    for (int i = 0; i < int(beads.size()); i++) {
+        if (beads[i].size() != 4) throw std::runtime_error("wrong number of fields");
 
-        if (beads[i][3] != fil_idx && avec.size() > 0){
+        if (beads[i][3] != fil_idx && avec.size() > 0) {
 
-            network.push_back(new filament(this, avec, spring_len, stretching, bending, delta_t, temp, frac_force));
+            network.push_back(new filament(bc, avec, {}, bead_radius, vis, spring_len, stretching, bending, delta_t, temp, frac_force));
             avec.clear();
             fil_idx = beads[i][3];
         }
-        avec.push_back({beads[i][0], beads[i][1], beads[i][2], vis});
+        if (beads[i][2] != bead_radius) throw std::runtime_error("bead radius mismatch");
+        avec.push_back({beads[i][0], beads[i][1]});
     }
 
     if (avec.size() > 0)
-        network.push_back(new filament(this, avec, spring_len, stretching, bending, delta_t, temp, frac_force));
+        network.push_back(new filament(bc, avec, {}, bead_radius, vis, spring_len, stretching, bending, delta_t, temp, frac_force));
 
     avec.clear();
 
@@ -65,6 +76,7 @@ filament_ensemble::~filament_ensemble()
 
 void filament_ensemble::set_external(external *ext_)
 {
+    if (ext) delete ext;
     ext = ext_;
 }
 
@@ -80,8 +92,9 @@ void filament_ensemble::quad_update_serial()
     quads->clear();
     for (int f = 0; f < int(network.size()); f++) {
         for (int l = 0; l < network[f]->get_nsprings(); l++) {
-            spring *s = network[f]->get_spring(l);
-            quads->add_spring(s, {f, l});
+            vec_type start = network[f]->get_start(l);
+            vec_type disp = network[f]->get_disp(l);
+            quads->add_spring(start, disp, {f, l});
         }
     }
     if (exv) quads->build_pairs();
@@ -94,39 +107,44 @@ vector<array<int, 2>> *filament_ensemble::get_attach_list(vec_type pos)
 
 // end [quadrants]
 
-vector<filament *>* filament_ensemble::get_network()
-{
-    return &network;
-}
-
-filament * filament_ensemble::get_filament(int index)
-{
-    return network[index];
-}
-
 double filament_ensemble::get_llength(int fil, int spring)
 {
-    return network[fil]->get_spring(spring)->get_length();
+    return network[fil]->get_llength(spring);
 }
 
 vec_type filament_ensemble::get_start(int fil, int spring)
 {
-    return network[fil]->get_spring(spring)->get_h0();
+    return network[fil]->get_start(spring);
 }
 
 vec_type filament_ensemble::get_end(int fil, int spring)
 {
-    return network[fil]->get_spring(spring)->get_h1();
+    return network[fil]->get_end(spring);
 }
 
 vec_type filament_ensemble::get_direction(int fil, int spring)
 {
-    return network[fil]->get_spring(spring)->get_direction();
+    return network[fil]->get_direction(spring);
 }
 
-vec_type filament_ensemble::get_force(int fil, int spring)
+vec_type filament_ensemble::get_disp(int fil, int spring)
 {
-    return network[fil]->get_force(spring);
+    return network[fil]->get_disp(spring);
+}
+
+vec_type filament_ensemble::intpoint(int fil, int spring, vec_type pos)
+{
+    return network[fil]->intpoint(spring, pos);
+}
+
+vec_type filament_ensemble::get_pos(int fil, int bead)
+{
+    return network[fil]->get_bead_position(bead);
+}
+
+vec_type filament_ensemble::get_force(int fil, int bead)
+{
+    return network[fil]->get_force(bead);
 }
 
 box *filament_ensemble::get_box()
@@ -134,25 +152,56 @@ box *filament_ensemble::get_box()
     return bc;
 }
 
-bool filament_ensemble::is_polymer_start(int fil, int bead){
-
+bool filament_ensemble::is_polymer_start(int fil, int bead)
+{
     return !(bead);
-
 }
 
-int filament_ensemble::get_nbeads(){
+bool filament_ensemble::intersect(array<int, 2> fl1, array<int, 2> fl2)
+{
+    vec_type r1 = network[fl1[0]]->get_start(fl1[1]);
+    vec_type r2 = network[fl1[0]]->get_end(fl1[1]);
+    vec_type s1 = network[fl2[0]]->get_start(fl2[1]);
+    vec_type s2 = network[fl2[0]]->get_end(fl2[1]);
+    std::optional<vec_type> inter = seg_seg_intersection_bc(bc, r1, r2, s1, s2);
+    if (inter) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+int filament_ensemble::get_nbeads()
+{
     int tot = 0;
-    for (unsigned int f = 0; f < network.size(); f++)
-        tot += network[f]->get_nbeads();
+    for (filament *f : network) {
+        tot += f->get_nbeads();
+    }
     return tot;
 }
 
-int filament_ensemble::get_nsprings(){
-    return this->get_nbeads() - network.size();
+int filament_ensemble::get_nsprings()
+{
+    int tot = 0;
+    for (filament *f : network) {
+        tot += f->get_nsprings();
+    }
+    return tot;
 }
 
-int filament_ensemble::get_nfilaments(){
+int filament_ensemble::get_nfilaments()
+{
     return network.size();
+}
+
+int filament_ensemble::get_nbeads(int i)
+{
+    return network[i]->get_nbeads();
+}
+
+int filament_ensemble::get_nsprings(int i)
+{
+    return network[i]->get_nsprings();
 }
 
 // begin [attached]
@@ -194,7 +243,24 @@ vec_type filament_ensemble::get_attached_direction(fp_index_type i)
 {
     int f_index = i.f_index;
     int l_index = network[f_index]->get_attached_l(i.p_index);
-    return get_direction(f_index, l_index);
+    return this->get_direction(f_index, l_index);
+}
+
+// get displacement h[f,l+1]-h[f,l]
+vec_type filament_ensemble::get_attached_disp(fp_index_type i)
+{
+    int f_index = i.f_index;
+    int l_index = network[f_index]->get_attached_l(i.p_index);
+    return this->get_disp(f_index, l_index);
+}
+
+// applies force f=-dU/d(h[f,l+1]-h[f,l]) to h[f,l+1] and h[f,l]
+void filament_ensemble::add_attached_disp_force(fp_index_type i, vec_type f)
+{
+    int f_index = i.f_index;
+    int l_index = network[f_index]->get_attached_l(i.p_index);
+    network[f_index]->update_forces(l_index, -f);
+    network[f_index]->update_forces(l_index + 1, f);
 }
 
 bool filament_ensemble::at_barbed_end(fp_index_type i)
@@ -240,44 +306,45 @@ vector<vector<double>> filament_ensemble::output_thermo()
     return out;
 }
 
-void filament_ensemble::write_beads(ofstream& fout)
+void filament_ensemble::write_beads(ofstream &fout)
 {
-    for (unsigned int i=0; i<network.size(); i++) {
-        fout<<network[i]->write_beads(i);
+    for (size_t i = 0; i < network.size(); i++) {
+        fmt::print(fout, "{}", network[i]->write_beads(i));
     }
 }
 
-void filament_ensemble::write_springs(ofstream& fout)
+void filament_ensemble::write_springs(ofstream &fout)
 {
-    for (unsigned int i=0; i<network.size(); i++) {
-        fout<<network[i]->write_springs(i);
+    for (size_t i = 0; i < network.size(); i++) {
+        fmt::print(fout, "{}", network[i]->write_springs(i));
     }
 }
 
-void filament_ensemble::write_thermo(ofstream& fout){
-    for (unsigned int f = 0; f < network.size(); f++)
-        fout<<network[f]->write_thermo(f);
-
+void filament_ensemble::write_thermo(ofstream &fout)
+{
+    for (size_t i = 0; i < network.size(); i++) {
+        fmt::print(fout, "{}", network[i]->write_thermo(i));
+    }
 }
 
 void filament_ensemble::print_filament_thermo()
 {
     for (size_t i = 0; i < network.size(); i++) {
-        fmt::print("\nF{}\t:", i);
-        network[i]->print_thermo();
+        filament *f = network[i];
+        fmt::print("F{}\t:\tPEs = {}\tPEb = {}\n",
+                i, f->get_stretching_energy(), f->get_bending_energy());
     }
 }
 
 void filament_ensemble::print_network_thermo()
 {
     fmt::print(
-            "\n"
             "All Filaments\t:\t"
             "PEs = {}\t"
             "PEb = {}\t"
             "PEx = {}\t"
             "PEe = {}\t"
-            "PE = {}",
+            "PE = {}\n",
             pe_stretch, pe_bend, pe_exv, pe_ext,
             pe_stretch + pe_bend + pe_exv + pe_ext);
 }
@@ -285,7 +352,7 @@ void filament_ensemble::print_network_thermo()
 void filament_ensemble::print_filament_lengths()
 {
     for (size_t f = 0; f < network.size(); f++) {
-        fmt::print("\nF{} : {} um", f, network[f]->get_end2end());
+        fmt::print("F{} : {} um\n", f, network[f]->get_end2end());
     }
 }
 
@@ -382,7 +449,8 @@ void filament_ensemble::try_grow()
     }
 }
 
-void filament_ensemble::try_fracture() {
+void filament_ensemble::try_fracture()
+{
     // Note: network.size() is not a constant
     // fractured filaments are added to the end of network,
     // so they can be fractured again
@@ -398,12 +466,6 @@ void filament_ensemble::try_fracture() {
             delete broken;
         }
     }
-}
-
-void filament_ensemble::montecarlo()
-{
-    this->try_grow();
-    this->try_fracture();
 }
 
 // end [monte carlo]
@@ -462,7 +524,7 @@ void filament_ensemble::update_excluded_volume()
     pe_exv = 0.0;
     vir_ext.zero();
     if (exv) {
-        exv->update_spring_forces_from_quads(quads, network);
+        exv->update_spring_forces_from_quads(quads, this);
         pe_exv = exv->get_pe_exv();
         vir_exv = exv->get_vir_exv();
     }

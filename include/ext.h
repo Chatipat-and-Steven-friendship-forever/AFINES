@@ -38,6 +38,15 @@ class ext_ring : public external
         double k, r1, r2;
 };
 
+class ext_circle_fene : public external
+{
+    public:
+        ext_circle_fene(double k, double rmin, double rmax);
+        ext_result_type compute(vec_type pos) override;
+    protected:
+        double k, rmin, rmax;
+};
+
 class ext_rectangle : public external
 {
     public:

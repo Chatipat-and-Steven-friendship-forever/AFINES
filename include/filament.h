@@ -10,15 +10,14 @@
 #ifndef AFINES_FILAMENT_H
 #define AFINES_FILAMENT_H
 
-class filament_ensemble;
-
-#include "spring.h"
 #include "globals.h"
 
 class filament
 {
     public:
-        filament(filament_ensemble *net, vector<vector<double>> beadvec,
+        filament(class box *bc,
+                vector<vec_type> positions, vector<vec_type> randoms,
+                double bead_radius, double visc,
                 double l0, double kl, double kb, double dt, double temp, double fracture);
         ~filament();
 
@@ -33,7 +32,6 @@ class filament
         string write_thermo(int fil);
 
         void print_thermo();
-        string to_string();
 
         // [thermo]
 
@@ -50,8 +48,21 @@ class filament
         vec_type get_force(int i);
 
         int get_nsprings();
-        spring *get_spring(int i);
 
+        // spring state
+        vec_type get_start(int i);
+        vec_type get_end(int i);
+        double get_llength(int i);
+        vec_type get_disp(int i);
+        vec_type get_direction(int i);
+        double get_tension(int i);
+        double get_stretching_energy(int i);
+        vec_type intpoint(int i, vec_type pos);
+        // spring params
+        double get_kl(int i);
+        double get_l0(int i);
+
+        // filament state
         double get_end2end();
 
         // [dynamics]
@@ -67,9 +78,8 @@ class filament
         // attempts to fracture the filament
         // failure: returns no filaments
         // success: returns two filaments, split at the first fracture site
-        vector<filament *> try_fracture();
-        vector<filament *> fracture(int node);  // helper method
-        vector<vector<double>> get_beads(size_t first, size_t last);  // helper method
+        vector<class filament *> try_fracture();
+        vector<class filament *> fracture(int node);  // helper method
 
         void detach_all_motors();
 
@@ -95,15 +105,13 @@ class filament
 
         // [misc]
 
-        box *get_box();
-
-        void add_bead(vector<double> a, double l0, double kl);
+        void add_bead(vec_type a, double l0, double kl);
 
         bool operator==(const filament& that);
 
         // [attached positions]
 
-        int new_attached(motor *m, int hd, int l, vec_type pos);
+        int new_attached(class motor *m, int hd, int l, vec_type pos);
         void del_attached(int i);
 
         int get_attached_l(int i);
@@ -125,13 +133,15 @@ class filament
         void set_lgrow(double);
 
     protected:
-        box *bc;
-        filament_ensemble *filament_network;
+        class box *bc;
 
         // state
+
+        vector<vec_type> positions;
+        vector<vec_type> forces;
         vector<vec_type> prv_rnds;
-        vector<class bead *> beads;
-        vector<spring *> springs;
+
+        vector<class spring *> springs;
 
         struct attached_type { class motor *m; int hd; int l; double pos; };
         vector<attached_type> attached;
@@ -141,15 +151,12 @@ class filament
         virial_type bending_virial;
 
         // parameters
-        double kb, temperature, dt, fracture_force, damp;
+        double kb, temperature, dt, fracture_force, damp, bd_prefactor;
+        double bead_radius, visc;
 
         // growing parameters
         int nsprings_max;
         double spring_l0, l0_max, l0_min, kgrow, lgrow;
-
-        // precompute
-        double bd_prefactor;
-        double fracture_force_sq;
 };
 
 #endif

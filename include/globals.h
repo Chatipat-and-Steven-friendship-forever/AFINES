@@ -19,13 +19,8 @@
 //=====================================
 //included dependences
 #include <boost/algorithm/string.hpp>
-#include <boost/range/irange.hpp>
-#include <boost/range/join.hpp>
-#include <boost/optional.hpp>
 #include <boost/functional/hash.hpp>
-#define BOOST_NO_CXX11_SCOPED_ENUMS
 #include <boost/filesystem.hpp>
-#undef BOOST_NO_CXX11_SCOPED_ENUMS
 
 #include <algorithm> //std::for_each
 #include <array>
@@ -38,6 +33,7 @@
 #include <iostream> //std::cout
 #include <limits>
 #include <map>
+#include <optional>
 #include <random>
 #include <set>
 #include <stdexcept>
@@ -50,6 +46,7 @@
 #include <fmt/ostream.h>
 
 #include "vec.h"
+#include "pcg_random.hpp"
 
 using namespace std;
 namespace fs = boost::filesystem;
@@ -62,13 +59,37 @@ const double maxSmallAngle = 0.001; //pi/12.0; //Small angles DEFINED as such th
 const double eps = 1e-4;
 const double infty = 1e10;
 const double actin_mass_density = 2.6e-14; //miligram / micron
+
+// [random]
+
+double rng_u();  // uniform distribution [0, 1)
+double rng_n();  // normal distribution mean=0 std=1
+
+pcg64 *get_rng();
+
+// these methods handle rng state only
+string gen_seed();  // generate rng state from random device
+string get_seed();  // serialize rng state
+void set_seed(string);  // seed from serialized rng state
+
+// note that distributions also have state
+// these methods handle both rng and distribution states
+void rng_save(ostream &); // save entire state
+void rng_load(istream &);  // load entire state
+
+inline vec_type vec_randn()
+{
+    // separate statements to keep call order correct
+    double x = rng_n();
+    double y = rng_n();
+    return {x, y};
+}
+
+// end [random]
+
 /*generic functions to be used below*/
-void set_seed(int s);
-double rng_u();
+
 int pr(int num);
-double rng_exp(double mean);
-double rng_n(); //default parameters --> mu = 0, sig = 1
-mt19937_64 &get_rng();
 
 vector<int> range_bc(string bc, double delrx, int botq, int topq, int low, int high);
 vector<int> range_bc(string bc, double delrx, int botq, int topq, int low, int high, int di);
@@ -106,6 +127,22 @@ void write_first_tsteps(string path, double tstop);
 template <typename T> int sgn(T val);
 int mysgn(double);
 
+static inline int imod(int a, int b)
+{
+    while (a < 0) a += b;
+    while (a >= b) a -= b;
+    assert(0 <= a && a < b);
+    return a;
+}
+
+static inline int clip(int x, int lo, int hi)
+{
+    if (x < lo) x = lo;
+    if (x > hi) x = hi;
+    assert(lo <= x && x <= hi);
+    return x;
+}
+
 pair<double, array<int, 2> > flip_pair(const pair<array<int, 2>, double> &p);
 multimap<double, array<int, 2> > flip_map(const std::unordered_map<array<int, 2>, double, boost::hash<array<int,2>>> &p);
 string print_pair(string name, const array<double, 2>& p);
@@ -117,16 +154,8 @@ map<array<int, 2>, double> transpose(map<array<int, 2>, double> mat);
 map<array<int, 2>, double> invert_block_diagonal(map<array<int, 2>, double> mat);
 void intarray_printer(array<int,2> a);
 
-boost::optional<vec_type> seg_seg_intersection(vec_type, vec_type, vec_type, vec_type);
+std::optional<vec_type> seg_seg_intersection(vec_type, vec_type, vec_type, vec_type);
 std::string quads_error_message(std::string, vector<array<int, 2> >, vector<array<int, 2> > );
-
-inline vec_type vec_randn()
-{
-    // separate statements to keep call order correct
-    double x = rng_n();
-    double y = rng_n();
-    return {x, y};
-}
 
 struct mc_prob
 {
@@ -139,9 +168,9 @@ struct mc_prob
     double prob;
     double used;
 
-    boost::optional<double> operator()(double needprob)
+    std::optional<double> operator()(double needprob)
     {
-        boost::optional<double> result;
+        std::optional<double> result;
         if (used <= prob && prob < used + needprob) {
             result = {prob - used};
         }

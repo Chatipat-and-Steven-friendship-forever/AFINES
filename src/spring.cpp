@@ -13,17 +13,14 @@
 -------------------------------------------------------------------*/
 
 #include "spring.h"
-#include "globals.h"
-#include "filament.h"
 
-spring::spring(double len, double stretching_stiffness, filament *f, array<int, 2> myaindex)
+#include "box.h"
+
+spring::spring(box *bc_, double l0_, double kl_)
 {
-    bc = f->get_box();
-    kl      = stretching_stiffness;
-    l0      = len;
-    fil     = f;
-    aindex  = myaindex;
-
+    bc = bc_;
+    kl = kl_;
+    l0 = l0_;
     llen = l0;
 }
 
@@ -37,24 +34,19 @@ vec_type spring::get_h1()
     return h1;
 }
 
-// stepping kinetics
-
-void spring::step()
+void spring::step(vec_type h0_, vec_type h1_)
 {
-    h0 = fil->get_bead_position(aindex[0]);
-    h1 = fil->get_bead_position(aindex[1]);
+    h0 = h0_;
+    h1 = h1_;
 
     disp = bc->rij_bc(h1 - h0);
     llen = abs(disp);
 
     direc.zero();
     if (llen != 0.0) direc = disp / llen;
-}
 
-void spring::update_force()
-{
-    double kf = kl * (llen-l0);
-    force = kf * direc;
+    double kf = kl * (llen - l0);
+    force = kf * direc;  // -dU/dh0
 }
 
 vec_type spring::get_force()
@@ -65,12 +57,6 @@ vec_type spring::get_force()
 vec_type spring::get_disp()
 {
     return disp;
-}
-
-void spring::filament_update()
-{
-    fil->update_forces(aindex[0],  force);
-    fil->update_forces(aindex[1], -force);
 }
 
 double spring::get_kl(){
@@ -89,44 +75,10 @@ double spring::get_length(){
     return llen;
 }
 
-vector<double> spring::output()
-{
-    return {h0.x, h0.y, disp.x, disp.y};
-}
-
-std::string spring::write()
-{
-    return fmt::format("\n{}\t{}\t{}\t{}", h0.x, h0.y, disp.x, disp.y);
-}
-
-std::string spring::to_string()
-{
-    return fmt::format(
-            "aindex[0] = {};\t "
-            "aindex[1] = {};\t "
-            "kl = {};\t "
-            "l0 = {}\n"
-            "filament : \n{}",
-            aindex[0], aindex[1], kl, l0, fil->to_string());
-}
-
+// compares parameters only
 bool spring::operator==(const spring& that)
 {
-    /*Note: you can't compare the filament objects because that will lead to infinite recursion;
-     * this function requires the filament poiner to be identical to evaluate to true*/
-    return (this->aindex[0] == that.aindex[0] && this->aindex[1] == that.aindex[1] &&
-            this->kl == that.kl &&
-            this->l0 == that.l0 && this->fil == that.fil);
-}
-
-bool spring::is_similar(const spring& that)
-{
-
-    /* Same as ==; but doesn't compare the filament pointer*/
-
-    return (this->aindex[0] == that.aindex[0] && this->aindex[1] == that.aindex[1] &&
-            this->kl == that.kl &&
-            this->l0 == that.l0);
+    return this->kl == that.kl && this->l0 == that.l0;
 }
 
 //shortest(perpendicular) distance between an arbitrary point and the spring
@@ -151,32 +103,6 @@ vec_type spring::intpoint(vec_type pos)
     }
 }
 
-bool spring::get_line_intersect(spring *l2)
-{
-    //Reference to Stack Overflow entry by iMalc on Feb 10, 2013
-    //Web Address: https://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
-
-    vec_type disp1 = this->get_disp();
-    vec_type disp2 = l2->get_disp();
-
-    vec_type disp12 = bc->rij_bc(h0 - l2->get_h0());
-
-    double denom = disp1.x*disp2.y - disp1.y*disp2.x;
-    if (denom == 0) return false;
-    bool denomPos = denom > 0;
-
-    double s_num = disp1.x*disp12.y - disp1.y*disp12.x;
-    double t_num = disp2.x*disp12.y - disp2.y*disp12.x;
-
-    if ((s_num < 0) == denomPos) return false;
-    if ((t_num < 0) == denomPos) return false;
-
-    if (((s_num > denom) == denomPos) || ((t_num > denom) == denomPos)) return false;
-
-    //Else Collision have been detected, the filaments do intersect!
-    return true;
-}
-
 vec_type spring::get_direction()
 {
     return direc;
@@ -189,22 +115,5 @@ double spring::get_stretching_energy()
 
 virial_type spring::get_virial()
 {
-    double k = kl * (llen-l0) / llen;
-    return 0.5 * outer(disp, k * disp);
-}
-
-void spring::set_aindex(array<int,2> aidx)
-{
-    aindex = aidx;
-}
-
-array<int, 2> spring::get_aindex()
-{
-    return aindex;
-}
-
-// functions for growing
-void spring::inc_aindex()
-{
-    aindex = {aindex[0] + 1, aindex[1] + 1};
+    return 0.5 * outer(disp, force);
 }

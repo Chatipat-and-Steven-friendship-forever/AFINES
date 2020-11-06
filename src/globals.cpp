@@ -12,18 +12,55 @@
 -------------------------------------------------------------------*/
 
 #include "globals.h"
-#include <boost/range/irange.hpp>
-/* distances in microns, time in seconds, forces in pN */
-mt19937_64 generator;
-normal_distribution<double> distribution(0,1);
-//uniform_real_distribution<double> distribution(-0.5,0.5);
 
-/*generic functions to be used below*/
+// begin [random]
+
+pcg64 rng;
+std::uniform_real_distribution<double> uniform_dist;
+std::normal_distribution<double> normal_dist;
 
 double rng_u()
 {
-    return (double)rand()/(RAND_MAX);
+    return uniform_dist(rng);
 }
+
+double rng_n()
+{
+    return normal_dist(rng);
+}
+
+pcg64 *get_rng()
+{
+    return &rng;
+}
+
+string gen_seed()
+{
+    pcg_extras::seed_seq_from<std::random_device> seed_source;
+    return fmt::format("{}", pcg64(seed_source));
+}
+
+void set_seed(string seed)
+{
+    std::istringstream(seed + '\n') >> rng;
+}
+
+string get_seed()
+{
+    return fmt::format("{}", rng);
+}
+
+void rng_load(istream &inp)
+{
+    inp >> rng >> uniform_dist >> normal_dist;
+}
+
+void rng_save(ostream &out)
+{
+    out << rng << '\n' << uniform_dist << '\n' << normal_dist << '\n';
+}
+
+// end [random]
 
 int pr(int num)
 {
@@ -33,24 +70,6 @@ int pr(int num)
     else {
         return 0;
     }
-}
-
-double rng_exp(double mean)
-{
-    double u;
-    u=rand() / (RAND_MAX + 1.);
-    return  -mean*log(u);
-}
-
-void set_seed(int s){
-    generator.seed(s);
-    srand(s);
-}
-
-double rng_n()
-{
-    return distribution(generator);
-
 }
 
 mt19937_64 &get_rng()
@@ -327,41 +346,33 @@ multimap<double, array<int, 2> > flip_map(const unordered_map<array<int, 2>, dou
     return dst;
 }
 
-boost::optional<vec_type> seg_seg_intersection(vec_type r1, vec_type r2, vec_type s1, vec_type s2)
+std::optional<vec_type> seg_seg_intersection(
+        vec_type p1, vec_type q1,
+        vec_type p2, vec_type q2)
 {
-    double a1, a2, b1, b2, c1, c2, det, x, y;
-    pair<double, double> mmx1, mmy1, mmx2, mmy2;
+    // adapted from Graphics Gems, page 304
 
-    a1 = r2.y - r1.y; //hy1[1] - hy1[0];
-    b1 = r1.x - r2.x; //hx1[0] - hx1[1];
-    c1 = a1*r1.x + b1*r1.y; //a1*hx1[0] + b1*hy1[0];
+    // intersection is at
+    // p1 + t v1 = p2 + s v2
 
-    mmx1 = minmax(r1.x, r2.x);
-    mmy1 = minmax(r1.y, r2.y);
+    vec_type v1 = q1 - p1;
+    vec_type v2 = q2 - p2;
 
-    a2 = s2.y - s1.y;//hy2[1] - hy2[0];
-    b2 = s1.x - s2.x;//hx2[0] - hx2[1];
-    c2 = a2*s1.x + b2*s1.y;
+    double det = cross(v1, v2);
 
-    det = a1*b2 - a2*b1;
-    mmx2 = minmax(s1.x, s2.x);
-    mmy2 = minmax(s1.y, s2.y);
+    if (det == 0.0) return {};  // springs are parallel
+    // ignore the collinear case, which should be very rare
 
-    if (det!=0){
-        x = (b2*c1 - b1*c2)/det;
-        y = (a1*c2 - a2*c1)/det;
-        if (x >= mmx1.first && x >= mmx2.first && x <= mmx1.second && x <= mmx2.second &&
-            y >= mmy1.first && y >= mmy2.first && y <= mmy1.second && y <= mmy2.second){
-            return {{x, y}};
-        }
+    vec_type p12 = p2 - p1;
+    double t = cross(p12, v2) / det;
+    double s = cross(p12, v1) / det;
+
+    // check if intersection point is on both segments
+    if (0.0 <= t && t <= 1.0 && 0.0 <= s && s <= 1.0) {
+        return {p1 + t * v1};
+    } else {
+        return {};
     }
-    return boost::none;
-    /*else{
-    //parallel; determine intersection by endpoint.
-    //This is a pain. I'm going to leave it out for now because it's an extremly unlikely scenario
-    //and the logic will look really gross
-
-    }*/
 }
 
 string print_pair(string name, const array<double, 2>& p)

@@ -53,6 +53,29 @@ ext_result_type ext_ring::compute(vec_type pos)
     return result;
 }
 
+// [circle fene]
+
+ext_circle_fene::ext_circle_fene(double k_, double rmin_, double rmax_)
+{
+    k = k_;
+    rmin = rmin_;
+    rmax = rmax_;
+}
+
+ext_result_type ext_circle_fene::compute(vec_type pos)
+{
+    ext_result_type result;
+    double lsq = abs2(pos);
+    if (lsq < rmin * rmin) return result;
+    double l = sqrt(lsq);
+    double dl = l - rmin;
+    double ratio = dl / rmax;
+    result.force = -k * dl / (1.0 - ratio * ratio) * pos;
+    result.energy = -0.5 * k * rmax * rmax * log1p(-ratio * ratio);
+    result.virial = -0.5 * outer(pos, result.force);
+    return result;
+}
+
 // [rectangle]
 
 ext_rectangle::ext_rectangle(double k_, double x_, double y_)
