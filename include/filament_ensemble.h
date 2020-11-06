@@ -69,6 +69,7 @@ class filament_ensemble
         void add_attached_disp_force(fp_index_type i, vec_type f);
         bool at_pointed_end(fp_index_type i);
         bool at_barbed_end(fp_index_type i);
+        double closest_attached_distance(int f_index, int l_index, vec_type pos);
 
         // thermo
         double get_potential_energy();

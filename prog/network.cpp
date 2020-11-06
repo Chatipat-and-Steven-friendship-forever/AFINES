@@ -603,11 +603,6 @@ int main(int argc, char **argv)
         crosslks->set_occ(occ);
     }
 
-    // compute forces and energies
-    net->compute_forces();
-    crosslks->compute_forces();
-    myosins->compute_forces();
-
     // END CREATE NETWORK OBJECTS
 
     // run simulation
@@ -795,7 +790,7 @@ int main(int argc, char **argv)
 
         // motor attachment/detachment
         if (occ > 0.0) {
-            std::shuffle(motor_ix.begin(), motor_ix.end(), get_rng());
+            std::shuffle(motor_ix.begin(), motor_ix.end(), *get_rng());
             for (size_t i : motor_ix) {
                 if (i < n_myosins) {
                     myosins->try_attach_detach(i);
@@ -808,11 +803,6 @@ int main(int argc, char **argv)
             myosins->try_attach_detach();
         }
 
-        // compute forces and energies
-        if (!freeze_filaments)
-            net->compute_forces();
-        crosslks->compute_forces();
-        myosins->compute_forces();
     }
 
     delete myosins;

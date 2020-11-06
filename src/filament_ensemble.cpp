@@ -273,6 +273,11 @@ bool filament_ensemble::at_pointed_end(fp_index_type i)
     return network[i.f_index]->at_pointed_end(i.p_index);
 }
 
+double filament_ensemble::closest_attached_distance(int f_index, int l_index, vec_type pos)
+{
+    return network[f_index]->closest_attached_distance(l_index, pos);
+}
+
 // end [attached]
 
 // begin [output]

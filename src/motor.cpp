@@ -671,7 +671,7 @@ bool motor::try_attach(int hd, mc_prob &p)
             // don't bind if there is a head bound closer than occ
             // closest_attached_distance is expensive to calculate,
             // so compute it as the last check
-            if (occ != 0.0 && f->closest_attached_distance(fl[1], intpoint) < occ) {
+            if (occ != 0.0 && filament_network->closest_attached_distance(fl[0], fl[1], intpoint) < occ) {
                 return false;
             }
 
