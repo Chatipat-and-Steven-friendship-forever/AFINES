@@ -28,8 +28,6 @@ motor_ensemble::motor_ensemble(vector<vector<double>> motors, double delta_t, do
     network->get_box()->add_callback([this](double g) { this->update_d_strain(g); });
     mld = mlen;
 
-    ext = nullptr;
-
     for (vector<double> mvec : motors) {
         n_motors.push_back(new motor(mvec, mlen, f_network, delta_t, temp,
                     v0, stiffness, ron, roff, rend, fstall, rcut, vis));
@@ -40,7 +38,6 @@ motor_ensemble::motor_ensemble(vector<vector<double>> motors, double delta_t, do
 
 motor_ensemble::~motor_ensemble()
 {
-    if (!ext) delete ext;
     for (motor *m : n_motors) delete m;
 }
 
@@ -125,10 +122,8 @@ void motor_ensemble::revive_heads()
     }
 }
 
-void motor_ensemble::set_external(external *ext_)
+void motor_ensemble::set_external(external *ext)
 {
-    if (ext) delete ext;
-    ext = ext_;
     for (motor *m : n_motors) {
         m->set_external(ext);
     }

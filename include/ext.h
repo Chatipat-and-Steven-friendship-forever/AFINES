@@ -17,7 +17,11 @@ class external
     public:
         external() {}
         virtual ~external() {}
-        virtual ext_result_type compute(vec_type pos) = 0;
+        virtual void update(double t) {}
+        virtual ext_result_type compute(vec_type pos)
+        {
+            throw std::logic_error("not implemented");
+        }
 };
 
 class ext_circle : public external
@@ -27,6 +31,15 @@ class ext_circle : public external
         ext_result_type compute(vec_type pos) override;
     protected:
         double k, r;
+};
+
+class ext_circle_linear : public ext_circle
+{
+    public:
+        ext_circle_linear(double k0, double r0, double dk, double dr);
+        void update(double t) override;
+    protected:
+        double k0, r0, dk, dr;
 };
 
 class ext_ring : public external
@@ -45,6 +58,15 @@ class ext_circle_fene : public external
         ext_result_type compute(vec_type pos) override;
     protected:
         double k, rmin, rmax;
+};
+
+class ext_circle_fene_linear : public ext_circle_fene
+{
+    public:
+        ext_circle_fene_linear(double k0, double rmin0, double rmax0, double dk, double drmin, double drmax);
+        void update(double t) override;
+    protected:
+        double k0, rmin0, rmax0, dk, drmin, drmax;
 };
 
 class ext_rectangle : public external

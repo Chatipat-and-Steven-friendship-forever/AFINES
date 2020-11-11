@@ -78,7 +78,6 @@ class motor_ensemble
         vector<class motor *> n_motors;
 
         double mld;  // saved for set_bending
-        class external *ext;  // saved for deletion in destructor
 
         // flags
         bool shear_flag, static_flag;

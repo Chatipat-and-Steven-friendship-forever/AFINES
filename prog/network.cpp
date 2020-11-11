@@ -570,33 +570,127 @@ int main(int argc, char **argv)
     if (!std::isnan(p_motor_v2)) crosslks->set_velocity(p_motor_v, p_motor_v2);
     if (!std::isnan(p_m_stall2)) crosslks->set_stall_force(p_m_stall, p_m_stall2);
 
+    // confinement forces
+
+    external *filament_ext = nullptr;
     if (circle_flag) {
         if (std::isinf(circle_max_radius)) {
-            net->set_external(new ext_circle(circle_spring_constant, circle_radius));
+            if (circle_linear_change_flag) {
+                filament_ext = new ext_circle_linear(
+                        circle_spring_constant,
+                        circle_radius,
+                        circle_spring_constant_change_rate,
+                        circle_radius_change_rate);
+            } else {
+                filament_ext = new ext_circle(
+                        circle_spring_constant,
+                        circle_radius);
+            }
         } else {
-            net->set_external(new ext_circle_fene(circle_spring_constant, circle_radius, circle_max_radius));
+            if (circle_linear_change_flag) {
+                filament_ext = new ext_circle_fene_linear(
+                        circle_spring_constant,
+                        circle_radius,
+                        circle_max_radius,
+                        circle_spring_constant_change_rate,
+                        circle_radius_change_rate,
+                        circle_max_radius_change_rate);
+            } else {
+                filament_ext = new ext_circle_fene(
+                        circle_spring_constant,
+                        circle_radius,
+                        circle_max_radius);
+            }
         }
     }
+    if (filament_ext) {
+        filament_ext->update(tinit);
+        net->set_external(filament_ext);
+    }
 
+    external *motor_ext = nullptr;
     if (a_m_ring_flag) {
-        myosins->set_external(new ext_ring(a_m_ring_spring_constant, a_m_ring_inner_radius, a_m_ring_outer_radius));
+        motor_ext = new ext_ring(
+                a_m_ring_spring_constant,
+                a_m_ring_inner_radius,
+                a_m_ring_outer_radius);
     } else if (circle_flag) {
         if (std::isinf(circle_max_radius)) {
-            myosins->set_external(new ext_circle(circle_spring_constant, circle_radius));
+            if (circle_linear_change_flag) {
+                motor_ext = new ext_circle_linear(
+                        circle_spring_constant,
+                        circle_radius,
+                        circle_spring_constant_change_rate,
+                        circle_radius_change_rate);
+            } else {
+                motor_ext = new ext_circle(
+                        circle_spring_constant,
+                        circle_radius);
+            }
         } else {
-            myosins->set_external(new ext_circle_fene(circle_spring_constant, circle_radius, circle_max_radius));
+            if (circle_linear_change_flag) {
+                motor_ext = new ext_circle_fene_linear(
+                        circle_spring_constant,
+                        circle_radius,
+                        circle_max_radius,
+                        circle_spring_constant_change_rate,
+                        circle_radius_change_rate,
+                        circle_max_radius_change_rate);
+            } else {
+                motor_ext = new ext_circle_fene(
+                        circle_spring_constant,
+                        circle_radius,
+                        circle_max_radius);
+            }
         }
+    }
+    if (motor_ext) {
+        motor_ext->update(tinit);
+        myosins->set_external(motor_ext);
     }
 
+    external *xlink_ext = nullptr;
     if (p_m_ring_flag) {
-        crosslks->set_external(new ext_ring(p_m_ring_spring_constant, p_m_ring_inner_radius, p_m_ring_outer_radius));
+        xlink_ext = new ext_ring(
+                p_m_ring_spring_constant,
+                p_m_ring_inner_radius,
+                p_m_ring_outer_radius);
     } else if (circle_flag) {
         if (std::isinf(circle_max_radius)) {
-            crosslks->set_external(new ext_circle(circle_spring_constant, circle_radius));
+            if (circle_linear_change_flag) {
+                xlink_ext = new ext_circle_linear(
+                        circle_spring_constant,
+                        circle_radius,
+                        circle_spring_constant_change_rate,
+                        circle_radius_change_rate);
+            } else {
+                xlink_ext = new ext_circle(
+                        circle_spring_constant,
+                        circle_radius);
+            }
         } else {
-            crosslks->set_external(new ext_circle_fene(circle_spring_constant, circle_radius, circle_max_radius));
+            if (circle_linear_change_flag) {
+                xlink_ext = new ext_circle_fene_linear(
+                        circle_spring_constant,
+                        circle_radius,
+                        circle_max_radius,
+                        circle_spring_constant_change_rate,
+                        circle_radius_change_rate,
+                        circle_max_radius_change_rate);
+            } else {
+                xlink_ext = new ext_circle_fene(
+                        circle_spring_constant,
+                        circle_radius,
+                        circle_max_radius);
+            }
         }
     }
+    if (xlink_ext) {
+        xlink_ext->update(tinit);
+        crosslks->set_external(xlink_ext);
+    }
+
+    // binding steric occlusion
 
     if (occ > 0.0) {
         myosins->set_occ(occ);
@@ -628,21 +722,6 @@ int main(int argc, char **argv)
 
     int count; double t;
     for (count = 0, t = tinit; t <= tfinal; count++, t += dt) {
-
-        if (circle_linear_change_flag && count % n_bw_confinement_change == 0) {
-            double ck = circle_spring_constant + circle_spring_constant_change_rate * t;
-            double cr = circle_radius + circle_radius_change_rate * t;
-            double cmr = circle_max_radius + circle_max_radius_change_rate * t;
-            if (std::isinf(circle_max_radius)) {
-                net->set_external(new ext_circle(ck, cr));
-                myosins->set_external(new ext_circle(ck, cr));
-                crosslks->set_external(new ext_circle(ck, cr));
-            } else {
-                net->set_external(new ext_circle_fene(ck, cr, cmr));
-                myosins->set_external(new ext_circle_fene(ck, cr, cmr));
-                crosslks->set_external(new ext_circle_fene(ck, cr, cmr));
-            }
-        }
 
         // compute forces and energies
         net->compute_forces();
@@ -764,6 +843,13 @@ int main(int argc, char **argv)
             bc->update_d_strain(d_strain - bc->get_delrx());
         }
 
+        // confinement
+        if (count % n_bw_confinement_change == 0) {
+            if (filament_ext) filament_ext->update(t);
+            if (motor_ext) motor_ext->update(t);
+            if (xlink_ext) xlink_ext->update(t);
+        }
+
         // Brownian dynamics and motor walking
         if (!freeze_filaments)
             net->integrate();
@@ -809,6 +895,9 @@ int main(int argc, char **argv)
     delete crosslks;
     delete net;
     delete bc;
+    if (filament_ext) delete filament_ext;
+    if (motor_ext) delete motor_ext;
+    if (xlink_ext) delete xlink_ext;
 
     fmt::print("Simulated {} steps.\n", count);
 

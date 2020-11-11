@@ -21,6 +21,23 @@ ext_result_type ext_circle::compute(vec_type pos)
     return result;
 }
 
+// [circle linear]
+
+ext_circle_linear::ext_circle_linear(double k0_, double r0_, double dk_, double dr_)
+    : ext_circle(k0_, r0_)
+{
+    k0 = k0_;
+    r0 = r0_;
+    dk = dk_;
+    dr = dr_;
+}
+
+void ext_circle_linear::update(double t)
+{
+    k = k0 + dk * t;
+    r = r0 + dr * t;
+}
+
 // [ring]
 
 ext_ring::ext_ring(double k_, double r1_, double r2_)
@@ -74,6 +91,28 @@ ext_result_type ext_circle_fene::compute(vec_type pos)
     result.energy = -0.5 * k * rmax * rmax * log1p(-ratio * ratio);
     result.virial = -0.5 * outer(pos, result.force);
     return result;
+}
+
+// [circle fene linear]
+
+ext_circle_fene_linear::ext_circle_fene_linear(
+        double k0_, double rmin0_, double rmax0_,
+        double dk_, double drmin_, double drmax_)
+    : ext_circle_fene(k0_, rmin0_, rmax0_)
+{
+    k0 = k0_;
+    rmin0 = rmin0_;
+    rmax0 = rmax0_;
+    dk = dk_;
+    drmin = drmin_;
+    drmax = drmax_;
+}
+
+void ext_circle_fene_linear::update(double t)
+{
+    k = k0 + dk * t;
+    rmin = rmin0 + drmin * t;
+    rmax = rmax0 + drmax * t;
 }
 
 // [rectangle]
