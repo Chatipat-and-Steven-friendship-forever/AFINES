@@ -4,6 +4,7 @@
 #include "generate.h"
 #include "motor_ensemble.h"
 #include "quadrants.h"
+#include "shear.h"
 
 #include <iostream>
 #include <fstream>
@@ -697,6 +698,33 @@ int main(int argc, char **argv)
         crosslks->set_occ(occ);
     }
 
+    // shear
+
+    shear_protocol *shear = nullptr;
+    {
+        vector<shear_protocol *> shears;
+        vector<double> shear_times;
+        if (stress_flag) {
+            shears.push_back(new strain_constant(restart_strain));
+            shear_times.push_back(time_of_dstrain);
+            shears.push_back(new stress_constant(bc, dt, stress_rate1, stress1));
+            shear_times.push_back(time_of_dstrain2);
+            shears.push_back(new stress_constant(bc, dt, stress_rate2, stress2));
+        } else if (osc_strain_flag) {
+            shears.push_back(new strain_constant(restart_strain));
+            shear_times.push_back(time_of_dstrain);
+            shears.push_back(new strain_triangle(d_strain_amp, d_strain_freq, time_of_dstrain, restart_strain));
+        } else if (diff_strain_flag) {
+            shears.push_back(new strain_constant(restart_strain));
+            shear_times.push_back(time_of_dstrain);
+            shears.push_back(new strain_linear(d_strain_amp, d_strain_freq, time_of_dstrain, restart_strain));
+        }
+
+        if (shears.size() > 0) {
+            shear = new shear_sequence(shears, shear_times);
+        }
+    }
+
     // END CREATE NETWORK OBJECTS
 
     // run simulation
@@ -807,40 +835,15 @@ int main(int argc, char **argv)
         }
 
         // shear
-        if (t >= time_of_dstrain && count % n_bw_shear == 0) {
-            double d_strain = 0.0;
-            if (stress_flag) {
-                double stress, stress_rate;
-                if (t < time_of_dstrain2) {
-                    stress = stress1;
-                    stress_rate = stress_rate1;
-                } else {
-                    stress = stress2;
-                    stress_rate = stress_rate2;
-                }
-
-                virial_type virial
-                    = net->get_potential_virial()
+        if (shear && count % n_bw_shear == 0) {
+            virial_type virial;
+            if (shear->need_virial(t)) {
+                virial = net->get_potential_virial()
                     + myosins->get_potential_virial()
                     + crosslks->get_potential_virial();
-
-                double xbox = bc->get_xbox();
-                double ybox = bc->get_ybox();
-                double delrx = bc->get_delrx();
-                double f_delrx = -2.0 * virial.yx / ybox;
-                // if strain = delrx/ybox, then
-                // strain += stress_rate (-dU/dstrain / area + stress) dt
-                // units:
-                // - stress: energy / area
-                // - stress_rate: area / (energy time)
-                d_strain = delrx + stress_rate * (stress + f_delrx / xbox) * ybox * dt;
-            } else if (osc_strain_flag) {
-                //d_strain += d_strain_amp * sin(2*pi*d_strain_freq * ( t - time_of_dstrain) );
-                d_strain = restart_strain + d_strain_amp*4*d_strain_freq*((t-time_of_dstrain) - 1/(d_strain_freq*2)*floor(2*(t-time_of_dstrain)*d_strain_freq + 0.5))*pow(-1,floor(2*(t-time_of_dstrain)*d_strain_freq + 0.5));
-            } else if (diff_strain_flag) {
-                d_strain = restart_strain + d_strain_amp*d_strain_freq*(t - time_of_dstrain);
             }
-            bc->update_d_strain(d_strain - bc->get_delrx());
+            double delrx = shear->compute(t, virial);
+            bc->update_d_strain(delrx - bc->get_delrx());
         }
 
         // confinement
@@ -898,6 +901,7 @@ int main(int argc, char **argv)
     if (filament_ext) delete filament_ext;
     if (motor_ext) delete motor_ext;
     if (xlink_ext) delete xlink_ext;
+    if (shear) delete shear;
 
     fmt::print("Simulated {} steps.\n", count);
 

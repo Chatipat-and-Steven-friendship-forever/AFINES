@@ -7,18 +7,19 @@ find_package(fmt REQUIRED)
 find_package(pybind11 REQUIRED)
 
 set(sources
-    src/spring.cpp
+    src/box.cpp
+    src/ext.cpp
+    src/exv.cpp
     src/filament.cpp
     src/filament_ensemble.cpp
+    src/generate.cpp
+    src/globals.cpp
     src/motor.cpp
     src/motor_ensemble.cpp
     src/potentials.cpp
-    src/exv.cpp
-    src/ext.cpp
-    src/box.cpp
     src/quadrants.cpp
-    src/generate.cpp
-    src/globals.cpp
+    src/shear.cpp
+    src/spring.cpp
 )
 
 add_executable(network prog/network.cpp ${sources})
