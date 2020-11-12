@@ -23,14 +23,17 @@ motor_ensemble::motor_ensemble(vector<vector<double>> motors, double delta_t, do
         double ron, double roff, double rend, double fstall, double rcut, double vis)
 {
     shear_flag = false;
-    static_flag = false;
     f_network = network;
     network->get_box()->add_callback([this](double g) { this->update_d_strain(g); });
     mld = mlen;
 
     for (vector<double> mvec : motors) {
-        n_motors.push_back(new motor(mvec, mlen, f_network, delta_t, temp,
-                    v0, stiffness, ron, roff, rend, fstall, rcut, vis));
+        motor *m = new motor(mvec, mlen, f_network, delta_t, temp, stiffness, vis);
+        m->set_binding(ron, roff, rend);
+        m->set_max_binding_dist(rcut);
+        m->set_velocity(v0);
+        m->set_stall_force(fstall);
+        n_motors.push_back(m);
     }
 
     this->update_energies();
@@ -72,11 +75,6 @@ void motor_ensemble::set_bending(double modulus, double ang){
 void motor_ensemble::use_shear(bool flag)
 {
     shear_flag = flag;
-}
-
-void motor_ensemble::use_static(bool flag)
-{
-    static_flag = flag;
 }
 
 void motor_ensemble::set_par(double k)
@@ -156,45 +154,20 @@ void motor_ensemble::set_occ(double occ)
 
 void motor_ensemble::try_attach_detach()
 {
-    for (size_t i = 0; i < n_motors.size(); i++) {
-        this->try_attach_detach(i);
+    for (motor *m : n_motors) {
+        m->try_attach_detach();
     }
 }
 
 void motor_ensemble::try_attach_detach(int i)
 {
-    array<motor_state, 2> s = n_motors[i]->get_states();
-
-    mc_prob p;
-
-    if (s[0] == motor_state::free) {
-        n_motors[i]->try_attach(0, p);
-    } else if (s[0] != motor_state::inactive) {
-        n_motors[i]->try_detach(0, p);
-    }
-
-    if (s[1] == motor_state::free) {
-        n_motors[i]->try_attach(1, p);
-    } else if (s[1] != motor_state::inactive) {
-        n_motors[i]->try_detach(1, p);
-    }
+    n_motors[i]->try_attach_detach();
 }
 
 void motor_ensemble::integrate()
 {
     for (motor *m : n_motors) {
-        array<motor_state, 2> s = m->get_states();
-        if (s[0] == motor_state::free || s[0] == motor_state::inactive) {
-            m->brownian_relax(0);
-        } else if (!static_flag && s[0] == motor_state::bound) {
-            m->walk(0);
-        }
-        if (s[1] == motor_state::free || s[1] == motor_state::inactive) {
-            m->brownian_relax(1);
-        } else if (!static_flag && s[1] == motor_state::bound) {
-            m->walk(1);
-        }
-        m->step();
+        m->integrate();
     }
 }
 

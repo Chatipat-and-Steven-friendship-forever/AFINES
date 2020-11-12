@@ -241,7 +241,6 @@ int main(int argc, char **argv)
     int p_m_align;
 
     bool p_dead_head_flag; int p_dead_head;
-    bool static_cl_flag;
 
     bool p_m_ring_flag;
     double p_m_ring_inner_radius, p_m_ring_outer_radius, p_m_ring_spring_constant;
@@ -279,8 +278,6 @@ int main(int argc, char **argv)
 
         ("p_dead_head_flag", po::value<bool>(&p_dead_head_flag)->default_value(false), "flag to kill head <dead_head> of all crosslinks")
         ("p_dead_head", po::value<int>(&p_dead_head)->default_value(0), "index of head to kill")
-
-        ("static_cl_flag", po::value<bool>(&static_cl_flag)->default_value(false), "flag to indicate compeletely static xlinks; i.e, no walking, no detachment")
 
         // confinement
         ("p_m_ring_flag", po::value<bool>(&p_m_ring_flag)->default_value(false), "flag to confine motors to a ring")
@@ -562,7 +559,6 @@ int main(int argc, char **argv)
     crosslks->set_bending(p_m_bend, p_m_ang);
     if (p_dead_head_flag) crosslks->kill_heads(p_dead_head);
     if (shear_motor_flag) crosslks->use_shear(true);
-    if (static_cl_flag) crosslks->use_static(true);
     if (p_m_kalign != 0.0) {
         if (p_m_align == 1) crosslks->set_par(p_m_kalign);
         if (p_m_align == 0) crosslks->set_align(p_m_kalign);

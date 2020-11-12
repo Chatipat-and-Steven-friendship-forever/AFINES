@@ -22,17 +22,15 @@ enum class motor_state {
 class motor
 {
     public:
-        motor() {}
         motor(vector<double> mvec,
                 double l0, class filament_ensemble *network,
-                double delta_t, double v0, double temp, double kl,
-                double ron, double roff, double rend,
-                double fstall, double rcut,
-                double vis);
-        virtual ~motor() {}
+                double delta_t, double temp, double kl, double vis);
 
         // [settings]
 
+        void set_max_binding_dist(double rcut);
+        void set_binding(double ron, double roff, double rend);
+        void set_binding_one(double ron1, double roff1, double rend1);
         void set_binding_two(double ron2, double roff2, double rend2);
 
         void set_bending(double kb, double th0);
@@ -52,7 +50,9 @@ class motor
         void revive_head(int hd);
         void deactivate_head(int hd);
 
+        void set_velocity(double v);
         void set_velocity(double v1, double v2);
+        void set_stall_force(double f);
         void set_stall_force(double f1, double f2);
 
         void set_occ(double occ);
@@ -61,6 +61,7 @@ class motor
         array<motor_state, 2> get_states();
         vec_type get_h0();
         vec_type get_h1();
+        vec_type get_disp();
         array<int, 2> get_f_index();
         array<int, 2> get_l_index();
 
@@ -84,11 +85,13 @@ class motor
 
         // [dynamics]
         void update_d_strain(double g);  // apply shear (called automatically by box)
+        void integrate();  // Brownian dynamics for free heads and walking for bound heads
         void brownian_relax(int hd);  // Brownian dynamics for free heads
         void walk(int hd);  // walking for bound heads
         void step();  // compute derived state (incl. bound head positions)
 
         // [attach/detach]
+        void try_attach_detach();
         double metropolis_prob(int hd, array<int, 2> fl_idx, vec_type newpos);
         double alignment_penalty(vec_type a, vec_type b);
         // attachment
@@ -130,7 +133,7 @@ class motor
         // attach/detach
         double kon, koff, kend;
         double kon2, koff2, kend2;
-        double max_bind_dist, max_bind_dist_sq;
+        double max_bind_dist;
         double occ;
 
         // walk

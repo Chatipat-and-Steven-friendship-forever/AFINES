@@ -30,10 +30,7 @@ motor::motor(vector<double> mvec,
         double mlen, filament_ensemble * network,
         double delta_t,
         double temp,
-        double v0,
         double stiffness,
-        double ron, double roff, double rend,
-        double fstall, double rcut,
         double vis)
 {
     bc = network->get_box();
@@ -46,16 +43,15 @@ motor::motor(vector<double> mvec,
     bd_prefactor = sqrt(temperature / (2 * damp * dt));
 
     // attach/detach
-    kon = kon2 = ron * dt;
-    koff = koff2 = roff * dt;
-    kend = kend2 = rend * dt;
-    max_bind_dist = rcut;
-    max_bind_dist_sq = rcut * rcut;
+    kon = kon2 = 0.0;
+    koff = koff2 = 0.0;
+    kend = kend2 = 0.0;
+    max_bind_dist = 0.0;
     occ = 0.0;
 
     // walk
-    vs[0] = vs[1] = v0;
-    stall_force[0] = stall_force[1] = fstall;
+    vs[0] = vs[1] = 0.0;
+    stall_force[0] = stall_force[1] = INFINITY;
 
     // stretch
     mk = stiffness;
@@ -117,10 +113,30 @@ motor::motor(vector<double> mvec,
 
 // begin [settings]
 
-void motor::set_binding_two(double ron2, double roff2, double rend2){
-    kon2  = ron2*dt;
-    koff2 = roff2*dt;
-    kend2 = rend2*dt;
+void motor::set_max_binding_dist(double rcut)
+{
+    max_bind_dist = rcut;
+}
+
+void motor::set_binding(double ron, double roff, double rend)
+{
+    kon = kon2 = ron * dt;
+    koff = koff2 = roff * dt;
+    kend = kend2 = rend * dt;
+}
+
+void motor::set_binding_one(double ron1, double roff1, double rend1)
+{
+    kon = ron1 * dt;
+    koff = roff1 * dt;
+    kend = rend1 * dt;
+}
+
+void motor::set_binding_two(double ron2, double roff2, double rend2)
+{
+    kon2  = ron2 * dt;
+    koff2 = roff2 * dt;
+    kend2 = rend2 * dt;
 }
 
 void motor::set_bending(double kb_, double th0_)
@@ -172,10 +188,22 @@ void motor::set_external(external *ext_)
     ext = ext_;
 }
 
+void motor::set_velocity(double v)
+{
+    vs[0] = v;
+    vs[1] = v;
+}
+
 void motor::set_velocity(double v1, double v2)
 {
     vs[0] = v1;
     vs[1] = v2;
+}
+
+void motor::set_stall_force(double f)
+{
+    stall_force[0] = f;
+    stall_force[1] = f;
 }
 
 void motor::set_stall_force(double f1, double f2)
@@ -230,6 +258,11 @@ vec_type motor::get_h0()
 vec_type motor::get_h1()
 {
     return h[1];
+}
+
+vec_type motor::get_disp()
+{
+    return disp;
 }
 
 array<int, 2> motor::get_f_index()
@@ -318,6 +351,8 @@ void motor::clear_forces()
 // (call this ONCE)
 void motor::update_force()
 {
+    this->clear_forces();
+
     // spring forces
     tension = mk * (len - mld);
     vec_type sf = -tension * direc;
@@ -329,14 +364,6 @@ void motor::update_force()
     // bending forces
     // partially applied to filaments
     if (kb > 0.0) {
-
-        // bending forces are added (not assigned), so clear them first
-        // also, bending forces may not be activated
-        b_eng[0] = b_eng[1] = 0.0;
-        b_force[0].zero();
-        b_force[1].zero();
-        vir_bend.zero();
-
         // bending forces are activated only when both heads are bound
         if (state[0] == motor_state::bound && state[1] == motor_state::bound) {
             this->update_bending(0);
@@ -347,11 +374,6 @@ void motor::update_force()
     // alignment forces
     // all applied to filaments
     if (kalign != 0.0) {
-
-        // in case alignment isn't activated
-        align_eng = 0.0;
-        vir_align.zero();
-
         // alignment is activated only when both heads are bound
         if (state[0] == motor_state::bound && state[1] == motor_state::bound) {
             update_alignment();
@@ -360,7 +382,6 @@ void motor::update_force()
 
     // external forces
     if (ext) {
-        vir_ext.zero();
         this->update_external(0);
         this->update_external(1);
     }
@@ -482,6 +503,24 @@ void motor::update_d_strain(double g)
     h[1] = bc->pos_bc({h[1].x + g * h[1].y / fov[1], h[1].y});
 }
 
+// perform Brownian dynamics for unbound heads
+// and walk (if possible) for bound heads
+void motor::integrate()
+{
+    array<motor_state, 2> s = state;
+    if (s[0] == motor_state::free || s[0] == motor_state::inactive) {
+        this->brownian_relax(0);
+    } else if (s[0] == motor_state::bound) {
+        this->walk(0);
+    }
+    if (s[1] == motor_state::free || s[1] == motor_state::inactive) {
+        this->brownian_relax(1);
+    } else if (s[1] == motor_state::bound) {
+        this->walk(1);
+    }
+    this->step();
+}
+
 // Brownian dynamics for unbound particles
 // does NOT check that particles are unbound
 void motor::brownian_relax(int hd)
@@ -529,6 +568,26 @@ void motor::step()
 // begin [attach/detach]
 // assumes that derived state is computed
 // if positions are changed, derived states are recomputed
+
+void motor::try_attach_detach()
+{
+    array<motor_state, 2> s = state;
+
+    mc_prob p;
+
+    if (s[0] == motor_state::free) {
+        this->try_attach(0, p);
+    } else if (s[0] != motor_state::inactive) {
+        this->try_detach(0, p);
+    }
+
+    if (s[1] == motor_state::free) {
+        this->try_attach(1, p);
+    } else if (s[1] != motor_state::inactive) {
+        this->try_detach(1, p);
+    }
+}
+
 
 // metropolis algorithm
 // compute attachment/detachment probability between current and proposed state
@@ -660,7 +719,7 @@ bool motor::try_attach(int hd, mc_prob &p)
         // don't bind if binding site is further away than the cutoff
         vec_type dr = bc->rij_bc(intpoint - h[hd]);
         double dist_sq = abs2(dr);
-        if (dist_sq > max_bind_dist_sq || !allowed_bind(hd, fl)) {
+        if (dist_sq > max_bind_dist * max_bind_dist || !allowed_bind(hd, fl)) {
             return false;
         }
 
