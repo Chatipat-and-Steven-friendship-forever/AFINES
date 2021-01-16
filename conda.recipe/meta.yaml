@@ -1,0 +1,20 @@
+package:
+  name: afines
+  version: {{ GIT_DESCRIBE_TAG }}
+
+build:
+  number: {{ GIT_DESCRIBE_NUMBER }}
+  string: {{ GIT_BUILD_STR }}
+
+source:
+  path: ..
+
+requirements:
+  build:
+    - git
+    - cmake
+    - {{ compiler('cxx') }}
+  host:
+    - boost-cpp
+  run:
+    - boost-cpp
