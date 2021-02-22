@@ -19,7 +19,7 @@
 
 filament::filament(filament_ensemble *net, vector<vector<double>> beadvec, double spring_length,
         double stretching_stiffness, double bending_stiffness,
-        double deltat, double temp, double frac_force)
+        double deltat, double temp, double frac_force, double shake_tol_)
 {
     filament_network = net;
 
@@ -29,6 +29,7 @@ filament::filament(filament_ensemble *net, vector<vector<double>> beadvec, doubl
     fracture_force = frac_force;
     fracture_force_sq = fracture_force*fracture_force;
     kb = bending_stiffness;
+    shake_tol = shake_tol_;
 
     ubend = 0.0;
 
@@ -101,7 +102,41 @@ void filament::update_positions()
         beads[i]->set_pos(new_pos);
         beads[i]->reset_force();
     }
+
+    shake();
+
+    // SHAKE needs original displacement
+    // so spring update must be after it
     for (spring *s : springs) s->step();
+}
+
+// constrain spring lengths using SHAKE
+void filament::shake()
+{
+    size_t n_springs = springs.size();
+    bool converged = false;
+    while (!converged) {
+        converged = true;
+        for (int i = 0; i < n_springs; i++) {
+            spring *s = springs[i];
+            if (s->get_kl() == INFINITY) {
+                // apply a single SHAKE step to a spring
+                // assumes that damp is the same for all beads
+                double l0 = s->get_l0();  // constraint length
+                vec_type h0 = beads[i]->get_pos();
+                vec_type h1 = beads[i + 1]->get_pos();
+                vec_type disp = bc->rij_bc(h1 - h0);  // current displacement
+                double rsq = abs2(disp);
+                if (fabs(sqrt(rsq) - l0) > shake_tol) {
+                    converged = false;
+                    vec_type disp0 = s->get_disp();  // original displacement
+                    double lambda = 0.25 * (rsq - l0 * l0) / dot(disp, disp0);
+                    beads[i]->set_pos(h0 + lambda * disp0);
+                    beads[i + 1]->set_pos(h1 - lambda * disp0);
+                }
+            }
+        }
+    }
 }
 
 void filament::update_stretching()
@@ -261,12 +296,12 @@ vector<filament *> filament::fracture(int node){
         newfilaments.push_back(
                 new filament(filament_network, lower_half,
                     springs[0]->get_l0(), springs[0]->get_kl(), kb,
-                    dt, temperature, fracture_force));
+                    dt, temperature, fracture_force, shake_tol));
     if (upper_half.size() > 0)
         newfilaments.push_back(
                 new filament(filament_network, upper_half,
                     springs[0]->get_l0(), springs[0]->get_kl(), kb,
-                    dt, temperature, fracture_force));
+                    dt, temperature, fracture_force, shake_tol));
 
     return newfilaments;
 

@@ -19,7 +19,8 @@ class filament
 {
     public:
         filament(filament_ensemble *net, vector<vector<double>> beadvec,
-                double l0, double kl, double kb, double dt, double temp, double fracture);
+                double l0, double kl, double kb, double dt, double temp,
+                double fracture, double shake_tol);
         ~filament();
 
         // [output]
@@ -60,6 +61,9 @@ class filament
         // computes kinetic energies
         // clears forces, but doesn't compute them
         void update_positions();
+
+        // apply constraints
+        void shake();
 
         // shears beads and springs
         void update_d_strain(double);
@@ -141,7 +145,7 @@ class filament
         virial_type bending_virial;
 
         // parameters
-        double kb, temperature, dt, fracture_force, damp;
+        double kb, temperature, dt, fracture_force, damp, shake_tol;
 
         // growing parameters
         int nsprings_max;

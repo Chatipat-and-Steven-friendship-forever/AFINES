@@ -53,8 +53,12 @@ void spring::step()
 
 void spring::update_force()
 {
-    double kf = kl * (llen-l0);
-    force = kf * direc;
+    if (kl == INFINITY) {
+        force.zero();
+    } else {
+        double kf = kl * (llen-l0);
+        force = kf * direc;
+    }
 }
 
 vec_type spring::get_force()
@@ -184,13 +188,21 @@ vec_type spring::get_direction()
 
 double spring::get_stretching_energy()
 {
-    return 0.5 * kl * (llen - l0) * (llen - l0);
+    if (kl == INFINITY) {
+        return 0.0;
+    } else {
+        return 0.5 * kl * (llen - l0) * (llen - l0);
+    }
 }
 
 virial_type spring::get_virial()
 {
-    double k = kl * (llen-l0) / llen;
-    return 0.5 * outer(disp, k * disp);
+    if (kl == INFINITY) {
+        return {};
+    } else {
+        double k = kl * (llen-l0) / llen;
+        return 0.5 * outer(disp, k * disp);
+    }
 }
 
 void spring::set_aindex(array<int,2> aidx)
