@@ -20,7 +20,7 @@ class filament
     public:
         filament(filament_ensemble *net, vector<vector<double>> beadvec,
                 double l0, double kl, double kb, double dt, double temp,
-                double fracture, double shake_tol);
+                double fracture, double shake_tol, int max_shake);
         ~filament();
 
         // [output]
@@ -146,6 +146,7 @@ class filament
 
         // parameters
         double kb, temperature, dt, fracture_force, damp, shake_tol;
+        int max_shake;
 
         // growing parameters
         int nsprings_max;

@@ -19,7 +19,7 @@
 
 filament::filament(filament_ensemble *net, vector<vector<double>> beadvec, double spring_length,
         double stretching_stiffness, double bending_stiffness,
-        double deltat, double temp, double frac_force, double shake_tol_)
+        double deltat, double temp, double frac_force, double shake_tol_, int max_shake_)
 {
     filament_network = net;
 
@@ -30,6 +30,7 @@ filament::filament(filament_ensemble *net, vector<vector<double>> beadvec, doubl
     fracture_force_sq = fracture_force*fracture_force;
     kb = bending_stiffness;
     shake_tol = shake_tol_;
+    max_shake = max_shake_;
 
     ubend = 0.0;
 
@@ -115,7 +116,7 @@ void filament::shake()
 {
     size_t n_springs = springs.size();
     bool converged = false;
-    while (!converged) {
+    for (int iteration = 0; iteration < max_shake; iteration++) {
         converged = true;
         for (int i = 0; i < n_springs; i++) {
             spring *s = springs[i];
@@ -136,7 +137,9 @@ void filament::shake()
                 }
             }
         }
+        if (converged) return;
     }
+    fmt::print("\nWarning: SHAKE did not converge after {} iterations", max_shake);
 }
 
 void filament::update_stretching()
@@ -296,12 +299,12 @@ vector<filament *> filament::fracture(int node){
         newfilaments.push_back(
                 new filament(filament_network, lower_half,
                     springs[0]->get_l0(), springs[0]->get_kl(), kb,
-                    dt, temperature, fracture_force, shake_tol));
+                    dt, temperature, fracture_force, shake_tol, max_shake));
     if (upper_half.size() > 0)
         newfilaments.push_back(
                 new filament(filament_network, upper_half,
                     springs[0]->get_l0(), springs[0]->get_kl(), kb,
-                    dt, temperature, fracture_force, shake_tol));
+                    dt, temperature, fracture_force, shake_tol, max_shake));
 
     return newfilaments;
 

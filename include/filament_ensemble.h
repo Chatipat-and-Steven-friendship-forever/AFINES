@@ -22,7 +22,7 @@ class filament_ensemble
 
         filament_ensemble(box *bc, vector<vector<double>> beads, array<int, 2> nq,
                 double dt, double temp, double visc, double l0, double kl, double kb,
-                double frac_force, double rmax, double kexv, double shake_tol);
+                double frac_force, double rmax, double kexv, double shake_tol, int max_shake);
 
         ~filament_ensemble();
 

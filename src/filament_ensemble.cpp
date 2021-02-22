@@ -15,7 +15,7 @@
 #include "filament_ensemble.h"
 
 filament_ensemble::filament_ensemble(box *bc_, vector<vector<double> > beads, array<int,2> mynq, double delta_t, double temp,
-        double vis, double spring_len, double stretching, double bending, double frac_force, double RMAX, double A, double shake_tol)
+        double vis, double spring_len, double stretching, double bending, double frac_force, double RMAX, double A, double shake_tol, int max_shake)
 {
     bc = bc_;
 
@@ -28,7 +28,7 @@ filament_ensemble::filament_ensemble(box *bc_, vector<vector<double> > beads, ar
 
         if (beads[i][3] != fil_idx && avec.size() > 0){
 
-            network.push_back(new filament(this, avec, spring_len, stretching, bending, delta_t, temp, frac_force, shake_tol));
+            network.push_back(new filament(this, avec, spring_len, stretching, bending, delta_t, temp, frac_force, shake_tol, max_shake));
             avec.clear();
             fil_idx = beads[i][3];
         }
@@ -36,7 +36,7 @@ filament_ensemble::filament_ensemble(box *bc_, vector<vector<double> > beads, ar
     }
 
     if (avec.size() > 0)
-        network.push_back(new filament(this, avec, spring_len, stretching, bending, delta_t, temp, frac_force, shake_tol));
+        network.push_back(new filament(this, avec, spring_len, stretching, bending, delta_t, temp, frac_force, shake_tol, max_shake));
 
     avec.clear();
 

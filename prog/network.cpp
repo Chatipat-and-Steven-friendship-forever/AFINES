@@ -117,6 +117,7 @@ int main(int argc, char **argv)
     bool freeze_filaments;
 
     double shake_tol;
+    int max_shake;
 
     po::options_description config_actin("Filament Options");
     config_actin.add_options()
@@ -152,6 +153,7 @@ int main(int argc, char **argv)
 
         // shake
         ("shake_tol", po::value<double>(&shake_tol)->default_value(1e-4), "SHAKE tolerance (um)")
+        ("max_shake", po::value<int>(&max_shake)->default_value(100), "Maximum number of SHAKE iterations per spring per step.")
         ;
 
     // motors
@@ -516,7 +518,7 @@ int main(int argc, char **argv)
             bc, actin_pos_vec, {xgrid, ygrid}, dt,
             temperature, viscosity, link_length,
             link_stretching_stiffness, link_bending_stiffness,
-            fracture_force, rmax, kexv, shake_tol);
+            fracture_force, rmax, kexv, shake_tol, max_shake);
 
     // additional options
     net->set_growing(kgrow, lgrow, l0min, l0max, nlink_max);
