@@ -154,68 +154,118 @@ of 0.05 you would enter the command:
 
 ## Simulation Parameters ##
 
-|variable name              |type   |default value  |units  |description                        |
-|-------------              |:----: |:-------------:|:-----:|-----------------------------------|
-|**ENVIRONMENT**            |||||
-|xrange                     |double |50             |um     |size of cell in horizontal direction|
-|yrange                     |double |50             |um     |size of cell in vertical direction  |
-|grid_factor                |double |1              |um^(-1)|number of grid boxes per micron     |
-|dt                         |double |0.0001         |s      |length of individual timestep       |
-|tinit                      |double |0              |s      |time that recording of simulation starts|
-|tfinal                     |double |10             |s      |length of simulation|
-|nframes                    |int    |100            |0      |number of frames of actin/link/motor positions printed to file (equally distant in time)|
-|nmsgs                      |int    |1000           |0      |number of timesteps between printing simulation progress to stdout|
-|viscosity                  |double |0.001          |mg/um*s|Dynamic viscosity|
-|temperature                |double |0.004          |pN*um  |Temp in energy units |
-|bnd_cnd                    |string |"PERIODIC"     |       |boundary conditions|
-|dir                        |string |"."            |       |directory for output files|
-|myseed                     |int    |time(NULL)     |       |seed of random number generator|
-|**ACTIN**                  |||||
-|nmonomer                   |double |11             |       |number of beads per filament|
-|npolymer                   |double |3              |       |number of polymers in the network|
-|actin_length               |double |0.5            |um     |Length of a single actin monomer|
-|actin_pos_str              |string |               |       |Starting positions of actin polymers, commas delimit coordinates; semicolons delimit positions|
-|link_length                |double |0              |       |Length of links connecting monomers|
-|polymer_bending_modulus    |double |0.068           |pn*um^2|Bending modulus of a filament|
-|fracture_force             |double |1000000        |pN     |filament breaking poiafines|
-|link_stretching_stiffness  |double |1              |pN/um  |stiffness of link|
-|**MOTORS**                 |       |               |       ||
-|a_motor_density            |double |0.05           |um^(-2)|density of active motors |
-|a_motor_pos_str            |string |               |       |Starting positions of motors, commas delimit coordinates; semicolons delimit positions|
-|a_m_kon                    |double |100            |s^(-1) |active motor on rate|
-|a_m_koff                   |double |20             |s^(-1) |active motor off rate|
-|a_m_kend                   |double |20             |s^(-1) |active motor off rate at filament end|
-|a_motor_stiffness          |double |10             |pN/um  |active motor spring stiffness|
-|a_motor_length             |double |0.4            |um     |length of motor|
-|a_m_stall                  |double |10             |pN     |stall force of motors|
-|a_motor_v                  |double |1              |um/s   |velocity along filaments towards barbed end when attached|
-|motor_intersect_flag       |boolean|false          |       |if true, then motors are placed at filament intersections|
-|a_linkage_prob             |double |1              |       |probability that filaments are linked by a motor if motor_intersect_flag = true|
-|dead_head_flag             |boolean|false          |       |if true, then head [dead_head] of all motors remains stationary throughout sim|
-|dead_head                  |int    |0              |       |can be 0 or 1; head that remains stationary if dead_head_flag=true|
-|**CROSSLINKS**             |       |               |       ||
-|p_motor_density            |double |0.05           |um^(-2)|number of passive motors|
-|p_motor_pos_str            |string |               |       |Starting positions of xlinks, commas delimit coordinates; semicolons delimit positions|
-|p_m_kon                    |double |100            |s^(-1) |passive motor on rate|
-|p_m_koff                   |double |20             |s^(-1) |passive motor off rate|
-|p_m_kend                   |double |20             |s^(-1) |passive motor off rate at filament end|
-|p_motor_stiffness          |double |50             |s^(-1) |xlink spring stiffness (pN/um)|
-|p_motor_length             |double |0.4            |s^(-1) |length of xlink|
-|p_m_stall                  |double |0              |pN     |stall force|
-|link_intersect_flag        |boolean|false          |       |if true, then crosslinks are placed at filament intersections|
-|p_linkage_prob             |double |1              |     |probability that filaments are crosslinked if link_intersect_flag = true|
-|p_dead_head_flag           |boolean|false          |       |if true, then head [p_dead_head] of all xlinks remains stationary throughout sim|
-|p_dead_head                |int    |0              |       |can be 0 or 1; head that remains stationary if p_dead_head_flag=true|
-|static_cl_flag             |boolean|false          |       |should be set to true if xlinks start off attached to filaments and never detach|
-|**SHEAR**                  |       |               |       ||
-|strain_pct                 |double |0              |       |pre-strain (e.g., 0.5 means a strain of 0.5*xrange)|
-|time_of_strain             |double |0              |       |time of pre-strain|
-|d_strain_pct               |double |0              |s      |differential strain (e.g., 0.5 means a strain of 0.5*xrange)|
-|time_of_dstrain            |double |10000          |s      |time when differential strain begins|
-|diff_strain_flag           |boolean|false          |       |flag to use if differential strain should be linear (in one direction)|
-|osc_strain_flag            |boolean|false          |       |flag to use if differential strain should be oscillatory (like Gardel, Science 2004)|
-|n_bw_shear                 |int    |10^8           |s      |number of timesteps between subsequent differential strains |
-|d_strain_freq              |double |1              |Hz     |frequency of differential oscillatory strain|
+All the available options for a binary can be displayed using the command
+    ```
+    > ./bin/afines -h
+    ```
+These are reproduced below, but the above command should be more accurate.
+
+|variable name              |type   |default value  |units  |description                                                                                       |
+|---------------------------|:-----:|:-------------:|:-----:|--------------------------------------------------------------------------------------------------|
+|**ENVIRONMENT**            |       |               |       |                                                                                                  |
+|bnd_cnd,bc                 |string |"PERIODIC"     |       |boundary conditions                                                                               |
+|xrange                     |double |10             |um     |size of cell in horizontal direction                                                              |
+|yrange                     |double |10             |um     |size of cell in vertical direction                                                                |
+|dt                         |double |0.0001         |s      |length of individual timestep                                                                     |
+|tinit                      |double |0              |s      |time that recording of simulation starts                                                          |
+|tfinal                     |double |0.01           |s      |length of simulation                                                                              |
+|nframes                    |int    |1000           |       |number of frames of actin/link/motor positions printed to file (equally distant in time)          |
+|nmsgs                      |int    |10000          |       |number of timesteps between printing simulation progress to stdout                                |
+|viscosity                  |double |0.001          |mg/um*s|Dynamic viscosity                                                                                 |
+|temperature,temp           |double |0.004          |pN*um  |Temp in energy units                                                                              |
+|dir                        |string |"."            |       |directory for output files                                                                        |
+|myseed                     |int    |time(NULL)     |       |seed of random number generator                                                                   |
+|restart                    |bool   |false          |       |whether to restart the simulation from the last recorded time step                                |
+|restart_time               |double |-1             |s      |time to restart the simulation from                                                               |
+|restart_strain             |double |0              |um     |starting strain for restarting simulation                                                         |
+|steven_continuation_flag   |bool   |false          |       |whether to start with the strain from the last recorded time step                                 |
+|continuation_fr            |int    |0              |       |last saved from from the simulation to be continued                                               |
+|grid_factor                |double |2              |um^(-1)|number of grid boxes per micron                                                                   |
+|quad_off_flag              |bool   |false          |       |flag to turn off neighbor list updating                                                           |
+|quad_update_period         |int    |1              |       |number of timesteps between actin/link/motor position updates to update quadrants                 |
+|circle_flag                |bool   |false          |       |flag to add a circular wall                                                                       |
+|circle_radius              |double |INFINITY       |um     |radius of circular wall                                                                           |
+|circle_spring_constant     |double |0              |pN/um  |spring constant of circular wall                                                                  |
+|**ACTIN**                  |       |               |       |                                                                                                  |
+|actin_in                   |string |""             |       |input actin positions file                                                                        |
+|npolymer                   |int    |3              |       |number of polymers in the network                                                                 |
+|nmonomer                   |int    |11             |       |number of beads per filament                                                                      |
+|nmonomer_extra             |int    |0              |       |maximum number of monomers per filament                                                           |
+|extra_bead_prob            |double |0.5            |       |probability of adding an extra bead from nmonomer...nmonomer_extra                                |
+|actin_length               |double |0.5            |um     |Length of a single actin monomer                                                                  |
+|actin_pos_str              |string |               |       |Starting positions of actin polymers, commas delimit coordinates; semicolons delimit positions    |
+|link_length                |double |0              |       |Length of links connecting monomers                                                               |
+|polymer_bending_modulus    |double |0.068          |pN*um^2|Bending modulus of a filament                                                                     |
+|fracture_force             |double |1000000        |pN     |filament breaking poiafines                                                                       |
+|link_stretching_stiffness  |double |1              |pN/um  |stiffness of link                                                                                 |
+|rmax                       |double |0.25           |um     |cutoff distance for interactions between actin beads and filaments                                |
+|kexv                       |double |1.0            |pN/um  |parameter of exv force calculation                                                                |
+|kgrow                      |double |0              |s^(-1) |rate of filament growth                                                                           |
+|lgrow                      |double |0              |um     |additional length of filament upon growth                                                         |
+|l0min                      |double |0              |um     |minimum length a link can shrink to before disappearing                                           |
+|l0max                      |double |2              |um     |maximum length a link can grow to before breaking into two links                                  |
+|nlink_max                  |int    |25             |       |maximum number of links allowed on filament                                                       |
+|**MOTORS**                 |       |               |       |                                                                                                  |
+|a_motor_in                 |string |""             |       |input motor positions file                                                                        |
+|a_motor_density            |double |0.05           |um^(-2)|density of active motors                                                                          |
+|a_motor_pos_str            |string |""             |       |Starting positions of motors, commas delimit coordinates; semicolons delimit positions            |
+|motor_intersect_flag       |boolean|false          |       |if true, then motors are placed at filament intersections                                         |
+|a_linkage_prob             |double |1              |       |probability that filaments are linked by a motor if motor_intersect_flag = true                   |
+|a_m_kon                    |double |1              |s^(-1) |active motor on rate                                                                              |
+|a_m_koff                   |double |0.1            |s^(-1) |active motor off rate                                                                             |
+|a_m_kend                   |double |0.1            |s^(-1) |active motor off rate at filament end                                                             |
+|a_m_cut                    |double |0.063          |um     |cutoff distance for binding                                                                       |
+|a_m_kon2                   |double |-1             |s^(-1) |active motor on rate when both heads bound                                                        |
+|a_m_koff2                  |double |-1             |s^(-1) |active motor off rate when both heads bound                                                       |
+|a_m_kend2                  |double |-1             |s^(-1) |active motor off rate at filament end when both heads bound                                       |
+|a_motor_length             |double |0.4            |um     |length of motor                                                                                   |
+|a_motor_stiffness          |double |1              |pN/um  |active motor spring stiffness                                                                     |
+|a_m_bend                   |double |0.04           |pN     |bending force constant for active motors                                                          |
+|a_m_ang                    |double |pi/2           |       |equilibrium angle of active motor-filament system                                                 |
+|a_m_align                  |int    |0              |       |active motor alignment type                                                                       |
+|a_m_kalign                 |double |0              |pN*um  |active motor alignment penalty                                                                    |
+|a_motor_v                  |double |1              |um/s   |velocity along filaments towards barbed end when attached                                         |
+|a_m_stall                  |double |0.5            |pN     |stall force of motors                                                                             |
+|dead_head_flag             |boolean|false          |       |if true, then head [dead_head] of all motors remains stationary throughout sim                    |
+|dead_head                  |int    |0              |       |can be 0 or 1; head that remains stationary if dead_head_flag=true                                |
+|**CROSSLINKS**             |       |               |       |                                                                                                  |
+|p_motor_in                 |string |""             |       |input crosslinker positions file                                                                  |
+|p_motor_density            |double |0.05           |um^(-2)|number of passive motors                                                                          |
+|p_motor_pos_str            |string |""             |       |Starting positions of xlinks, commas delimit coordinates; semicolons delimit positions            |
+|link_intersect_flag        |boolean|false          |       |if true, then crosslinks are placed at filament intersections                                     |
+|p_linkage_prob             |double |1              |       |probability that filaments are crosslinked if link_intersect_flag = true                          |
+|p_m_kon                    |double |1              |s^(-1) |passive motor on rate                                                                             |
+|p_m_koff                   |double |0.1            |s^(-1) |passive motor off rate                                                                            |
+|p_m_kend                   |double |0.1            |s^(-1) |passive motor off rate at filament end                                                            |
+|p_m_cut                    |double |0.063          |um     |cutoff distance for binding (um)                                                                  |
+|p_m_kon2                   |double |-1             |s^(-1) |passive motor on rate when both heads bound                                                       |
+|p_m_koff2                  |double |-1             |s^(-1) |passive motor off rate when both heads bound                                                      |
+|p_m_kend2                  |double |-1             |s^(-1) |passive motor off rate at filament end when both heads bound                                      |
+|p_motor_length             |double |0.150          |um     |length of xlink                                                                                   |
+|p_motor_stiffness          |double |1              |pN/um  |xlink spring stiffness                                                                            |
+|p_m_bend                   |double |0.04           |pN     |bending force constant of passive motors                                                          |
+|p_m_ang                    |double |pi/2           |       |equilibrium angle of passive motor-filament system                                                |
+|p_m_align                  |int    |0              |       |passive motor alignment type                                                                      |
+|p_m_kalign                 |double |0              |pN*um  |passive motor alignment penality                                                                  |
+|p_motor_v                  |double |0              |um/s   |passive motor velocity                                                                            |
+|p_m_stall                  |double |0              |pN     |stall force                                                                                       |
+|p_dead_head_flag           |boolean|false          |       |if true, then head [p_dead_head] of all xlinks remains stationary throughout sim                  |
+|p_dead_head                |int    |0              |       |can be 0 or 1; head that remains stationary if p_dead_head_flag=true                              |
+|static_cl_flag             |boolean|false          |       |should be set to true if xlinks start off attached to filaments and never detach                  |
+|**SHEAR**                  |       |               |       |                                                                                                  |
+|n_bw_shear                 |int    |10^9           |s      |number of timesteps between subsequent differential strains                                       |
+|d_strain_freq              |double |1              |Hz     |frequency of differential oscillatory strain                                                      |
+|d_strain_pct               |double |0              |s      |differential strain (e.g., 0.5 means a strain of 0.5*xrange)                                      |
+|time_of_dstrain            |double |10000          |s      |time when differential strain begins                                                              |
+|time_of_dstrain2           |double |10000          |s      |time when second differential strain begins                                                       |
+|diff_strain_flag           |boolean|false          |       |flag to use if differential strain should be linear (in one direction)                            |
+|osc_strain_flag            |boolean|false          |       |flag to use if differential strain should be oscillatory (like Gardel, Science 2004)              |
+|stress_flag                |boolean|false          |       |flag to turn on constant stress                                                                   |
+|stress                     |double |0              |pN/um  |value of constant stress                                                                          |
+|stress_rate                |double |0              |s/mg   |decay rate to specified value of stress                                                           |
+|stress2                    |double |0              |pN/um  |second value of constant stress                                                                   |
+|stress_rate2               |double |0              |s/mg   |second decay rate to the specified value of stress                                                |
+|shear_motor_flag           |boolean|false          |       |flag to turn on shearing for motors                                                               |
 
 ### Configuration file Example ###
 Below is an example of a configuration file named example.cfg. 

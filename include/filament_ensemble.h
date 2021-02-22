@@ -7,191 +7,123 @@
  *
  */
 
-//=====================================
-//include guard
-#ifndef __FILAMENT_ENSEMBLE_H_INCLUDED__
-#define __FILAMENT_ENSEMBLE_H_INCLUDED__
+#ifndef AFINES_FILAMENT_ENSEMBLE_H
+#define AFINES_FILAMENT_ENSEMBLE_H
 
-//=====================================
-// forward declared dependencies
-
-//=====================================
-//included dependences
 #include "filament.h"
 #include "box.h"
-//=====================================
-//filament network class
-
-int const CIRCLE = 1;
+#include "quadrants.h"
+#include "exv.h"
+#include "ext.h"
 
 class filament_ensemble
 {
     public:
 
-        filament_ensemble(box *bc, vector< vector<double> > beads, array<int,2> mynq, double delta_t, double temp,
-                double vis, double spring_len, double stretching, double ext, double bending, double frac_force, bool check_dup_in_quad_);
-        
+        filament_ensemble(box *bc, vector<vector<double>> beads, array<int, 2> nq,
+                double dt, double temp, double visc, double l0, double kl, double kb,
+                double frac_force, double rmax, double kexv);
+
         ~filament_ensemble();
-        
-        void nlist_init();
-        
-        void nlist_init_serial();
-        
-        void quad_update();
-        
+
+        // settings
+        void set_external(external *);
+
+        // quadrants
+        quadrants *get_quads();
         void quad_update_serial();
-        
-        void consolidate_quads();
+        vector<array<int, 2>> *get_attach_list(vec_type pos);
 
-        void update_quads_per_filament(int);
-
-        void reset_n_springs(int);
-
-        void update_dist_map(set<pair<double, array<int, 2>>>& t_map, const array<int, 2>& mquad, double x, double y);
-
-        vector<array<int, 2>> *get_attach_list(double, double);
-        
-        vector<filament *> * get_network();
-
-        filament * get_filament(int index);
-
-        set<pair<double, array<int,2>>> get_dist(double x, double y);
-        
-        set<pair<double, array<int,2>>> get_dist_all(double x, double y);
-        
-        array<double,2> get_direction(int fil, int spring);
-
-        array<double,2> get_start(int fil, int spring);
-        
-        array<double,2> get_end(int fil, int spring);
-        
-        array<double,2> get_force(int fil, int bead);
-        
-        double get_int_direction(int fil, int spring, double xp, double yp);
-
-        double get_xcm(int fil, int spring);
-       
-        double get_ycm(int fil, int spring);
-
-        double get_llength(int fil, int spring);
-       
-        double get_bead_friction();
-        
-        box *get_box();
-        array<int, 2> get_nq();
-        
-        double get_stretching_energy();
-
-        array<array<double, 2>, 2> get_stretching_virial();
-        
-        double get_bending_energy();
-
-        array<array<double, 2>, 2> get_bending_virial();
+        // state
 
         int get_nbeads();
-        
         int get_nsprings();
-        
         int get_nfilaments();
 
-        void update_shear();
-        
+        box *get_box();
+        vector<filament *> * get_network();
+        filament * get_filament(int index);
+
+        vec_type get_force(int fil, int spring);
+        vec_type get_direction(int fil, int spring);
+        vec_type get_start(int fil, int spring);
+        vec_type get_end(int fil, int spring);
+
+        double get_int_direction(int fil, int spring, double xp, double yp);
+        double get_llength(int fil, int spring);
+
+        bool is_polymer_start(int f, int a);
+
+        // attached locations
+        fp_index_type new_attached(motor *m, int hd, int f_index, int l_index, vec_type pos);
+        void del_attached(fp_index_type i);
+        array<int, 2> get_attached_fl(fp_index_type i);
+        vec_type get_attached_pos(fp_index_type i);
+        void add_attached_force(fp_index_type i, vec_type f);
+        void add_attached_pos(fp_index_type i, double dist);
+        vec_type get_attached_direction(fp_index_type i);
+        bool at_pointed_end(fp_index_type i);
+        bool at_barbed_end(fp_index_type i);
+
+        // thermo
+        double get_potential_energy();
+        double get_stretching_energy();
+        double get_bending_energy();
+        double get_excluded_energy();
+        double get_external_energy();
+
+        virial_type get_potential_virial();
+        virial_type get_stretching_virial();
+        virial_type get_bending_virial();
+        virial_type get_excluded_virial();
+        virial_type get_external_virial();
+
+        // monte carlo
+        void montecarlo();
+
+        void set_growing(double, double, double, double, int);
+        void try_grow();
+        void try_fracture();
+
+        // dynamics
+        void integrate();
         void update_d_strain(double);
-        
-        void update_delrx(double);
-        
+
+        // update forces/energies
+        void compute_forces();
+
         void update_stretching();
-        
-        void update_filament_stretching(int);
-        
         void update_bending();
-        
-        void update_int_forces();
+        void update_excluded_volume();
+        void update_external();
+        void update_energies();
 
-        void update_positions();
+        void update_forces(int fil, int bead, vec_type f);
 
-        void update_positions_range(int lo, int hi);
-        
-        void update_forces(int fil, int bead, double f2, double f3);
+        // output
 
         vector<vector<double>> output_beads();
         vector<vector<double>> output_springs();
         vector<vector<double>> output_thermo();
 
         void write_beads(ofstream& fout);
-        
         void write_springs(ofstream& fout);
-        
         void write_thermo(ofstream& fout);
-        
-        void set_straight_filaments(bool is_straight);
 
-        void set_y_thresh(double);
-        
-        void set_fene_dist_pct(double);
-        
-        void set_shear_rate(double);
-        
-        void set_shear_stop(double);
-
-        void set_shear_dt(double);
-        
-        bool is_polymer_start(int f, int a);
-
-        void set_fov(double x, double y);
-
-        void set_nq(double x, double y);
-
-        void set_visc(double v);
-
-        vector<int> get_broken();
-
-        void clear_broken();
-        
         void print_filament_thermo();
-
         void print_network_thermo();
-
         void print_filament_lengths();
-        
-        void update();
-        
-        void update_energies();
-        
-        void turn_quads_off();
-        
-        void set_circle_wall(double radius, double spring_constant);
-
-        array<double, 2> external_force(array<double, 2> pos);
 
     protected:
-
         box *bc;
-
-        int external_force_flag;
-        double circle_wall_radius, circle_wall_spring_constant;
-
-        double t, dt, temperature, spring_rest_len, visc, min_time;
-        double gamma, shear_stop, shear_dt, shear_speed;
-        double max_springs_per_quad_per_filament, max_springs_per_quad; 
-        bool straight_filaments = false, quad_off_flag;
-        double pe_stretch, pe_bend, ke;
-
-        array<array<double, 2>, 2> vir_stretch, vir_bend;
-
-        array<double,2> view;
-        array<int, 2> nq;
-        vector<int> broken_filaments, empty_vector;
-        
-        vector< vector < vector< array<int, 2 > >* > * > springs_per_quad;
-        vector< vector < int >* > n_springs_per_quad;
-        vector<array<int, 2>> all_springs;
-
-        bool check_dup_in_quad;
-
-        vector<array<int, 2>* > all_quads;
+        quadrants *quads;
+        excluded_volume *exv;
+        external *ext;
         vector<filament *> network;
-        unordered_set<array<int, 2>, boost::hash<array<int,2>>> fls;
+
+        // thermo
+        double pe_stretch, pe_bend, pe_exv, pe_ext;
+        virial_type vir_stretch, vir_bend, vir_exv, vir_ext;
 };
 
 #endif

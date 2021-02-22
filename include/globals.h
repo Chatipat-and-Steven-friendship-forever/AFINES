@@ -10,8 +10,8 @@
 
 //=====================================
 //include guard
-#ifndef __GLOBALS_H_INCLUDED__
-#define __GLOBALS_H_INCLUDED__
+#ifndef AFINES_GLOBALS_H
+#define AFINES_GLOBALS_H
 
 //=====================================
 // forward declared dependencies
@@ -46,10 +46,13 @@
 #include <unordered_set>
 #include <vector>
 
+#include <fmt/core.h>
+#include <fmt/ostream.h>
+
+#include "vec.h"
+
 using namespace std;
 namespace fs = boost::filesystem;
-
-using virial_type = array<array<double, 2>, 2>;
 
 /* distances in microns, time in seconds, forces in pN * 
  * --> Temp in pN-um                                   */
@@ -62,13 +65,10 @@ const double actin_mass_density = 2.6e-14; //miligram / micron
 /*generic functions to be used below*/
 void set_seed(int s);
 double rng_u();
-double rng(double start, double end);
 int pr(int num);
 double rng_exp(double mean);
 double rng_n(); //default parameters --> mu = 0, sig = 1
-double rng_n(double mean, double var);
-bool event(double prob);
-int event(double rate, double timestep);
+mt19937_64 &get_rng();
 
 vector<int> range_bc(string bc, double delrx, int botq, int topq, int low, int high);
 vector<int> range_bc(string bc, double delrx, int botq, int topq, int low, int high, int di);
@@ -84,13 +84,8 @@ int coord2quad_floor(double fov, int nq, double pos);
 int coord2quad_ceil(double fov, int nq, double pos);
 int coord2quad(double fov, int nq, double pos);
 
-double my_velocity(double vel0, double force, double fstall);
-double cross(double ax, double ay, double bx, double by);
-double dot(double x1, double y1, double x2, double y2);
-double cross(const array<double, 2>& v1, const array<double, 2>& v2);
-double dot(const array<double, 2>& v1, const array<double, 2>& v2);
-
 double angBC(double ang);
+double angBC(double ang, double max);
 
 double var(const vector<double>& vals);
 double mode_var(const vector<double>& vals, double m);
@@ -109,6 +104,7 @@ void write_first_ntsteps(string path, int n);
 void write_first_tsteps(string path, double tstop);
 
 template <typename T> int sgn(T val);
+int mysgn(double);
 
 pair<double, array<int, 2> > flip_pair(const pair<array<int, 2>, double> &p);
 multimap<double, array<int, 2> > flip_map(const std::unordered_map<array<int, 2>, double, boost::hash<array<int,2>>> &p);
@@ -121,10 +117,47 @@ map<array<int, 2>, double> transpose(map<array<int, 2>, double> mat);
 map<array<int, 2>, double> invert_block_diagonal(map<array<int, 2>, double> mat);
 void intarray_printer(array<int,2> a);
 
-boost::optional<array<double, 2> > seg_seg_intersection(const array<double, 2>&, const array<double, 2>&, const array<double, 2>&, const array<double, 2>&);
+boost::optional<vec_type> seg_seg_intersection(vec_type, vec_type, vec_type, vec_type);
 std::string quads_error_message(std::string, vector<array<int, 2> >, vector<array<int, 2> > );
 
-void virial_add(virial_type &, virial_type const &);
-void virial_clear(virial_type &);
+inline vec_type vec_randn()
+{
+    // separate statements to keep call order correct
+    double x = rng_n();
+    double y = rng_n();
+    return {x, y};
+}
+
+struct mc_prob
+{
+    mc_prob()
+    {
+        prob = rng_u();
+        used = 0.0;
+    }
+
+    double prob;
+    double used;
+
+    boost::optional<double> operator()(double needprob)
+    {
+        boost::optional<double> result;
+        if (used <= prob && prob < used + needprob) {
+            result = {prob - used};
+        }
+        used += needprob;
+        if (used > 1) {
+            throw runtime_error("Need too much probability.");
+        }
+        return result;
+    }
+
+};
+
+struct fp_index_type
+{
+    int f_index;
+    int p_index;
+};
 
 #endif

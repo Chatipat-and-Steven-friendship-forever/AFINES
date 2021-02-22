@@ -22,9 +22,9 @@ pts2[dir_,parts_]:=DeleteCases[SplitBy[Import[dir<>"/txt_stack/"<>parts<>".txt",
 pts3[dir_,name_]:=Map[Internal`StringToDouble/@(StringSplit[StringTake[#,{2,-2}],", "])&,Import[dir<>"/txt_stack/"<>name<>".dat","TSV"],{2}];
 importCheck[fname_]:=
 If[
-FileExistsQ[fname],
+FileExistsQ[fname] && FileByteCount[fname]!=0,
 ToExpression[Import[fname,"TSV"]],
-Print[fname<>" doesn't exist"];{}
+Print[fname<>" doesn't exist or is empty"];{}
 ];
 pts4[dir_,parts_]:=Module[{},
 d=Import[dir<>"/txt_stack/"<>parts<>".txt","Table"];
@@ -54,6 +54,20 @@ bcs=BinCounts[vs,{vi,vf,dv}];
 ClearAll[amots,cms,vs];
 bcs
 ];
+
+(*reading npy files
+source: https://mathematica.stackexchange.com/questions/144770/exchanging-numpy-arrays-between-python-and-mathematica/146881#146881
+*)
+getnpy[file_]:=Module[{a,f=OpenRead[file,BinaryFormat->True],version,headerlen,header,dims,type,typ,byto},a=If[BinaryRead[f,"Byte"]==147&&BinaryReadList[f,"Character8",5]==Characters["NUMPY"],version=BinaryReadList[f,"Byte",2];
+headerlen=BinaryRead[f,"Integer16",ByteOrdering->-1];
+header=StringJoin@BinaryReadList[f,"Character8",headerlen];
+dims=StringCases[header,"'shape':"~~Whitespace~~"("~~s:{NumberString,",",Whitespace}..~~")":>ToExpression["{"~~If[StringTake[s,-1]==",",StringDrop[s,-1],s]~~"}"]][[1]];
+type=StringCases[header,"'descr':"~~Whitespace~~Shortest["'"~~s:_...~~"'"]:>s][[1]];
+byto=Switch[StringTake[type,1],"<",-1,">",1,_,$ByteOrdering];
+If[MemberQ[{"<",">","|","="},StringTake[type,1]],type=StringDrop[type,1]];
+typ=Switch[type,"f8","Real64","i8","Integer64",_,Print["unknown type",header];0];
+If[typ!=0,ArrayReshape[BinaryReadList[f,typ,ByteOrdering->byto],dims],0],Print["not a npy"];0];
+Close[f];a];
 
 
 (* ::Subsection:: *)

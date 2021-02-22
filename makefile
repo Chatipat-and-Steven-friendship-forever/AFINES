@@ -5,19 +5,18 @@ BUILDDIR_DEBUG := build_debug
 TARGETDIR := bin
 TARGET := bin/afines
 
-#  
-
 SRCEXT := cpp
 SOURCES := $(shell find $(SRCDIR) -type f -name *.$(SRCEXT))
 OBJECTS := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.o))
 OBJECTS_DEBUG := $(patsubst $(SRCDIR)/%,$(BUILDDIR_DEBUG)/%,$(SOURCES:.$(SRCEXT)=.o))
 
-CFLAGS := -O3 -Wall -std=c++11 -DBOOST_TEST_DYN_LINK -march=native# -fopenmp
-CFLAGS_DEBUG := -Wall -Wunused -Wunreachable-code -std=c++11 -DBOOST_TEST_DYN_LINK -pg 
+CFLAGS_COMMON := -std=c++11 -DFMT_HEADER_ONLY -DBOOST_TEST_DYN_LINK
+CFLAGS := -O3 -march=native -Wall $(CFLAGS_COMMON)
+CFLAGS_DEBUG := -g -pg -Wall -Wunused -Wunreachable-code $(CFLAGS_COMMON)
 
 # BOOST_SUFFIX := -mt
 LIB := -L ${BOOST_ROOT} -lboost_unit_test_framework${BOOST_SUFFIX} -lboost_program_options${BOOST_SUFFIX} -lboost_filesystem${BOOST_SUFFIX} -lboost_system${BOOST_SUFFIX}
-INC := -I include # -isystem /usr/include/  -isystem /usr/local/include/ -isystem /opt/local/include/
+INC := -I include -I external/fmt/include # -isystem /usr/include/  -isystem /usr/local/include/ -isystem /opt/local/include/
 
 #NOW := $(shell date +"%c" | tr ' :' '_')
 
@@ -51,6 +50,12 @@ network: $(OBJECTS)
 debug: $(OBJECTS_DEBUG)
 	mkdir -p $(TARGETDIR)
 	$(CC) $(CFLAGS_DEBUG) $(OBJECTS_DEBUG) prog/network.cpp $(INC) $(LIB) -o bin/afines_debug
+bundles: $(OBJECTS)
+	mkdir -p $(TARGETDIR)
+	$(CC) $(CFLAGS) $(OBJECTS) prog/bundles.cpp $(INC) $(LIB) -o bin/bun
+bundles_debug: $(OBJECTS_DEBUG)
+	mkdir -p $(TARGETDIR)
+	$(CC) $(CFLAGS_DEBUG) $(OBJECTS_DEBUG) prog/bundles.cpp $(INC) $(LIB) -o bin/bun_debug
 
 # THE FOLLOWING PROGRAMS MAY OR MAY NOT EXIST; CHECK YOUR PROG FOLDER
 filament_force_extension: $(OBJECTS)
@@ -82,6 +87,9 @@ filament_ensemble_tester: $(OBJECTS)
 
 motor_tester: $(OBJECTS)
 	$(CC) $(CFLAGS) $(OBJECTS) test/motor_test.cpp $(INC) $(LIB) -o bin/motor_tester
+
+spacer_tester: $(OBJECTS)
+	$(CC) $(CFLAGS) $(OBJECTS) test/spacer_test.cpp $(INC) $(LIB) -o bin/spacer_tester
 
 motor_ensemble_tester: $(OBJECTS)
 	$(CC) $(CFLAGS) $(OBJECTS) test/motor_ensemble_test.cpp $(INC) $(LIB) -o bin/motor_ensemble_tester

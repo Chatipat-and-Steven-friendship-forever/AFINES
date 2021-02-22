@@ -7,77 +7,48 @@
  *
  */
 
-//=====================================
-//include guard
-#ifndef __ACTIN_H_INCLUDED__
-#define __ACTIN_H_INCLUDED__
+#ifndef AFINES_BEAD_H
+#define AFINES_BEAD_H
 
-//=====================================
-// forward declared dependencies
-
-//=====================================
-//included dependences
 #include "globals.h"
+#include "vec.h"
 
-//=====================================
-//filament bead class
-class bead
-{
+class bead {
     public:
-
-        bead();
-        
         bead(double xcm, double ycm, double len, double vis); 
-        
         bead(const bead& other);
-        
-        ~bead();
-    
-        void update();
 
-        double get_length();
+        // state
 
-        double get_xcm();
-        
-        double get_ycm();
-        
-        void update_force(double f1, double f2);
-        
+        vec_type get_pos();
+        void set_pos(vec_type pos);
+
+        vec_type get_force();
+        void update_force(vec_type f);
         void reset_force();
 
-        double get_fx();
+        // parameters
 
-        double get_fy();
-
-        void set_fx(double);
-
-        void set_fy(double);
-
-        array<double,2> get_force();
-
+        double get_length();
         double get_friction();
-        
         double get_viscosity();
 
-        void set_xcm(double xcm);
-
-        void set_ycm(double ycm);
+        // output
 
         vector<double> output();
-
         string write();
-        
         string to_string();
-        
-        bool operator==(const bead& that);    
-        
+
+        // misc
+
+        bool operator==(const bead& that);
 
     private:
-        
-        double x, y, rad, visc, friction;
+        // state
+        vec_type pos, force;
 
-        array<double, 2> force;
-        
+        // parameters
+        double rad, visc, friction;
 };
 
 #endif

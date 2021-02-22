@@ -6,107 +6,91 @@
  *
  */
 
-//=====================================
-//include guard
-#ifndef __LINK_H_INCLUDED__
-#define __LINK_H_INCLUDED__
+#ifndef AFINES_SPRING_H
+#define AFINES_SPRING_H
 
-
-//=====================================
-// forward declared dependencies
 class filament;
 
-//=====================================
-//included dependences
 #include "globals.h"
 #include "box.h"
+#include "motor.h"
 
-//=====================================
-//spring class
-class spring
-{
+class spring {
     public:
-        spring();
-        
-        spring(double len, double stiffness, double max_ext, filament* f, array<int, 2> aindex);
-        
-        virtual ~spring();
+        spring() {}
+        spring(double l0, double kl, filament* f, array<int, 2> aindex);
+        virtual ~spring() {}
 
-        array<double, 2> get_hx();
-        
-        array<double, 2> get_hy();
-        
-        double get_kl();
-        
+        // [dynamics]
+
+        // reads positions from filament
+        // updates all state except force
+        void step();
+
+        // updates force
+        void update_force();
+
+        // applies force to filament
+        void filament_update();
+
+        // [state]
+
+        vec_type get_h0();
+        vec_type get_h1();
+
         double get_length();
-        
-        double get_length_sq();
-       
+        vec_type get_disp();
+        vec_type get_direction();
+
+        vec_type get_force();
+
+        // [parameters]
+
+        double get_kl();
+
         double get_l0();
-        
-        double get_fene_ext();
-        
+        void set_l0(double myl0);
+
+        array<int, 2> get_aindex();
+        void set_aindex(array<int, 2> idx);
+        void inc_aindex();
+
+        // [thermo]
+
         double get_stretching_energy();
 
-        array<array<double, 2>, 2> get_virial();
-        
-        double get_xcm();
-        
-        double get_ycm();
-        
+        virial_type get_virial();
+
+        // [output]
+
         string to_string();
-
         vector<double> output();
-
         string write();
-        
-        void step();
-        
-        void filament_update();
-        
-        bool operator==(const spring& that);    
-        
-        bool is_similar(const spring& that);    
 
-        void update_force();
-        
-        void update_force_fraenkel_fene();
-        
-        double get_stretching_energy_fene();
-        
-        void update_force_marko_siggia(double kToverA);
+        // [misc]
 
-        array<double,2> get_force();
+        bool operator==(const spring& that);
+        bool is_similar(const spring& that);
 
-        void set_aindex1(int i);
-        
-        double get_distance_sq(double xp, double yp);
-
-        double get_int_angle(double xp, double yp);
-        
-        array<double,2> get_intpoint();
-
-        void calc_intpoint(double xp, double yp);
-
-        array<double, 2> get_direction();
-        
-        array<double, 2> get_disp();
-        
-        array<double, 2> get_neg_disp();
+        vec_type intpoint(vec_type pos);
+        bool get_line_intersect(spring *l2); 
 
     protected:
 
+        // state
+        vec_type h0, h1;
+
+        // derived state
+        double llen;
+        vec_type disp, direc;
+
+        vec_type force;
+
+        // parameters
+        array<int, 2> aindex;  // bead indices
+        double kl, l0;
         box *bc;
-
-        double xcm, ycm, l0, kl, max_ext, eps_ext, llen, llensq;//, force;
-       
-        array<double,2> hx, hy;
-        array<double, 2> disp, force, intpoint, direc;
-
-        array<int, 2> aindex;
-         
         filament *fil;
-        
-        vector< array<int,2> > quad; //vector of two vectors(x and y quadrants) of integers
 };
+
 #endif
