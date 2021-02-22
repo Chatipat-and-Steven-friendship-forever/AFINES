@@ -40,7 +40,7 @@ filament::filament(filament_ensemble *net, vector<vector<double>> beadvec, doubl
     kgrow = 0.0;
     lgrow = 0.0;
 
-    damp = infty;
+    damp = INFINITY;
     if (beadvec.size() > 0)
     {
         vector<double> &entry = beadvec[0];
@@ -83,7 +83,7 @@ void filament::add_bead(vector<double> a, double spring_length, double stretchin
         springs.push_back(new spring(spring_length, stretching_stiffness, this, {j-1,  j}));
         springs[j-1]->step();
     }
-    if (damp == infty) {
+    if (damp == INFINITY) {
         damp = beads[0]->get_friction();
         bd_prefactor = sqrt(temperature/(2*dt*damp));
     }

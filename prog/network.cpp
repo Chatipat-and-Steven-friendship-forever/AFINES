@@ -129,7 +129,7 @@ int main(int argc, char **argv)
 
         ("link_length", po::value<double>(&link_length)->default_value(1), "Length of links connecting monomers")
         ("polymer_bending_modulus", po::value<double>(&polymer_bending_modulus)->default_value(0.068), "Bending modulus of a filament")
-        ("fracture_force", po::value<double>(&fracture_force)->default_value(100000000), "pN-- filament breaking point")
+        ("fracture_force", po::value<double>(&fracture_force)->default_value(INFINITY), "pN-- filament breaking point")
         ("link_stretching_stiffness,ks", po::value<double>(&link_stretching_stiffness)->default_value(1), "stiffness of link, pN/um")
 
         // excluded volume
@@ -289,12 +289,12 @@ int main(int argc, char **argv)
 
     po::options_description config_shear("Shear Options");
     config_shear.add_options()
-        ("n_bw_shear", po::value<int>(&n_bw_shear)->default_value(1000000000), "number of timesteps between subsequent shears")
+        ("n_bw_shear", po::value<int>(&n_bw_shear)->default_value(1), "number of timesteps between subsequent shears")
 
         ("d_strain_freq", po::value<double>(&d_strain_freq)->default_value(1), "differential strain frequency")
         ("d_strain_pct", po::value<double>(&d_strain_pct)->default_value(0), "differential strain amplitude")
-        ("time_of_dstrain", po::value<double>(&time_of_dstrain)->default_value(10000), "time when differential strain starts")
-        ("time_of_dstrain2", po::value<double>(&time_of_dstrain2)->default_value(10000), "time when second differential strain starts")
+        ("time_of_dstrain", po::value<double>(&time_of_dstrain)->default_value(INFINITY), "time when differential strain starts")
+        ("time_of_dstrain2", po::value<double>(&time_of_dstrain2)->default_value(INFINITY), "time when second differential strain starts")
 
         ("diff_strain_flag", po::value<bool>(&diff_strain_flag)->default_value(false), "flag to turn on linear differential strain")
         ("osc_strain_flag", po::value<bool>(&osc_strain_flag)->default_value(false), "flag to turn on oscillatory differential strain")
