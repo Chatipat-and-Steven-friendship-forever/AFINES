@@ -134,7 +134,7 @@ int main(int argc, char **argv)
 
         // excluded volume
         ("rmax", po::value<double>(&rmax)->default_value(0.25), "cutoff distance for interactions between actins beads and filaments")
-        ("kexv", po::value<double>(&kexv)->default_value(1.0), "parameter of exv force calculation")
+        ("kexv", po::value<double>(&kexv)->default_value(0.0), "parameter of exv force calculation")
 
         // filament growth
         ("kgrow", po::value<double>(&kgrow)->default_value(0), "rate of filament growth")
