@@ -118,7 +118,7 @@ void filament::shake()
     bool converged = false;
     for (int iteration = 0; iteration < max_shake; iteration++) {
         converged = true;
-        for (int i = 0; i < n_springs; i++) {
+        for (size_t i = 0; i < n_springs; i++) {
             spring *s = springs[i];
             if (s->get_kl() == INFINITY) {
                 // apply a single SHAKE step to a spring
@@ -628,7 +628,7 @@ bool filament::at_pointed_end(int i)
 double filament::distance_from_pointed_end(int l, double pos)
 {
     double dist = 0.0;
-    for (size_t i = springs.size() - 1; i > l; i--) {
+    for (int i = int(springs.size()) - 1; i > l; i--) {
         dist += springs[i]->get_length();
     }
     return dist + pos;
