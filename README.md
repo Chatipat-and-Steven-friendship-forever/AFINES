@@ -14,58 +14,25 @@
 
 #### created at the University of Chicago ####
 
-### System Requirements ###
-Minimally, this system requires gcc+11 and boost which you can load on midway via the commands
-```
-    > module load gcc
-    > module load boost
-```
+### Installation ###
 
-On a Mac, you can install Boost via MacPorts, with the command
+AFINES is available as a conda package. We recommend installing it in its own conda environment, as follows:
 ```
-sudo port install boost
+conda create -n afines
+conda activate afines
+conda install -c dinnergroup -c conda-forge afines=sorting_guv
+```
+Simulations can then be run using
+```
+conda activate afines  # if the conda environment isn't already activated
+afines ...
 ```
 
 ### QUICKSTART GUIDE ###
 
-* If you don't already have a bin directory, create one with:
-    ```
-    > mkdir bin
-    ```    
-* If you don't already have an executable, run the command: 
-    ```
-    > make [clean] [tar] network 
-    ```
-    * [clean] will delete the old executable
-    * [tar] will generate the file tars/amxbd.tar.gz
-    * IF this doesn't work, then there's probably a dependency or linker issue. Try each of the following solutions in the order prescribed, and attempt to compile in between. 
-        1. Make sure you have Boost installed 
-        2. Find the folder with the "*boost*.dylib" or "*boost*.a" folders; when I installed Boost using MacPorts, it was `/opt/local/lib/` . Run the command:
-
-                 export BOOST_ROOT=<my boost folder>
-
-              With the Macports installation, <my boost folder>=/opt/local/lib . 
-
-        3. Within BOOST_ROOT, identify if the library folders have a suffix, such as "-mt" or "-d" (e.g., the program-options library on my Mac is named "libboost_program_options-mt.dylib", instead of "libbbost_program_options.dylib"). If so, run the command:
-            
-                export BOOST_SUFFIX=<my boost suffix>
-            
-             With the Macports installation, <my boost suffix>=-mt
-
-        4. Find the folder with the boost/*.h files; with MacPorts installation, it was `/opt/local/include/`. Add `-I <myincludefolder>` to the line that begins `INC :=` in the makefile.
-
-* You should now have an executable file called bin/afines. NOTE: you only need to recreate this file if you edit the source
-  code.
-
-* Create an output directory for your simulation (e.g., "out") 
-
-```
-> mkdir out
-```
-
-* Run your simulation in the specified output output directory, e.g., 
+* Run your simulation and output to the directory "out",
     ``` 
-    > bin/afines --dir out
+    > afines --dir out
     ```
 
 * See below for other simulation configuration options that you can set from the command line or from a configuration
@@ -137,7 +104,7 @@ each list of positions within the file. Thus the structure of actins.txt is:
 * data/config_full.cfg is the full set of configuration options used for the simulation. Thus if a simulation did not
   complete, you can restart with 
 ```
-./bin/afines -c data/config_full.cfg --restart true
+afines -c data/config_full.cfg --restart true
 ```
 
 ### Configurable settings ###
@@ -148,7 +115,7 @@ configuration file:
 For example, to run a 500 second of simulation of 10 rigid actin filaments, an active motor density of 0.5 and a crosslinker density
 of 0.05 you would enter the command:
     ```
-    > ./bin/afines --tf 500 --npolymer 10 --a_motor_density 0.5 --p_motor_density 0.05
+    > afines --tf 500 --npolymer 10 --a_motor_density 0.5 --p_motor_density 0.05
     ```
 (this would write to the default output directory)
 
@@ -156,7 +123,7 @@ of 0.05 you would enter the command:
 
 All the available options for a binary can be displayed using the command
     ```
-    > ./bin/afines -h
+    > afines -h
     ```
 These are reproduced below, but the above command should be more accurate.
 
@@ -270,8 +237,8 @@ These are reproduced below, but the above command should be more accurate.
 ### Configuration file Example ###
 Below is an example of a configuration file named example.cfg. 
 To run a simulation using this configuration, enter the command
-     ```   
-    >./bin/afines -c example.cfg
+    ```   
+    > afines -c example.cfg
     ```
 #### example.cfg ####
 ```
